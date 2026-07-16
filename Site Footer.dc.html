@@ -42,10 +42,18 @@
     <div style="flex:1.4;min-width:240px">
       <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Stay Connected</div>
       <p style="font-size:14px;line-height:1.55;color:rgba(255,255,255,.6);margin:0 0 14px">Product updates, new flavors, and retail news.</p>
-      <div style="display:flex;gap:8px;margin-bottom:18px">
-        <input type="email" placeholder="Email address" style="flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 12px;color:#fff;font-size:13.5px"/>
-        <button style="background:oklch(45% 0.17 20);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Sign Up</button>
-      </div>
+      <sc-if value="{{ showNewsletterForm }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="email" value="{{ newsletterEmail }}" onChange="{{ onNewsletterEmailChange }}" placeholder="Email address" style="flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 12px;color:#fff;font-size:13.5px"/>
+          <button type="button" onClick="{{ submitNewsletter }}" disabled="{{ newsletterSubmitting }}" style="background:oklch(45% 0.17 20);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">{{ newsletterButtonLabel }}</button>
+        </div>
+        <sc-if value="{{ showNewsletterError }}" hint-placeholder-val="{{ false }}">
+          <p style="font-size:12.5px;color:oklch(74% 0.13 75);margin:0 0 18px">{{ newsletterError }}</p>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ showNewsletterSuccess }}" hint-placeholder-val="{{ false }}">
+        <p style="font-size:13.5px;color:oklch(74% 0.13 75);margin:0 0 18px">Thanks for subscribing!</p>
+      </sc-if>
       <div style="display:flex;gap:16px">
         <sc-for list="{{ footerSocial }}" as="s" hint-placeholder-count="3">
           <a href="{{ s.href }}" target="_blank" rel="noopener noreferrer" style="font-size:14px;color:rgba(255,255,255,.7)" style-hover="color:#fff">{{ s.label }}</a>
@@ -65,6 +73,37 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1440, &quot;height&quot;: 360}}">
 class Component extends DCLogic {
+  state = { newsletterEmail: '', newsletterSubmitting: false, newsletterError: '', newsletterSubscribed: false };
+
+  async submitNewsletter() {
+    if (this.state.newsletterSubmitting) return;
+
+    const email = this.state.newsletterEmail.trim();
+    if (!email) {
+      this.setState({ newsletterError: 'Please enter an email address.' });
+      return;
+    }
+
+    this.setState({ newsletterSubmitting: true, newsletterError: '' });
+
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Something went wrong subscribing.');
+      }
+
+      this.setState({ newsletterSubmitting: false, newsletterSubscribed: true });
+    } catch (err) {
+      this.setState({ newsletterSubmitting: false, newsletterError: err.message });
+    }
+  }
+
   renderVals() {
     return {
       footerCompany: [
@@ -81,7 +120,16 @@ class Component extends DCLogic {
         { label: 'Instagram', href: 'https://www.instagram.com/rubyfoodhub' },
         { label: 'Facebook', href: '#' },
         { label: 'TikTok', href: 'https://www.tiktok.com/@rubyfoodhub' }
-      ]
+      ],
+      showNewsletterForm: !this.state.newsletterSubscribed,
+      showNewsletterSuccess: this.state.newsletterSubscribed,
+      newsletterEmail: this.state.newsletterEmail,
+      onNewsletterEmailChange: (e) => this.setState({ newsletterEmail: e.target.value }),
+      submitNewsletter: () => this.submitNewsletter(),
+      newsletterButtonLabel: this.state.newsletterSubmitting ? 'Signing Up…' : 'Sign Up',
+      newsletterSubmitting: this.state.newsletterSubmitting,
+      showNewsletterError: !!this.state.newsletterError,
+      newsletterError: this.state.newsletterError
     };
   }
 }

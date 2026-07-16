@@ -32,7 +32,7 @@
           <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18);color:oklch(22% 0.02 40)">{{ p }}</span>
         </sc-for>
       </div>
-      <a href="Contact.dc.html" style="display:inline-block;white-space:nowrap;background:oklch(45% 0.17 20);color:#fff;padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Become a Distribution Partner</a>
+      <a href="#wholesale-form" style="display:inline-block;white-space:nowrap;background:oklch(45% 0.17 20);color:#fff;padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Become a Distribution Partner</a>
     </div>
     <div style="flex:1;min-width:320px">
       <div style="width:100%;aspect-ratio:4/5;border-radius:22px;overflow:hidden;box-shadow:0 20px 44px rgba(34,30,26,.14)">
@@ -58,11 +58,30 @@
     </div>
   </section>
 
-  <section style="background:oklch(45% 0.17 20);padding:88px 48px;text-align:center">
-    <div style="max-width:600px;margin:0 auto">
-      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:34px;line-height:1.2;color:#fff;margin:0 0 20px">Let's Talk Distribution</h2>
-      <p style="font-size:16px;line-height:1.6;color:rgba(255,255,255,.85);margin:0 0 32px">Tell us about your store, region, or route — we'll follow up with pricing and availability.</p>
-      <a href="Contact.dc.html" style="display:inline-block;white-space:nowrap;background:#fff;color:oklch(45% 0.17 20);padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(96% 0.01 60)">Contact Our Team</a>
+  <section id="wholesale-form" style="background:oklch(45% 0.17 20);padding:88px 48px">
+    <div style="max-width:560px;margin:0 auto">
+      <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:center;margin-bottom:32px">
+          <h2 style="font-family:'Domine',serif;font-weight:700;font-size:34px;line-height:1.2;color:#fff;margin:0 0 20px">Become a Retail Partner</h2>
+          <p style="font-size:16px;line-height:1.6;color:rgba(255,255,255,.85);margin:0">Tell us about your store, region, or route — we'll follow up with pricing and availability.</p>
+        </div>
+        <div style="background:#fff;border-radius:16px;padding:36px;display:flex;flex-direction:column;gap:14px">
+          <input type="text" value="{{ name }}" onChange="{{ onNameChange }}" placeholder="Full Name" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+          <input type="email" value="{{ email }}" onChange="{{ onEmailChange }}" placeholder="Email Address" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+          <input type="text" value="{{ company }}" onChange="{{ onCompanyChange }}" placeholder="Company / Store Name" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+          <textarea value="{{ message }}" onChange="{{ onMessageChange }}" placeholder="Tell us about your store, region, or route" rows="4" style="width:100%;padding:12px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px;font-family:'Manrope',sans-serif;resize:vertical"></textarea>
+          <button type="button" onClick="{{ submitForm }}" disabled="{{ submitting }}" style="width:100%;margin-top:6px;background:oklch(45% 0.17 20);color:#fff;padding:15px 0;border-radius:100px;font-size:15px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">{{ submitLabel }}</button>
+          <sc-if value="{{ showError }}" hint-placeholder-val="{{ false }}">
+            <p style="color:oklch(45% 0.17 20);font-size:13px;margin:0;text-align:center">{{ errorMessage }}</p>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showSuccess }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff;border-radius:16px;padding:56px 40px;text-align:center">
+          <h2 style="font-family:'Domine',serif;font-weight:700;font-size:26px;margin:0 0 12px">Thanks for Reaching Out</h2>
+          <p style="font-size:15px;line-height:1.6;color:rgba(34,30,26,.7);margin:0">Our wholesale team will follow up with pricing and availability soon.</p>
+        </div>
+      </sc-if>
     </div>
   </section>
 
@@ -76,11 +95,60 @@
   &quot;photoSide&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;right&quot;, &quot;options&quot;: [&quot;left&quot;, &quot;right&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Layout&quot;}
 }">
 class Component extends DCLogic {
+  state = { name: '', email: '', company: '', message: '', submitting: false, errorMessage: '', sent: false };
+
+  async submitForm() {
+    if (this.state.submitting) return;
+
+    if (!this.state.name.trim() || !this.state.email.trim() || !this.state.company.trim() || !this.state.message.trim()) {
+      this.setState({ errorMessage: 'Please fill in your name, email, company, and message.' });
+      return;
+    }
+
+    this.setState({ submitting: true, errorMessage: '' });
+
+    try {
+      const response = await fetch('/api/wholesale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: this.state.name,
+          email: this.state.email,
+          company: this.state.company,
+          message: this.state.message
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Something went wrong sending your message.');
+      }
+
+      this.setState({ submitting: false, sent: true });
+    } catch (err) {
+      this.setState({ submitting: false, errorMessage: err.message });
+    }
+  }
+
   renderVals() {
     const side = this.props.photoSide || 'right';
     return {
       direction: side === 'left' ? 'row-reverse' : 'row',
-      wholesalePartners: ['Grocery Stores', 'Supermarkets', 'Restaurants', 'Cafés', 'Convenience Stores', 'Food Service Companies', 'Wholesale Distributors']
+      wholesalePartners: ['Grocery Stores', 'Supermarkets', 'Restaurants', 'Cafés', 'Convenience Stores', 'Food Service Companies', 'Wholesale Distributors'],
+      showForm: !this.state.sent,
+      showSuccess: this.state.sent,
+      name: this.state.name,
+      onNameChange: (e) => this.setState({ name: e.target.value }),
+      email: this.state.email,
+      onEmailChange: (e) => this.setState({ email: e.target.value }),
+      company: this.state.company,
+      onCompanyChange: (e) => this.setState({ company: e.target.value }),
+      message: this.state.message,
+      onMessageChange: (e) => this.setState({ message: e.target.value }),
+      submitForm: () => this.submitForm(),
+      submitLabel: this.state.submitting ? 'Sending…' : 'Submit',
+      showError: !!this.state.errorMessage,
+      errorMessage: this.state.errorMessage
     };
   }
 }
