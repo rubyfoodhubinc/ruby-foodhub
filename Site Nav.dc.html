@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</helmet>
+<nav style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:20px;padding:14px 28px;background:oklch(97% 0.015 60 / 0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(34,30,26,.08);font-family:'Manrope',sans-serif">
+  <a href="Home.dc.html" style="display:flex;align-items:center;gap:10px;flex:none">
+    <div style="width:34px;height:34px;border-radius:50%;background:oklch(45% 0.17 20);display:flex;align-items:center;justify-content:center">
+      <span style="font-family:'Domine',serif;font-weight:700;font-size:17px;color:#fff">R</span>
+    </div>
+    <span style="font-family:'Domine',serif;font-weight:700;font-size:20px;letter-spacing:-0.2px;color:oklch(22% 0.02 40);white-space:nowrap">Ruby FoodHub</span>
+  </a>
+  <div style="display:flex;align-items:center;gap:16px;margin-left:auto;overflow-x:auto;min-width:0">
+    <sc-for list="{{ links }}" as="link" hint-placeholder-count="6">
+      <a href="{{ link.href }}" style="flex:none;white-space:nowrap;font-size:13.5px;color:{{ link.color }};font-weight:{{ link.weight }}" style-hover="color:oklch(45% 0.17 20)">{{ link.label }}</a>
+    </sc-for>
+    <a href="Cart.dc.html" style="flex:none;white-space:nowrap;position:relative;font-size:13.5px;color:oklch(22% 0.02 40);font-weight:600" style-hover="color:oklch(45% 0.17 20)">
+      Cart
+      <sc-if value="{{ hasCartItems }}" hint-placeholder-val="{{ false }}">
+        <span style="position:absolute;top:-9px;right:-16px;min-width:16px;height:16px;padding:0 4px;border-radius:100px;background:oklch(45% 0.17 20);color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1">{{ cartCount }}</span>
+      </sc-if>
+    </a>
+    <a href="Products.dc.html" style="flex:none;white-space:nowrap;background:oklch(45% 0.17 20);color:#fff;padding:9px 18px;border-radius:100px;font-size:13.5px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Shop Now</a>
+  </div>
+</nav>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: {&quot;width&quot;: 1440, &quot;height&quot;: 76},
+  &quot;active&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;home&quot;, &quot;options&quot;: [&quot;home&quot;, &quot;story&quot;, &quot;products&quot;, &quot;wholesale&quot;, &quot;locations&quot;, &quot;contact&quot;], &quot;tsType&quot;: &quot;string&quot;}
+}">
+class Component extends DCLogic {
+  state = { cartCount: 0 };
+
+  componentDidMount() {
+    this.refreshCount();
+    this._onUpdate = () => this.refreshCount();
+    window.addEventListener('cart:updated', this._onUpdate);
+    window.addEventListener('storage', this._onUpdate);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('cart:updated', this._onUpdate);
+    window.removeEventListener('storage', this._onUpdate);
+  }
+
+  async refreshCount() {
+    const cart = await import('./cart-lib.js');
+    this.setState({ cartCount: cart.getCartCount() });
+  }
+
+  renderVals() {
+    const RUBY = 'oklch(45% 0.17 20)';
+    const CHARCOAL = 'oklch(22% 0.02 40)';
+    const active = this.props.active || 'home';
+    const items = [
+      { key: 'home', label: 'Home', href: 'Home.dc.html' },
+      { key: 'story', label: 'Our Story', href: 'Our%20Story.dc.html' },
+      { key: 'products', label: 'Products', href: 'Products.dc.html' },
+      { key: 'wholesale', label: 'Wholesale', href: 'Wholesale.dc.html' },
+      { key: 'locations', label: 'Locations', href: 'Locations.dc.html' },
+      { key: 'contact', label: 'Contact', href: 'Contact.dc.html' }
+    ];
+    return {
+      links: items.map(it => ({
+        label: it.label,
+        href: it.href,
+        color: it.key === active ? RUBY : CHARCOAL,
+        weight: it.key === active ? 800 : 600
+      })),
+      cartCount: this.state.cartCount,
+      hasCartItems: this.state.cartCount > 0
+    };
+  }
+}
+</script>
+</body>
+</html>

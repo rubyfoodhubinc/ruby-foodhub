@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:oklch(45% 0.17 20);text-decoration:none}
+  a:hover{color:oklch(52% 0.19 20)}
+  *{box-sizing:border-box}
+</style>
+</helmet>
+
+<div style="background:oklch(97% 0.015 60);color:oklch(22% 0.02 40)">
+
+  <dc-import name="Site Nav" active="contact" hint-size="100%,76px"></dc-import>
+
+  <section style="padding:96px 48px 0;max-width:600px;margin:0 auto;text-align:center">
+    <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:16px">Contact Us</div>
+    <h1 style="font-family:'Domine',serif;font-weight:700;font-size:46px;line-height:1.15;margin:0 0 18px">Get in Touch</h1>
+    <p style="font-size:17px;line-height:1.65;color:rgba(34,30,26,.75);margin:0">Questions about our products, wholesale, or partnership opportunities? We'd love to hear from you.</p>
+  </section>
+
+  <section style="padding:56px 48px 104px;max-width:1080px;margin:0 auto">
+    <div style="display:flex;gap:1px;flex-wrap:wrap;background:rgba(34,30,26,.1);border:1px solid rgba(34,30,26,.1);border-radius:16px;overflow:hidden">
+      <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:40px 32px;text-align:center">
+        <div style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:12px">Address</div>
+        <div style="font-size:16px;line-height:1.55">15322 Marek Ln<br>Guy, Texas, USA 77444</div>
+      </div>
+      <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:40px 32px;text-align:center">
+        <div style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:12px">Email</div>
+        <a href="mailto:Sales@rubyfoodhub.com" style="font-size:16px;font-weight:700;color:oklch(22% 0.02 40)" style-hover="color:oklch(45% 0.17 20)">Sales@rubyfoodhub.com</a>
+      </div>
+      <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:40px 32px;text-align:center">
+        <div style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:12px">Phone</div>
+        <a href="tel:+16604607261" style="font-size:16px;font-weight:700;color:oklch(22% 0.02 40)" style-hover="color:oklch(45% 0.17 20)">+1 (660) 460-7261</a>
+      </div>
+    </div>
+  </section>
+
+  <dc-import name="Site Footer" hint-size="100%,360px"></dc-import>
+
+</div>
+
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:oklch(45% 0.17 20);text-decoration:none}
+  a:hover{color:oklch(52% 0.19 20)}
+  *{box-sizing:border-box}
+</style>
+</helmet>
+
+<div style="background:oklch(97% 0.015 60);color:oklch(22% 0.02 40)">
+
+  <dc-import name="Site Nav" active="cart" hint-size="100%,76px"></dc-import>
+
+  <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+    <section style="padding:64px 48px 120px;max-width:1080px;margin:0 auto;display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1.3;min-width:360px">
+        <h1 style="font-family:'Domine',serif;font-weight:700;font-size:34px;margin:0 0 32px">Checkout</h1>
+
+        <div style="margin-bottom:28px">
+          <label style="display:block;font-size:12.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:10px">Contact &amp; Delivery Details</label>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <input type="text" value="{{ fullName }}" onChange="{{ onFullNameChange }}" placeholder="Full Name" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <input type="text" value="{{ address }}" onChange="{{ onAddressChange }}" placeholder="Street Address, City, State" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <input type="email" value="{{ email }}" onChange="{{ onEmailChange }}" placeholder="Email Address" style="flex:1;min-width:200px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+              <input type="tel" value="{{ phone }}" onChange="{{ onPhoneChange }}" placeholder="Phone Number" style="flex:1;min-width:200px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:28px">
+          <label style="display:block;font-size:12.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:8px">Delivery Zip Code</label>
+          <input type="text" value="{{ zip }}" onChange="{{ onZipChange }}" placeholder="e.g. 77002" style="width:100%;max-width:280px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+          <div style="font-size:12.5px;color:rgba(34,30,26,.5);margin-top:6px">{{ tierNote }}</div>
+        </div>
+
+        <div style="margin-bottom:28px">
+          <label style="display:block;font-size:12.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:10px">Add a Tip</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+            <sc-for list="{{ tipPresets }}" as="t" hint-placeholder-count="3">
+              <button type="button" onClick="{{ t.select }}" style="flex:none;padding:10px 18px;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer;background:{{ t.bg }};color:{{ t.color }};border:1.5px solid oklch(45% 0.17 20)">{{ t.label }}</button>
+            </sc-for>
+            <button type="button" onClick="{{ selectNoTip }}" style="flex:none;padding:10px 18px;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer;background:{{ noTipBg }};color:{{ noTipColor }};border:1.5px solid rgba(34,30,26,.25)">No Tip</button>
+          </div>
+          <input type="number" min="0" step="0.01" value="{{ customTip }}" onChange="{{ onCustomTipChange }}" placeholder="Custom amount ($)" style="width:100%;max-width:220px;padding:10px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14px"/>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <label style="display:block;font-size:12.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:10px">Order Notes / Delivery Instructions</label>
+          <textarea value="{{ notes }}" onChange="{{ onNotesChange }}" placeholder="Gate code, preferred drop-off spot, etc." rows="4" style="width:100%;padding:12px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px;font-family:'Manrope',sans-serif;resize:vertical"></textarea>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:300px;background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(34,30,26,.07);padding:32px;position:sticky;top:96px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:16px">Order Summary</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+          <sc-for list="{{ items }}" as="item" hint-placeholder-count="2">
+            <div style="display:flex;justify-content:space-between;font-size:14px">
+              <span>{{ item.productName }} × {{ item.variantLabel }} — Qty: {{ item.qty }}</span>
+              <span style="flex:none;margin-left:12px">${{ item.lineTotalDisplay }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:14.5px;padding-top:16px;border-top:1px solid rgba(34,30,26,.1)">
+          <div style="display:flex;justify-content:space-between"><span>Subtotal</span><span>${{ subtotalDisplay }}</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Shipping</span><span>{{ shippingDisplay }}</span></div>
+          <div style="display:flex;justify-content:space-between;color:rgba(34,30,26,.55)"><span>Tax</span><span>Calculated at payment</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Tip</span><span>${{ tipDisplay }}</span></div>
+          <div style="display:flex;justify-content:space-between;font-weight:800;font-size:17px;padding-top:10px;border-top:1px solid rgba(34,30,26,.1)"><span>Total</span><span>${{ totalDisplay }}</span></div>
+        </div>
+        <button type="button" onClick="{{ placeOrder }}" style="width:100%;margin-top:22px;background:oklch(45% 0.17 20);color:#fff;padding:15px 0;border-radius:100px;font-size:15px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Place Order</button>
+        <a href="Cart.dc.html" style="display:block;text-align:center;margin-top:14px;font-size:13.5px;color:rgba(34,30,26,.55)">Back to Cart</a>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{ showConfirmation }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:120px 48px;max-width:600px;margin:0 auto;text-align:center">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:20px">Order Placed</div>
+      <h1 style="font-family:'Domine',serif;font-weight:700;font-size:36px;margin:0 0 12px">Thank You!</h1>
+      <div style="font-family:ui-monospace,monospace;font-size:15px;color:rgba(34,30,26,.55);margin:0 0 24px">Order #{{ orderNumber }}</div>
+      <p style="font-size:16px;line-height:1.6;color:rgba(34,30,26,.75);margin:0 0 32px">Your order total was <strong>${{ finalTotalDisplay }}</strong>. A confirmation would normally be emailed to {{ finalEmail }} once payment is connected.</p>
+      <a href="Products.dc.html" style="display:inline-block;background:oklch(45% 0.17 20);color:#fff;padding:14px 28px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Continue Shopping</a>
+    </section>
+  </sc-if>
+
+  <dc-import name="Site Footer" hint-size="100%,360px"></dc-import>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1200}}">
+class Component extends DCLogic {
+  state = { cart: null, zip: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', address: '', email: '', phone: '', placed: false, finalTotal: 0, orderNumber: '', finalEmail: '' };
+
+  async componentDidMount() {
+    const lib = await import('./cart-lib.js');
+    this._lib = lib;
+    const params = new URLSearchParams(window.location.search);
+    const zip = params.get('zip') || '';
+    this.setState({ cart: lib.getCart(), zip });
+  }
+
+  selectTipPercent(pct) { this.setState({ tipMode: 'percent', tipPercent: pct, customTip: '' }); }
+  selectNoTip() { this.setState({ tipMode: 'none', tipPercent: 0, customTip: '' }); }
+
+  computeSubtotal(cart) { return cart.reduce((s, i) => s + i.unitPrice * i.qty, 0); }
+
+  computeTip(subtotal) {
+    if (this.state.customTip !== '') return parseFloat(this.state.customTip) || 0;
+    if (this.state.tipMode === 'percent') return subtotal * (this.state.tipPercent / 100);
+    return 0;
+  }
+
+  placeOrder() {
+    const lib = this._lib;
+    const cart = this.state.cart || [];
+    const subtotal = this.computeSubtotal(cart);
+    const tier = lib.getTierForZip(this.state.zip);
+    const shippingFee = this.state.zip ? lib.computeShippingFee(tier, subtotal) : 0;
+    // TODO: replace this placeholder with a real Stripe Tax calculation
+    // (based on the customer's shipping state) at payment integration time.
+    const tax = 0;
+    const tip = this.computeTip(subtotal);
+    const total = subtotal + shippingFee + tax + tip;
+
+    const orderNumber = lib.getNextOrderNumber();
+    const order = {
+      orderNumber,
+      items: cart,
+      subtotal, shippingTier: tier, shippingFee, tax, tip,
+      notes: this.state.notes, zip: this.state.zip, total,
+      fullName: this.state.fullName, address: this.state.address,
+      email: this.state.email, phone: this.state.phone,
+      placedAt: new Date().toISOString()
+    };
+    localStorage.setItem('rubyfoodhub_last_order', JSON.stringify(order));
+    lib.saveCart([]);
+    this.setState({ placed: true, finalTotal: total, orderNumber, finalEmail: this.state.email || 'your email' });
+  }
+
+  renderVals() {
+    const lib = this._lib;
+    const cart = this.state.cart || [];
+    const subtotal = this.computeSubtotal(cart);
+    const tier = lib ? lib.getTierForZip(this.state.zip) : '50+';
+    const shippingFee = (lib && this.state.zip) ? lib.computeShippingFee(tier, subtotal) : 0;
+    const tip = this.computeTip(subtotal);
+    const total = subtotal + shippingFee + tip;
+
+    const tierNotes = {
+      '0-20': subtotal >= 100 ? 'Local delivery (0–20mi): free over $100 subtotal.' : 'Local delivery (0–20mi): $10 flat fee under $100 subtotal.',
+      '20-50': 'Regional delivery (20–50mi): $50 flat fee.',
+      '50+': 'Extended delivery (50mi+): $75 flat fee.'
+    };
+
+    const presets = [10, 15, 20].map((pct) => ({
+      label: pct + '%',
+      select: () => this.selectTipPercent(pct),
+      bg: this.state.tipMode === 'percent' && this.state.tipPercent === pct && this.state.customTip === '' ? 'oklch(45% 0.17 20)' : 'transparent',
+      color: this.state.tipMode === 'percent' && this.state.tipPercent === pct && this.state.customTip === '' ? '#fff' : 'oklch(45% 0.17 20)'
+    }));
+
+    return {
+      showForm: !this.state.placed,
+      showConfirmation: this.state.placed,
+      items: cart.map((item) => ({ ...item, lineTotalDisplay: (item.unitPrice * item.qty).toFixed(2) })),
+      fullName: this.state.fullName,
+      onFullNameChange: (e) => this.setState({ fullName: e.target.value }),
+      address: this.state.address,
+      onAddressChange: (e) => this.setState({ address: e.target.value }),
+      email: this.state.email,
+      onEmailChange: (e) => this.setState({ email: e.target.value }),
+      phone: this.state.phone,
+      onPhoneChange: (e) => this.setState({ phone: e.target.value }),
+      zip: this.state.zip,
+      onZipChange: (e) => this.setState({ zip: e.target.value }),
+      tierNote: this.state.zip ? tierNotes[tier] : 'Enter your zip code to calculate shipping.',
+      tipPresets: presets,
+      selectNoTip: () => this.selectNoTip(),
+      noTipBg: this.state.tipMode === 'none' ? 'rgba(34,30,26,.08)' : 'transparent',
+      noTipColor: 'oklch(22% 0.02 40)',
+      customTip: this.state.customTip,
+      onCustomTipChange: (e) => this.setState({ customTip: e.target.value }),
+      notes: this.state.notes,
+      onNotesChange: (e) => this.setState({ notes: e.target.value }),
+      subtotalDisplay: subtotal.toFixed(2),
+      shippingDisplay: this.state.zip ? '$' + shippingFee.toFixed(2) : 'Enter zip',
+      tipDisplay: tip.toFixed(2),
+      totalDisplay: total.toFixed(2),
+      finalTotalDisplay: this.state.finalTotal.toFixed(2),
+      orderNumber: this.state.orderNumber,
+      finalEmail: this.state.finalEmail,
+      placeOrder: () => this.placeOrder()
+    };
+  }
+}
+</script>
+</body>
+</html>

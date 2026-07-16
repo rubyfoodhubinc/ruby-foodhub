@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-print-defaults>
+@media print {
+  @page { margin: 0.5in; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  figure, table, pre, blockquote, img, svg, tr, [class~="card" i] { break-inside: avoid; }
+  img, svg { max-width: 100%; }
+  p { orphans: 3; widows: 3; }
+}
+</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:oklch(45% 0.17 20);text-decoration:none}
+  a:hover{color:oklch(52% 0.19 20)}
+  *{box-sizing:border-box}
+</style>
+</helmet>
+
+
+<div style="background:oklch(97% 0.015 60);color:oklch(22% 0.02 40)">
+
+  <nav style="position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:16px 48px;background:oklch(97% 0.015 60 / 0.92);backdrop-filter:blur(8px);border-bottom:1px solid rgba(34,30,26,.08)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:34px;height:34px;border-radius:50%;background:oklch(45% 0.17 20);display:flex;align-items:center;justify-content:center">
+        <span style="font-family:'Domine',serif;font-weight:700;font-size:17px;color:#fff">R</span>
+      </div>
+      <span style="font-family:'Domine',serif;font-weight:700;font-size:20px;letter-spacing:-0.2px">Ruby FoodHub</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:36px">
+      <sc-for list="{{ navLinks }}" as="link" hint-placeholder-count="4">
+        <a href="{{ link.href }}" style="font-size:15px;font-weight:600;color:oklch(22% 0.02 40)" style-hover="color:oklch(45% 0.17 20)">{{ link.label }}</a>
+      </sc-for>
+      <a href="#products" style="background:oklch(45% 0.17 20);color:#fff;padding:11px 24px;border-radius:100px;font-size:14px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Shop Now</a>
+    </div>
+  </nav>
+
+  <section style="display:flex;align-items:center;gap:64px;padding:96px 48px 72px;max-width:1360px;margin:0 auto;flex-direction:{{ heroDirection }}">
+    <div style="flex:1;min-width:320px;max-width:560px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:18px">Premium Beverages</div>
+      <h1 style="font-family:'Domine',serif;font-weight:700;font-size:56px;line-height:1.08;letter-spacing:-0.5px;margin:0 0 24px">Real Ingredients. Bold Refreshment.</h1>
+      <p style="font-size:17px;line-height:1.65;color:rgba(34,30,26,.78);margin:0 0 16px">At Ruby FoodHub, we believe every great drink begins with real ingredients. Our beverages are carefully crafted using authentic recipes, premium ingredients, and uncompromising quality standards to create refreshing experiences you'll enjoy every day.</p>
+      <p style="font-size:17px;line-height:1.65;color:rgba(34,30,26,.78);margin:0 0 32px">Whether it's the bold warmth of fresh ginger or the vibrant taste of hibiscus, every bottle reflects our passion for authentic flavor and exceptional quality.</p>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px">
+        <a href="#products" style="background:oklch(45% 0.17 20);color:#fff;padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Explore Our Products</a>
+        <a href="#wholesale" style="border:1.5px solid rgba(34,30,26,.25);color:oklch(22% 0.02 40);padding:14.5px 28px;border-radius:100px;font-size:15px;font-weight:700" style-hover="border-color:oklch(22% 0.02 40)">Become a Partner</a>
+      </div>
+      <div style="font-family:'Domine',serif;font-style:italic;font-size:20px;color:oklch(42% 0.17 340)">"Drink Real. Feel Real."</div>
+    </div>
+    <div style="flex:1;min-width:320px;position:relative">
+      <div style="position:absolute;top:28px;left:{{ heroBlockSide }};width:88%;height:92%;background:oklch(45% 0.17 20);border-radius:28px;z-index:0"></div>
+      <div style="position:relative;width:88%;aspect-ratio:4/5;margin:0 auto;border-radius:28px;overflow:hidden;box-shadow:0 24px 48px rgba(34,30,26,.18);z-index:1">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="hero-bottle" shape="rect" placeholder="Ginger Refresher + Sorrel Hibiscus Punch — hero bottle shot" hint-size="100%,100%" style="width:100%;height:100%"></x-import>
+      </div>
+    </div>
+  </section>
+
+  <div style="height:6px;width:100%;background:repeating-linear-gradient(90deg, oklch(45% 0.17 20) 0 44px, oklch(74% 0.13 75) 44px 88px, oklch(42% 0.17 340) 88px 132px, oklch(22% 0.02 40) 132px 176px)"></div>
+
+  <section id="story" style="background:oklch(45% 0.17 20);padding:96px 48px;text-align:center;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 2px, transparent 2px 26px);pointer-events:none"></div>
+    <div style="position:relative;max-width:720px;margin:0 auto">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(74% 0.13 75);margin-bottom:18px">Welcome to Ruby FoodHub</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:40px;line-height:1.15;color:#fff;margin:0 0 24px">Refreshing Moments. Naturally Crafted.</h2>
+      <p style="font-size:17px;line-height:1.7;color:rgba(255,255,255,.86);margin:0 0 16px">Ruby FoodHub is a premium beverage company committed to creating drinks that people genuinely love. Our recipes combine traditional inspiration with modern production standards, resulting in beverages that are vibrant, refreshing, and consistently delicious.</p>
+      <p style="font-size:17px;line-height:1.7;color:rgba(255,255,255,.86);margin:0">From neighborhood retailers to large distributors, we proudly serve customers who value quality, authenticity, and unforgettable flavor.</p>
+    </div>
+  </section>
+
+  <section id="products" style="padding:104px 48px;max-width:1280px;margin:0 auto">
+    <div style="text-align:center;max-width:640px;margin:0 auto 64px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:16px">Our Products</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:42px;line-height:1.15;margin:0">Crafted for Every Moment</h2>
+    </div>
+    <div style="display:flex;gap:36px;flex-wrap:wrap">
+
+      <div style="flex:1;min-width:380px;border-radius:22px;overflow:hidden;background:{{ ginger.cardBg }};box-shadow:0 12px 32px rgba(34,30,26,.08)">
+        <div style="width:100%;aspect-ratio:16/11">
+          <image-slot id="product-ginger" shape="rect" placeholder="Ruby Ginger Refresher — bottle shot"></image-slot>
+        </div>
+        <div style="padding:36px">
+          <span style="display:inline-block;white-space:nowrap;background:{{ ginger.tagBg }};color:{{ ginger.tagText }};font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:100px;margin-bottom:18px">Naturally Energizing</span>
+          <h3 style="font-family:'Domine',serif;font-weight:700;font-size:27px;margin:0 0 12px;color:{{ ginger.titleColor }}">Ruby Ginger Refresher</h3>
+          <p style="font-size:15.5px;line-height:1.65;color:{{ ginger.bodyColor }};margin:0 0 22px">Experience the vibrant combination of real ginger, lemon, and pineapple in every refreshing bottle. A bold flavor with a perfectly balanced finish that refreshes, awakens, and satisfies.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin-bottom:26px">
+            <sc-for list="{{ gingerHighlights }}" as="h" hint-placeholder-count="5">
+              <span style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:7px 13px;border-radius:100px;background:{{ ginger.chipBg }};border:1px solid {{ ginger.chipBorder }};color:{{ ginger.chipText }}">{{ h }}</span>
+            </sc-for>
+          </div>
+          <a href="#" style="font-weight:800;font-size:15px;color:{{ ginger.titleColor }}">Shop Ginger Refresher &nbsp;→</a>
+        </div>
+      </div>
+
+      <div style="flex:1;min-width:380px;border-radius:22px;overflow:hidden;background:{{ hibiscus.cardBg }};box-shadow:0 12px 32px rgba(34,30,26,.08)">
+        <div style="width:100%;aspect-ratio:16/11">
+          <image-slot id="product-hibiscus" shape="rect" placeholder="Ruby Sorrel Hibiscus Punch — bottle shot"></image-slot>
+        </div>
+        <div style="padding:36px">
+          <span style="display:inline-block;white-space:nowrap;background:{{ hibiscus.tagBg }};color:{{ hibiscus.tagText }};font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:100px;margin-bottom:18px">Bold. Refreshing. Authentic.</span>
+          <h3 style="font-family:'Domine',serif;font-weight:700;font-size:27px;margin:0 0 12px;color:{{ hibiscus.titleColor }}">Ruby Sorrel Hibiscus Punch</h3>
+          <p style="font-size:15.5px;line-height:1.65;color:{{ hibiscus.bodyColor }};margin:0 0 22px">Inspired by generations of traditional recipes, this punch delivers rich hibiscus flavor with a smooth, refreshing finish — deep color, vibrant taste, perfect for celebrations or everyday refreshment.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;margin-bottom:26px">
+            <sc-for list="{{ hibiscusHighlights }}" as="h" hint-placeholder-count="5">
+              <span style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:7px 13px;border-radius:100px;background:{{ hibiscus.chipBg }};border:1px solid {{ hibiscus.chipBorder }};color:{{ hibiscus.chipText }}">{{ h }}</span>
+            </sc-for>
+          </div>
+          <a href="#" style="font-weight:800;font-size:15px;color:{{ hibiscus.titleColor }}">Shop Sorrel Hibiscus Punch &nbsp;→</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="background:oklch(94% 0.018 60);padding:104px 48px">
+    <div style="text-align:center;max-width:640px;margin:0 auto 56px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:16px">Why Ruby FoodHub?</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:42px;line-height:1.15;margin:0 0 20px">Crafted with Purpose</h2>
+      <p style="font-size:16px;line-height:1.65;color:rgba(34,30,26,.7);margin:0">Every Ruby FoodHub beverage reflects our commitment to quality and authenticity. We don't believe in shortcuts.</p>
+    </div>
+    <div style="max-width:1080px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(34,30,26,.1);border:1px solid rgba(34,30,26,.1);border-radius:16px;overflow:hidden">
+      <sc-for list="{{ valueItems }}" as="v" hint-placeholder-count="6">
+        <div style="background:oklch(94% 0.018 60);padding:38px 32px">
+          <div style="font-family:'Domine',serif;font-weight:700;font-size:28px;color:oklch(45% 0.17 20);margin-bottom:14px">{{ v.n }}</div>
+          <div style="font-weight:800;font-size:16.5px;margin-bottom:8px">{{ v.title }}</div>
+          <div style="font-size:14px;line-height:1.55;color:rgba(34,30,26,.65)">{{ v.desc }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="background:oklch(16% 0.015 40);padding:100px 48px;text-align:center">
+    <div style="max-width:680px;margin:0 auto">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(74% 0.13 75);margin-bottom:20px">Our Promise</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:38px;line-height:1.25;color:#fff;margin:0 0 24px">We are more than a beverage company.</h2>
+      <p style="font-size:16.5px;line-height:1.7;color:rgba(255,255,255,.75);margin:0 0 32px">We are passionate about creating products that inspire moments of refreshment, connection, and enjoyment. Every bottle carries our promise to deliver exceptional flavor, dependable quality, and an experience worth sharing.</p>
+      <div style="width:48px;height:2px;background:oklch(74% 0.13 75);margin:0 auto 28px"></div>
+      <div style="font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:oklch(74% 0.13 75)">Ruby FoodHub — Premium Beverages. Real Ingredients. Exceptional Taste.</div>
+    </div>
+  </section>
+
+  <sc-if value="{{ wholesaleVisible }}" hint-placeholder-val="{{ true }}">
+  <section id="wholesale" style="padding:104px 48px;max-width:1280px;margin:0 auto;display:flex;gap:64px;flex-wrap:wrap;align-items:center">
+    <div style="flex:1;min-width:380px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:16px">Wholesale &amp; Distribution</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:38px;line-height:1.18;margin:0 0 22px">Grow With Ruby FoodHub</h2>
+      <p style="font-size:16px;line-height:1.65;color:rgba(34,30,26,.75);margin:0 0 24px">Ruby FoodHub proudly partners with retailers, restaurants, and distributors across the country. Whether you're serving one neighborhood or an entire region, we're committed to helping you offer premium beverages your customers will love.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:32px">
+        <sc-for list="{{ wholesalePartners }}" as="p" hint-placeholder-count="7">
+          <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18);color:oklch(22% 0.02 40)">{{ p }}</span>
+        </sc-for>
+      </div>
+      <a href="#contact" style="background:oklch(45% 0.17 20);color:#fff;padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700;display:inline-block" style-hover="background:oklch(52% 0.19 20)">Become a Distribution Partner</a>
+    </div>
+    <div style="flex:1;min-width:320px">
+      <div style="width:100%;aspect-ratio:4/5;border-radius:22px;overflow:hidden;box-shadow:0 20px 44px rgba(34,30,26,.14)">
+        <image-slot id="wholesale-photo" shape="rect" placeholder="Retail shelf / distribution photo"></image-slot>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <section style="background:oklch(45% 0.17 20);padding:88px 48px;text-align:center">
+    <div style="max-width:620px;margin:0 auto">
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:36px;line-height:1.2;color:#fff;margin:0 0 20px">Ready to Experience Ruby FoodHub?</h2>
+      <p style="font-size:16px;line-height:1.65;color:rgba(255,255,255,.85);margin:0 0 32px">Discover beverages crafted with authentic ingredients and bold flavors — whether you're shopping for yourself or looking to partner with us.</p>
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+        <a href="#products" style="background:#fff;color:oklch(45% 0.17 20);padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(96% 0.01 60)">Explore Our Products</a>
+        <a href="#wholesale" style="border:1.5px solid rgba(255,255,255,.55);color:#fff;padding:14.5px 28px;border-radius:100px;font-size:15px;font-weight:700" style-hover="border-color:#fff">Become a Partner</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" style="padding:96px 48px;max-width:1080px;margin:0 auto">
+    <div style="text-align:center;max-width:600px;margin:0 auto 56px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:16px">Contact Us</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:42px;line-height:1.15;margin:0">Get in Touch</h2>
+    </div>
+    <div style="display:flex;gap:1px;flex-wrap:wrap;background:rgba(34,30,26,.1);border:1px solid rgba(34,30,26,.1);border-radius:16px;overflow:hidden">
+      <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:36px 32px;text-align:center">
+        <div style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:12px">Address</div>
+        <div style="font-size:16px;line-height:1.55">15322 Marek Ln<br>Guy, Texas, USA 77444</div>
+      </div>
+      <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:36px 32px;text-align:center">
+        <div style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:12px">Email</div>
+        <a href="mailto:Sales@rubyfoodhub.com" style="font-size:16px;font-weight:700;color:oklch(22% 0.02 40)" style-hover="color:oklch(45% 0.17 20)">Sales@rubyfoodhub.com</a>
+      </div>
+      <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:36px 32px;text-align:center">
+        <div style="font-size:12.5px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:12px">Phone</div>
+        <a href="tel:+16604607261" style="font-size:16px;font-weight:700;color:oklch(22% 0.02 40)" style-hover="color:oklch(45% 0.17 20)">+1 (660) 460-7261</a>
+      </div>
+    </div>
+  </section>
+
+  <footer style="background:oklch(16% 0.015 40);color:rgba(255,255,255,.85);padding:72px 48px 32px">
+    <div style="max-width:1280px;margin:0 auto;display:flex;gap:56px;flex-wrap:wrap;padding-bottom:48px;border-bottom:1px solid rgba(255,255,255,.1)">
+      <div style="flex:2;min-width:280px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="width:30px;height:30px;border-radius:50%;background:oklch(45% 0.17 20);display:flex;align-items:center;justify-content:center">
+            <span style="font-family:'Domine',serif;font-weight:700;font-size:15px;color:#fff">R</span>
+          </div>
+          <span style="font-family:'Domine',serif;font-weight:700;font-size:19px;color:#fff">Ruby FoodHub</span>
+        </div>
+        <p style="font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.6);max-width:320px;margin:0 0 10px">Ruby FoodHub Inc. — premium beverages crafted from authentic ingredients.</p>
+        <div style="font-family:'Domine',serif;font-style:italic;font-size:15px;color:oklch(74% 0.13 75)">"Drink Real. Feel Real."</div>
+      </div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Company</div>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <sc-for list="{{ footerCompany }}" as="l" hint-placeholder-count="3">
+            <a href="{{ l.href }}" style="font-size:14.5px;color:rgba(255,255,255,.8)" style-hover="color:#fff">{{ l.label }}</a>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Products</div>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <sc-for list="{{ footerProducts }}" as="l" hint-placeholder-count="2">
+            <a href="{{ l.href }}" style="font-size:14.5px;color:rgba(255,255,255,.8)" style-hover="color:#fff">{{ l.label }}</a>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1.4;min-width:240px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Stay Connected</div>
+        <p style="font-size:14px;line-height:1.55;color:rgba(255,255,255,.6);margin:0 0 14px">Product updates, new flavors, and retail news.</p>
+        <div style="display:flex;gap:8px;margin-bottom:18px">
+          <input type="email" placeholder="Email address" style="flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 12px;color:#fff;font-size:13.5px">
+          <button style="background:oklch(45% 0.17 20);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Sign Up</button>
+        </div>
+        <div style="display:flex;gap:16px">
+          <sc-for list="{{ footerSocial }}" as="s" hint-placeholder-count="3">
+            <a href="{{ s.href }}" style="font-size:14px;color:rgba(255,255,255,.7)" style-hover="color:#fff">{{ s.label }}</a>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1280px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:24px;font-size:13px;color:rgba(255,255,255,.45)">
+      <span>© 2026 Ruby FoodHub Inc.</span>
+      <div style="display:flex;gap:20px">
+        <a href="#" style="color:rgba(255,255,255,.45)" style-hover="color:#fff">Privacy Policy</a>
+        <a href="#" style="color:rgba(255,255,255,.45)" style-hover="color:#fff">Terms</a>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: {&quot;width&quot;: 1440},
+  &quot;heroImageSide&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;right&quot;, &quot;options&quot;: [&quot;left&quot;, &quot;right&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Layout&quot;},
+  &quot;cardStyle&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;minimal&quot;, &quot;options&quot;: [&quot;minimal&quot;, &quot;bold&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Products&quot;},
+  &quot;showWholesaleSection&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Sections&quot;}
+}">
+class Component extends DCLogic {
+  renderVals() {
+    const CHARCOAL = 'oklch(22% 0.02 40)';
+    const GINGER_ACCENT = 'oklch(50% 0.16 55)';
+    const GINGER_SOFT = 'oklch(94% 0.035 55)';
+    const HIBISCUS_ACCENT = 'oklch(42% 0.17 340)';
+    const HIBISCUS_SOFT = 'oklch(93% 0.03 340)';
+
+    const bold = (this.props.cardStyle || 'minimal') === 'bold';
+
+    const productStyle = (accent, soft) => bold ? {
+      cardBg: accent,
+      titleColor: '#fff',
+      bodyColor: 'rgba(255,255,255,.85)',
+      chipBg: 'rgba(255,255,255,.15)',
+      chipBorder: 'rgba(255,255,255,.4)',
+      chipText: '#fff',
+      tagBg: 'rgba(255,255,255,.92)',
+      tagText: accent
+    } : {
+      cardBg: '#fff',
+      titleColor: CHARCOAL,
+      bodyColor: 'rgba(34,30,26,.72)',
+      chipBg: 'transparent',
+      chipBorder: accent,
+      chipText: accent,
+      tagBg: soft,
+      tagText: accent
+    };
+
+    const heroImageSide = this.props.heroImageSide || 'right';
+
+    return {
+      navLinks: [
+        { label: 'Our Story', href: '#story' },
+        { label: 'Products', href: '#products' },
+        { label: 'Wholesale', href: '#wholesale' },
+        { label: 'Contact', href: '#contact' }
+      ],
+      heroDirection: heroImageSide === 'left' ? 'row-reverse' : 'row',
+      heroBlockSide: heroImageSide === 'left' ? 'auto' : '-28px',
+      wholesaleVisible: this.props.showWholesaleSection !== false,
+      ginger: productStyle(GINGER_ACCENT, GINGER_SOFT),
+      hibiscus: productStyle(HIBISCUS_ACCENT, HIBISCUS_SOFT),
+      gingerHighlights: ['Real Ginger', 'Lemon', 'Pineapple', 'Naturally refreshing flavor', 'Best served chilled'],
+      hibiscusHighlights: ['Authentic Hibiscus (Sorrel)', 'Rich natural flavor', 'Premium quality ingredients', 'Refreshing finish', 'Enjoy chilled'],
+      valueItems: [
+        { n: '01', title: 'Premium Ingredients', desc: 'Sourced for flavor, not shortcuts.' },
+        { n: '02', title: 'Authentic Recipes', desc: 'Rooted in tradition, made for today.' },
+        { n: '03', title: 'Consistent Quality', desc: 'Every bottle, every batch, every time.' },
+        { n: '04', title: 'Exceptional Taste', desc: 'Bold, memorable, refreshing.' },
+        { n: '05', title: 'Reliable Manufacturing', desc: 'Distributor-ready, food-safety standards.' },
+        { n: '06', title: 'Customer Satisfaction', desc: 'Drinks people reach for again.' }
+      ],
+      wholesalePartners: ['Grocery Stores', 'Supermarkets', 'Restaurants', 'Cafés', 'Convenience Stores', 'Food Service Companies', 'Wholesale Distributors'],
+      footerCompany: [
+        { label: 'Our Story', href: '#story' },
+        { label: 'Wholesale', href: '#wholesale' },
+        { label: 'Contact', href: '#contact' }
+      ],
+      footerProducts: [
+        { label: 'Ginger Refresher', href: '#products' },
+        { label: 'Sorrel Hibiscus Punch', href: '#products' }
+      ],
+      footerSocial: [
+        { label: 'Instagram', href: '#' },
+        { label: 'Facebook', href: '#' },
+        { label: 'TikTok', href: '#' }
+      ]
+    };
+  }
+}
+</script>
+<script>
+(async () => {
+  if (!document.title || !document.title.trim()) document.title = "Ruby FoodHub Landing";
+  // rAF raced with a short timeout: inside a cross-origin iframe (PrintMode),
+  // rAF can be throttled or paused even while the tab is focused, which would
+  // hang the scroll loop and never reach print(). Same pattern as
+  // buildExportSettleScript (export/shared.ts).
+  var raf = function () {
+    return Promise.race([
+      new Promise(function (r) { requestAnimationFrame(r); }),
+      new Promise(function (r) { setTimeout(r, 50); }),
+    ]);
+  };
+  var t0 = performance.now();
+  var mark = function (phase) {
+    var ms = Math.round(performance.now() - t0);
+    console.info('[autoprint]', phase, ms + 'ms');
+    try { parent.postMessage({ __omelette_autoprint: { phase: phase, ms: ms } }, '*'); } catch (e) {}
+  };
+  mark('start');
+  // Prepend so page-supplied @page / break rules (deck-stage's margin:0,
+  // author CSS) keep source-order precedence over the baseline.
+  const baseCss = document.createElement('style');
+  baseCss.textContent = "@media print {\n  figure, table { break-inside: avoid; }\n  *, *::before, *::after {\n    print-color-adjust: exact; -webkit-print-color-adjust: exact;\n    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;\n    animation-delay: -99s !important; animation-duration: .001s !important;\n    animation-iteration-count: 1 !important; animation-fill-mode: both !important;\n    animation-play-state: running !important; transition-duration: 0s !important;\n  }\n}";
+  document.head.prepend(baseCss);
+  if (document.readyState === 'loading') {
+    await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+  let ds = document.querySelector('deck-stage');
+  // whenDefined never resolves when nothing registers the element, so only
+  // await it when a <deck-stage> tag exists (and race a timeout regardless).
+  if (ds && !customElements.get('deck-stage')) {
+    try {
+      await Promise.race([
+        customElements.whenDefined('deck-stage'),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    ds = document.querySelector('deck-stage');
+  }
+  // dc-runtime assigns window.DCLogic at init and mounts into #dc-root on
+  // DOMContentLoaded; settle on that subtree so React has rendered before
+  // print(). Non-DC pages fall through to weighing body.
+  const isDc = !ds && 'DCLogic' in window;
+  const settleRoot = ds || (isDc ? document.getElementById('dc-root') : null) || document.body;
+  if (settleRoot) {
+    // Weigh only content children — skip script/style/template so inline
+    // Babel/CSS doesn't register as stable "content" before the framework
+    // has mounted anything.
+    const MEDIA = 'img,svg,canvas,video,picture,iframe,embed,object';
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of settleRoot.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll(MEDIA).length + (c.matches(MEDIA) ? 1 : 0);
+      }
+      return text + media * 100;
+    };
+    // "Non-zero and stable" alone is not sufficient to mean rendered: generic
+    // body can carry a static shell while async main content is pending, and
+    // #dc-root can carry the root DC's static text while child refs are still
+    // .sc-placeholder boxes. Gate generic on readyState 'complete', and never
+    // accept stability while a dc-runtime placeholder is present.
+    const isGeneric = settleRoot === document.body;
+    // A placeholder whose fetch failed (.sc-placeholder-error inside) keeps
+    // .sc-placeholder forever — don't wait on it. JS loop, not :has(), so an
+    // engine without :has() support can't throw out of the while and skip
+    // print() entirely.
+    var pendingPlaceholders = function () {
+      var all = settleRoot.querySelectorAll('.sc-placeholder'), n = 0;
+      for (var i = 0; i < all.length; i++)
+        if (!all[i].querySelector('.sc-placeholder-error')) n++;
+      return n;
+    };
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      const ready =
+        (!isGeneric || document.readyState === 'complete') &&
+        pendingPlaceholders() === 0;
+      if (n > 0 && n === last && ready) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  mark('settle-done' + (settleRoot ? ' (errs=' + settleRoot.querySelectorAll('.sc-placeholder-error').length + ' pending=' + pendingPlaceholders() + ')' : ''));
+  // Project support.js may predate runtime default-seeding; push via bridge.
+  if (isDc && window.__dcSetProps && window.__dcRootName) {
+    try {
+      const dpEl = document.querySelector('script[data-dc-script]');
+      const meta = JSON.parse((dpEl && dpEl.getAttribute('data-props')) || '{}');
+      const bag = {};
+      for (const k in meta)
+        if (k[0] !== '$' && meta[k] && meta[k].default !== undefined)
+          bag[k] = meta[k].default;
+      if (Object.keys(bag).length) {
+        window.__dcSetProps(window.__dcRootName(), bag);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    } catch (e) {}
+  }
+  // Reveal content gated on scroll or visibility before printing. Lazy <img>,
+  // IntersectionObserver fade-ins, and collapsed <details> don't render while
+  // off-screen, so a long page would print with them blank or closed. Open
+  // every <details>, force native-lazy images eager, and scroll the document
+  // through its full height to trip lazy-load + IO; then wait (bounded) for the
+  // newly-triggered images. Inert for deck-stage (slides aren't scroll-gated).
+  try {
+    for (const d of document.querySelectorAll('details')) d.open = true;
+    for (const img of document.querySelectorAll('img[loading="lazy"]'))
+      img.loading = 'eager';
+    const scroller = document.scrollingElement || document.documentElement;
+    const full = Math.max(scroller.scrollHeight, document.body.scrollHeight);
+    const step = window.innerHeight || 800;
+    var scrollDeadline = Date.now() + 4000;
+    for (let y = 0; y <= full && Date.now() < scrollDeadline; y += step) {
+      window.scrollTo(0, y);
+      await raf();
+    }
+    window.scrollTo(0, 0);
+    await Promise.race([
+      Promise.all(
+        [...document.images].map((img) =>
+          img.complete
+            ? null
+            : new Promise((res) => {
+                img.addEventListener('load', res, { once: true });
+                img.addEventListener('error', res, { once: true });
+              })
+        )
+      ),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+  } catch (e) {}
+  mark('scroll-done');
+  try { await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 3000))]); } catch (e) {}
+  mark('fonts-done');
+  // Jump every animation to its end state so print() never captures a slide
+  // mid-entrance. Ordering matters: the 0s-transition style must be live
+  // BEFORE data-deck-active is set so attribute-keyed transitions don't
+  // start a (now-0s) run from the pre-active base.
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{animation-delay:-99s !important;animation-duration:.001s !important;animation-iteration-count:1 !important;animation-fill-mode:both !important;animation-play-state:running !important;transition-duration:0s !important}';
+  document.head.appendChild(st);
+  for (const d of document.querySelectorAll('deck-stage')) {
+    for (const c of d.children) {
+      const t = c.tagName;
+      if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+      c.setAttribute('data-deck-active', '');
+    }
+  }
+  // Re-append deck-stage's @page last so no author @page can add a margin and
+  // spill each full-bleed slide onto two sheets. Backstop for old copies.
+  if (ds) {
+    let pg = document.getElementById('deck-stage-print-page');
+    if (!pg) {
+      pg = document.createElement('style');
+      pg.textContent = '@page{size:' + (+ds.getAttribute('width') || 1920) +
+        'px ' + (+ds.getAttribute('height') || 1080) + 'px;margin:0}';
+    }
+    document.body.appendChild(pg);
+  }
+  try {
+    const sweep = () => {
+      for (const a of document.getAnimations()) {
+        try { a.finish(); } catch (e) {
+          try { a.currentTime = (a.effect && a.effect.getComputedTiming().duration) || 0; a.pause(); } catch (e2) {}
+        }
+      }
+    };
+    sweep();
+    await raf();
+    sweep();
+    await raf();
+  } catch (e) {}
+  // A document that owns its print CSS (the doc-page starter injects the
+  // meta at runtime; hand-rolled print designs author it) gets no automatic
+  // page geometry and keeps its forced breaks: strip the injected default
+  // @page — write time cannot see a runtime-injected meta — skip the frame
+  // override below, and skip the fakepage-flattening further down. What
+  // still applies: the print baseline and break-hygiene defaults (no @page
+  // in either; low specificity, so the document's own print CSS wins) and
+  // the break-inside relaxation on >page elements (avoid on those cannot
+  // be honored whoever authored it).
+  var ownsPrint = !!document.querySelector('meta[name="omelette-owns-print" i]');
+  if (ownsPrint) {
+    var dst = document.querySelector('style[data-omelette-print-defaults]');
+    if (dst && dst.textContent) {
+      dst.textContent = dst.textContent.replace(/@page\b[^{}]*\{[^}]*\}/, '');
+    }
+  }
+  // Size the PDF page to the rendered design unless the file opted into
+  // standard paper via @page{size:letter|A4|…} or declared print ownership
+  // via the meta above. Decks own their own @page.
+  // Wrappers (body, …) lose padding+margin so the frame sits at (0,0); the
+  // frame itself loses only margin — its padding is INSIDE the measured
+  // rect and must stay, or content shifts and leaves a gap at bottom/right.
+  var __m = null;
+  try { __m = (() => {
+  var STAMP = true;
+  var docEl = document.documentElement;
+  var doc = { width: docEl.scrollWidth, height: docEl.scrollHeight };
+  // Name-presence check, case-insensitive — the same contract as the
+  // instant-PDF path's runtime check in deck-stage-export.ts. The name is
+  // a string literal here because that file interpolates this script into
+  // its print script, so importing a shared constant from it would be a
+  // cycle; measure.test.ts pins the literal so the two cannot drift apart
+  // silently.
+  var ownsPrint = !!document.querySelector('meta[name="omelette-owns-print" i]');
+
+  var ds = document.querySelector('deck-stage');
+  if (ds) {
+    var dw = Number(ds.getAttribute('width')) || 1920;
+    var dh = Number(ds.getAttribute('height')) || 1080;
+    var n = typeof ds.length === 'number' ? ds.length : ds.children.length;
+    var idx = typeof ds.index === 'number' ? ds.index : 0;
+    var frames = [];
+    for (var i = 0; i < n; i++) frames.push({ left: 0, top: 0, width: dw, height: dh });
+    return { kind: 'deck', source: 'declared', doc: doc, frames: frames,
+      authored: frames.map(function(){return{width:true,height:true}}),
+      deck: { width: dw, height: dh, slideCount: n, index: idx },
+      signals: { paperPage: false, pxPage: false, ownsPrint: ownsPrint } };
+  }
+
+  // Declared kind: a doc-page tag names the kind outright, so no signal
+  // heuristics run (like the deck branch above, signals report false —
+  // they describe inferred classifications only). The tag alone is not
+  // trusted: the element must have upgraded (shadowRoot present), so a
+  // leftover tag whose script was deleted falls through to the heuristics
+  // that handle plain markup.
+  var stageSx = window.scrollX || 0, stageSy = window.scrollY || 0;
+  var dp = document.querySelector('doc-page');
+  if (dp && dp.shadowRoot) {
+    // Crop to the sheet, not the host — the desk around it is screen-only
+    // chrome that must not land in PNG exports.
+    var sheet = dp.shadowRoot.querySelector('.sheet');
+    var sr = (sheet || dp).getBoundingClientRect();
+    return { kind: 'paper-doc', source: 'declared', doc: doc,
+      frames: [{ left: sr.left + stageSx, top: sr.top + stageSy,
+        width: sr.width, height: sr.height }],
+      authored: [{ width: false, height: false }],
+      signals: { paperPage: false, pxPage: false, ownsPrint: ownsPrint } };
+  }
+  var paperPage = false, pxPage = false;
+  var eachRule = function (fn) {
+    for (var s = 0; s < document.styleSheets.length; s++) {
+      var rs; try { rs = document.styleSheets[s].cssRules; } catch (e) { continue; }
+      for (var r = 0; r < rs.length; r++) {
+        fn(rs[r]);
+        if (rs[r].cssRules) for (var n = 0; n < rs[r].cssRules.length; n++) fn(rs[r].cssRules[n]);
+      }
+    }
+  };
+  eachRule(function (r) {
+    if (r.type !== 6) return;
+    var m = /\bsize\s*:\s*([^;}]+)/i.exec(r.cssText || '');
+    if (!m) return;
+    if (/\b(letter|a[3-5]|legal|ledger)\b/i.test(m[1])) paperPage = true;
+    if (/\d+(?:\.\d+)?px\b/i.test(m[1])) pxPage = true;
+  });
+  var signals = { paperPage: paperPage, pxPage: pxPage, ownsPrint: ownsPrint };
+
+  var pxVal = function (v) {
+    var m = /^(\d+(?:\.\d+)?)px$/.exec(v || ''); return m ? +m[1] : 0;
+  };
+  var authoredPx = function (el, prop) {
+    if (pxVal(el.style[prop])) return true;
+    var attr = el.getAttribute(prop);
+    if (attr && /^\d+$/.test(attr)) return true;
+    var hit = false;
+    eachRule(function (r) {
+      if (hit || r.type !== 1 || !r.style) return;
+      try { if (el.matches(r.selectorText) && pxVal(r.style[prop])) hit = true; } catch (e) {}
+    });
+    return hit;
+  };
+
+  var el = document.body, rootPxW = false;
+  for (;;) {
+    var kids = [];
+    for (var c = 0; c < el.children.length; c++) {
+      var t = el.children[c].tagName;
+      if (t !== 'SCRIPT' && t !== 'STYLE' && t !== 'TEMPLATE') kids.push(el.children[c]);
+    }
+    if (kids.length !== 1 || !(kids[0] instanceof HTMLElement)) break;
+    if (STAMP) el.setAttribute('data-om-frame-wrap', '');
+    el = kids[0];
+    rootPxW = authoredPx(el, 'width');
+    if (rootPxW) break;
+  }
+  if (!rootPxW) rootPxW = authoredPx(el, 'width');
+
+  // @page{size:letter} alone is a flowing doc; with a px-width root it's a
+  // fixed sheet pretending to be paper — fall through and size to render.
+  if (paperPage && !rootPxW) {
+    return { kind: 'paper-doc', source: 'inferred', doc: doc, signals: signals,
+      frames: [{ left: 0, top: 0, width: doc.width, height: doc.height }],
+      authored: [{ width: false, height: false }] };
+  }
+
+  var sx = window.scrollX || 0, sy = window.scrollY || 0;
+  var rectOf = function (e) {
+    var r = e.getBoundingClientRect();
+    var oy; try { oy = getComputedStyle(e).overflowY; } catch (err) {}
+    var h = oy === 'visible' ? Math.max(r.height, e.scrollHeight || 0) : r.height;
+    return { left: r.left + sx, top: r.top + sy, width: r.width, height: h };
+  };
+
+  // Multi-frame: off unless the page opts in via data-om-multi-frame on the
+  // stop element — the explicit opt-in is what guards against card grids
+  // and pricing tables that match the geometry but aren't separate
+  // canvases. Two ways to name the frames, explicit first:
+  // 1. Descendants marked data-om-frame-export (the social-frames starter
+  //    marks each asset frame; shells/panels around them are presentation,
+  //    so nesting is expected). Document order.
+  // 2. Fallback, no marked descendants: direct children with an authored px
+  //    width AND height (the original geometry heuristic).
+  // Frames may be different sizes (a gallery mixes 1080×1920 stories with
+  // 728×90 banners); data-om-frame-label rides along for export filenames.
+  if (el.hasAttribute('data-om-multi-frame')) {
+    var visOk = function (e) {
+      var cs; try { cs = getComputedStyle(e); } catch (err) { return false; }
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.position !== 'fixed';
+    };
+    // A frame's crop is its VISUAL box — never the scrollHeight-inflated
+    // rect that rectOf computes for page roots. Shadow-DOM hover controls
+    // (image-slot's Replace bar parks 29px below its host) and similar
+    // escaping UI contribute scrollable overflow to the frame, and the
+    // inflated height both squashes the nominal-size resize and drags
+    // content below the frame into the crop. Zoom-independent; bit every
+    // slot-bearing frame.
+    var frameRectOf = function (e) {
+      var r = e.getBoundingClientRect();
+      return { left: r.left + sx, top: r.top + sy, width: r.width, height: r.height };
+    };
+    var pushCand = function (list, e) {
+      if (!visOk(e)) return;
+      var rc = frameRectOf(e);
+      if (rc.width < 2 || rc.height < 2) return;
+      var lbl = e.getAttribute('data-om-frame-label');
+      if (lbl) rc.label = lbl;
+      list.push(rc);
+    };
+    var cands = [];
+    var marked = el.querySelectorAll('[data-om-frame-export]');
+    if (marked.length) {
+      for (var mk = 0; mk < marked.length; mk++) pushCand(cands, marked[mk]);
+    } else {
+      for (var k = 0; k < el.children.length; k++) {
+        var ch = el.children[k];
+        if (!authoredPx(ch, 'width') || !authoredPx(ch, 'height')) continue;
+        pushCand(cands, ch);
+      }
+    }
+    if (cands.length >= 2) {
+      return { kind: 'multi-frame', source: 'inferred', doc: doc, signals: signals,
+        frames: cands, authored: cands.map(function(){return{width:true,height:true}}) };
+    }
+  }
+
+  if (STAMP) el.setAttribute('data-om-frame', '');
+  return { kind: 'single-canvas', source: 'inferred', doc: doc, signals: signals,
+    frames: [rectOf(el)],
+    authored: [{ width: rootPxW, height: authoredPx(el, 'height') }] };
+})(); } catch (e) {}
+  var frame = null;
+  if (!ownsPrint && __m && __m.kind === 'single-canvas') {
+    var f = __m.frames && __m.frames[0];
+    if (f && f.width >= 200 && f.height >= 200) {
+      frame = f;
+      var fst = document.createElement('style');
+      fst.textContent = '@media print{@page{size:' + Math.ceil(f.width) + 'px ' +
+        Math.ceil(f.height) + 'px;margin:0}' +
+        'html,body,[data-om-frame-wrap]{padding:0!important;margin:0!important;background:none!important}' +
+        '[data-om-frame]{margin:0!important}}';
+      document.body.appendChild(fst);
+    }
+  }
+  // Relax break-inside on oversized elements. An element taller than a
+  // printable page can't honor break-inside: avoid — browsers either overflow
+  // it or push it whole to the next page, leaving a blank gap, then break it
+  // anyway at an arbitrary point. After the final layout (content revealed,
+  // animations jumped), find elements taller than a page that still compute
+  // break-inside: avoid and reset them to auto, so the browser breaks them at
+  // their children's boundaries instead (children keep their own avoid). PAGE_PX
+  // is a conservative portrait estimate at 96 CSS px/in — Letter/A4 usable
+  // height minus our 0.5in margins — so only clearly-oversized elements are
+  // touched and under-page elements still stay whole. Skipped for decks (slides
+  // are sized to the page) and for fixed-size canvases (frame set, or an author
+  // px-based @page) — runs as before for flowing docs on letter/A4.
+  try {
+    if (!ds && !frame && !(__m && __m.signals && __m.signals.pxPage)) {
+      const PAGE_PX = 1024;
+      // Our print defaults add a real @page margin only when the source has
+      // no @page of its own; computed style can't tell us (it reports screen
+      // media), so read the injected rule directly.
+      const defaults = document.querySelector('style[data-omelette-print-defaults]');
+      const pageInset = /@page\s*\{[^}]*margin/.test(defaults ? defaults.textContent || '' : '');
+      const SEL = 'section,article,figure,table,pre,blockquote,[class~="card" i],[class~="page" i],[class~="sheet" i]';
+      for (const el of document.body.querySelectorAll(SEL)) {
+        if (el instanceof HTMLElement && el.offsetHeight > PAGE_PX) {
+          el.setAttribute('data-om-oversized', '');
+          // Fake-paged docs simulate sheets with over-tall break-after:page
+          // boxes; honoring the break spills half-blank pages and ends a
+          // colored box mid-sheet. Flow them, and (only when we own the page
+          // inset) drop the redundant padding/background via the rule below.
+          const cs = getComputedStyle(el);
+          // An owns-print doc's forced breaks are intentional sheet
+          // boundaries, never fake-paged simulation — don't strip them.
+          // The break-inside relaxation above still applies: avoid on a
+          // >page element is impossible to honor whoever authored it.
+          if (
+            !ownsPrint &&
+            (cs.breakAfter === 'page' || cs.pageBreakAfter === 'always')
+          ) {
+            el.setAttribute('data-om-fakepage', '');
+          }
+        }
+      }
+      const ost = document.createElement('style');
+      ost.textContent = '@media print{' +
+        '[data-om-oversized]{break-inside:auto !important;page-break-inside:auto !important}' +
+        '[data-om-fakepage]{break-after:auto !important;page-break-after:auto !important}' +
+        (pageInset ? '[data-om-fakepage]{padding:0 !important;background:none !important}' : '') +
+        '}';
+      document.head.appendChild(ost);
+    }
+  } catch (e) {}
+  // macOS Preview renders Skia-PDF Luminosity soft-masks as opaque grey boxes;
+  // swap the CSS that triggers them for Preview-safe forms.
+  try {
+    for (const el of document.body.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+
+      if (cs.boxShadow !== 'none' && cs.filter === 'none') {
+        const outs = [], kept = [];
+        for (const s of cs.boxShadow.split(/,(?![^(]*[)])/)) {
+          const t = s.trim();
+          const m = t.match(/^(rgba?[(][^)]+[)]) (-?[0-9.]+px) (-?[0-9.]+px) ([0-9.]+px) -?[0-9.]+px$/);
+          if (m && parseFloat(m[4]) > 0) outs.push('drop-shadow(' + m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[1] + ')');
+          else kept.push(t);
+        }
+        if (outs.length) {
+          el.style.setProperty('filter', outs.join(' '), 'important');
+          el.style.setProperty('box-shadow', kept.join(', ') || 'none', 'important');
+        }
+      }
+
+      const mask = cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage;
+      if (mask && mask !== 'none' && cs.filter === 'none') el.style.setProperty('filter', 'opacity(1)', 'important');
+    }
+  } catch (e) {}
+  mark('print-calling');
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:oklch(45% 0.17 20);text-decoration:none}
+  a:hover{color:oklch(52% 0.19 20)}
+  *{box-sizing:border-box}
+</style>
+</helmet>
+
+<div style="background:oklch(97% 0.015 60);color:oklch(22% 0.02 40)">
+
+  <dc-import name="Site Nav" active="products" hint-size="100%,76px"></dc-import>
+
+  <div style="max-width:1160px;margin:0 auto;padding:20px 48px 0;font-size:14px;color:rgba(34,30,26,.5)">
+    <a href="Products.dc.html" style="color:rgba(34,30,26,.5)" style-hover="color:oklch(45% 0.17 20)">Products</a> / Ruby Ginger Refresher
+  </div>
+
+  <section style="display:flex;align-items:center;gap:64px;padding:48px 48px 88px;max-width:1160px;margin:0 auto;flex-wrap:wrap">
+    <div style="flex:1;min-width:320px">
+      <div style="width:100%;aspect-ratio:4/5;border-radius:24px;overflow:hidden;box-shadow:0 20px 44px rgba(34,30,26,.14)">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="product-ginger" shape="rect" placeholder="Ruby Ginger Refresher — bottle shot" hint-size="100%,100%" style="width:100%;height:100%"></x-import>
+      </div>
+    </div>
+    <div style="flex:1;min-width:320px;max-width:520px">
+      <span style="display:inline-block;white-space:nowrap;background:oklch(94% 0.035 55);color:oklch(50% 0.16 55);font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:100px;margin-bottom:20px">Naturally Energizing</span>
+      <h1 style="font-family:'Domine',serif;font-weight:700;font-size:44px;line-height:1.1;margin:0 0 14px">Ruby Ginger Refresher</h1>
+      <div style="font-family:'Domine',serif;font-style:italic;font-size:20px;color:oklch(50% 0.16 55);margin-bottom:24px">Bold by Nature. Refreshing by Design.</div>
+      <p style="font-size:16.5px;line-height:1.65;color:rgba(34,30,26,.78);margin:0 0 16px">Ruby Ginger Refresher is our signature beverage, crafted to deliver a vibrant blend of real ginger, bright lemon, and sweet pineapple in every bottle. Every ingredient is selected for its distinctive flavor, creating a drink that is bold, balanced, and exceptionally refreshing.</p>
+      <p style="font-size:16.5px;line-height:1.65;color:rgba(34,30,26,.78);margin:0 0 28px">Whether you're enjoying a quiet moment at home, sharing a meal with family, or celebrating with friends, Ruby Ginger Refresher is made to complement life's everyday moments.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:9px;margin-bottom:32px">
+        <span style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid oklch(50% 0.16 55);color:oklch(50% 0.16 55)">Real Ginger</span>
+        <span style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid oklch(50% 0.16 55);color:oklch(50% 0.16 55)">Lemon</span>
+        <span style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid oklch(50% 0.16 55);color:oklch(50% 0.16 55)">Pineapple</span>
+        <span style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid oklch(50% 0.16 55);color:oklch(50% 0.16 55)">Naturally refreshing flavor</span>
+        <span style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid oklch(50% 0.16 55);color:oklch(50% 0.16 55)">Best served chilled</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+        <span style="color:oklch(50% 0.16 55);font-size:16px;letter-spacing:2px">{{ starsDisplay }}</span>
+        <span style="font-size:14px;color:rgba(34,30,26,.6)">{{ rating }} ({{ reviewCount }} reviews)</span>
+      </div>
+
+      <div style="margin-bottom:22px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:10px">Size</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px">
+          <sc-for list="{{ variants }}" as="v" hint-placeholder-count="4">
+            <button type="button" onClick="{{ v.select }}" style="flex:none;white-space:nowrap;padding:10px 16px;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer;background:{{ v.bg }};color:{{ v.color }};border:1.5px solid {{ v.border }}">{{ v.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
+        <div style="font-family:'Domine',serif;font-weight:700;font-size:28px">{{ priceDisplay }}</div>
+        <div style="display:flex;align-items:center;border:1.5px solid rgba(34,30,26,.2);border-radius:100px;overflow:hidden">
+          <button type="button" onClick="{{ decQty }}" style="width:38px;height:38px;border:none;background:transparent;font-size:18px;font-weight:700;cursor:pointer;color:oklch(22% 0.02 40)">−</button>
+          <span style="width:32px;text-align:center;font-size:15px;font-weight:700">{{ qty }}</span>
+          <button type="button" onClick="{{ incQty }}" style="width:38px;height:38px;border:none;background:transparent;font-size:18px;font-weight:700;cursor:pointer;color:oklch(22% 0.02 40)">+</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+        <button type="button" onClick="{{ handleAddToCart }}" style="flex:none;white-space:nowrap;background:oklch(45% 0.17 20);color:#fff;padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Add to Cart</button>
+        <button type="button" onClick="{{ handleBuyNow }}" style="flex:none;white-space:nowrap;background:transparent;color:oklch(22% 0.02 40);padding:14.5px 28px;border-radius:100px;font-size:15px;font-weight:700;border:1.5px solid rgba(34,30,26,.25);cursor:pointer" style-hover="border-color:oklch(22% 0.02 40)">Buy Now</button>
+      </div>
+      <sc-if value="{{ added }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13.5px;font-weight:700;color:oklch(45% 0.17 20);margin-bottom:18px">Added to cart ✓</div>
+      </sc-if>
+
+      <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px;font-weight:600;padding-top:14px;border-top:1px solid rgba(34,30,26,.1)">
+        <a href="Wholesale.dc.html" style="color:oklch(45% 0.17 20)">Become a Retail Partner &nbsp;→</a>
+        <a href="Products.dc.html" style="color:rgba(34,30,26,.55)">Back to Products</a>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:0 48px 96px;max-width:1280px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:12px">Gallery</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:32px;margin:0">See It In Real Life</h2>
+    </div>
+    <div style="display:flex;gap:20px;overflow-x:auto;padding-bottom:8px">
+      <div style="flex:0 0 auto;width:240px;aspect-ratio:4/5;border-radius:16px;overflow:hidden;box-shadow:0 10px 24px rgba(34,30,26,.12)">
+        <image-slot id="gallery-ginger-1" shape="rect" placeholder="Promo photo"></image-slot>
+      </div>
+      <div style="flex:0 0 auto;width:240px;aspect-ratio:4/5;border-radius:16px;overflow:hidden;box-shadow:0 10px 24px rgba(34,30,26,.12)">
+        <image-slot id="gallery-ginger-2" shape="rect" placeholder="Promo photo"></image-slot>
+      </div>
+      <div style="flex:0 0 auto;width:240px;aspect-ratio:4/5;border-radius:16px;overflow:hidden;box-shadow:0 10px 24px rgba(34,30,26,.12)">
+        <image-slot id="gallery-ginger-3" shape="rect" placeholder="Promo photo"></image-slot>
+      </div>
+      <div style="flex:0 0 auto;width:240px;aspect-ratio:4/5;border-radius:16px;overflow:hidden;box-shadow:0 10px 24px rgba(34,30,26,.12)">
+        <image-slot id="gallery-ginger-4" shape="rect" placeholder="Promo photo"></image-slot>
+      </div>
+      <div style="flex:0 0 auto;width:240px;aspect-ratio:4/5;border-radius:16px;overflow:hidden;box-shadow:0 10px 24px rgba(34,30,26,.12)">
+        <image-slot id="gallery-ginger-5" shape="rect" placeholder="Promo photo"></image-slot>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:oklch(94% 0.018 60);padding:96px 48px">
+    <div style="max-width:800px;margin:0 auto 56px;text-align:center">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px">The Blend</div>
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:36px;line-height:1.2;margin:0 0 20px">What Makes It Special?</h2>
+      <p style="font-size:16px;line-height:1.65;color:rgba(34,30,26,.7);margin:0">The character of Ruby Ginger Refresher comes from the harmony of three carefully selected ingredients — together, they create a beverage that is vibrant, refreshing, and full of character.</p>
+    </div>
+    <div style="max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1px;background:rgba(34,30,26,.1);border:1px solid rgba(34,30,26,.1);border-radius:16px;overflow:hidden">
+      <div style="flex:1;min-width:240px;background:oklch(97% 0.015 60);padding:38px 32px">
+        <div style="font-family:'Domine',serif;font-weight:700;font-size:22px;margin-bottom:12px;color:oklch(50% 0.16 55)">Ginger</div>
+        <div style="font-size:14.5px;line-height:1.6;color:rgba(34,30,26,.7)">Fresh ginger provides the beverage's bold, warming flavor and unmistakable aroma, giving each sip a lively and satisfying finish.</div>
+      </div>
+      <div style="flex:1;min-width:240px;background:oklch(97% 0.015 60);padding:38px 32px">
+        <div style="font-family:'Domine',serif;font-weight:700;font-size:22px;margin-bottom:12px;color:oklch(50% 0.16 55)">Lemon</div>
+        <div style="font-size:14.5px;line-height:1.6;color:rgba(34,30,26,.7)">Lemon adds brightness and balance, enhancing the ginger while contributing a crisp citrus character.</div>
+      </div>
+      <div style="flex:1;min-width:240px;background:oklch(97% 0.015 60);padding:38px 32px">
+        <div style="font-family:'Domine',serif;font-weight:700;font-size:22px;margin-bottom:12px;color:oklch(50% 0.16 55)">Pineapple</div>
+        <div style="font-size:14.5px;line-height:1.6;color:rgba(34,30,26,.7)">Pineapple brings gentle tropical sweetness that rounds out the flavor and creates a smooth, refreshing finish.</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:96px 48px;max-width:1080px;margin:0 auto;display:flex;gap:56px;flex-wrap:wrap">
+    <div style="flex:1;min-width:280px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px">Ingredients</div>
+      <p style="font-size:15px;line-height:1.6;color:rgba(34,30,26,.7);margin:0 0 18px">Ruby Ginger Refresher is crafted using quality ingredients. Typical ingredients include:</p>
+      <ul style="margin:0;padding:0 0 0 20px;font-size:15.5px;line-height:1.9;color:oklch(22% 0.02 40)">
+        <li>Filtered Water</li><li>Ginger</li><li>Lemon</li><li>Pineapple</li><li>Pure Cane Sugar</li><li>Natural Flavors (if applicable)</li><li>Food-Grade Acidity Regulators (if applicable)</li>
+      </ul>
+      <p style="font-size:13.5px;line-height:1.6;color:rgba(34,30,26,.5);margin:16px 0 0">Please refer to the product label for the complete ingredient statement for your market.</p>
+    </div>
+    <div style="flex:1;min-width:280px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px">Nutrition Information</div>
+      <p style="font-size:15px;line-height:1.6;color:rgba(34,30,26,.7);margin:0 0 18px">Nutrition Facts are available on every bottle and may vary slightly by package size. Please review the label for complete values, including:</p>
+      <ul style="margin:0;padding:0 0 0 20px;font-size:15.5px;line-height:1.9;color:oklch(22% 0.02 40)">
+        <li>Serving Size</li><li>Calories</li><li>Total Carbohydrates</li><li>Total Sugars</li><li>Added Sugars</li><li>Sodium</li><li>Vitamin Content (if applicable)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section style="background:oklch(94% 0.018 60);padding:96px 48px">
+    <div style="max-width:1080px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:48px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px">Taste Profile</div>
+        <h2 style="font-family:'Domine',serif;font-weight:700;font-size:34px;margin:0">Bold, Bright, and Balanced</h2>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:1px;background:rgba(34,30,26,.1);border:1px solid rgba(34,30,26,.1);border-radius:16px;overflow:hidden">
+        <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:32px 28px">
+          <div style="font-weight:800;font-size:16px;margin-bottom:10px">Flavor Notes</div>
+          <div style="font-size:14.5px;line-height:1.7;color:rgba(34,30,26,.7)">Bold ginger · Bright citrus · Smooth tropical sweetness · Clean finish</div>
+        </div>
+        <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:32px 28px">
+          <div style="font-weight:800;font-size:16px;margin-bottom:10px">Body</div>
+          <div style="font-size:14.5px;line-height:1.7;color:rgba(34,30,26,.7)">Medium-bodied with a crisp, refreshing mouthfeel.</div>
+        </div>
+        <div style="flex:1;min-width:220px;background:oklch(97% 0.015 60);padding:32px 28px">
+          <div style="font-weight:800;font-size:16px;margin-bottom:10px">Finish</div>
+          <div style="font-size:14.5px;line-height:1.7;color:rgba(34,30,26,.7)">Clean, smooth, and pleasantly warming from the natural character of ginger.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:96px 48px;max-width:1080px;margin:0 auto">
+    <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px;text-align:center">When to Enjoy</div>
+    <h2 style="font-family:'Domine',serif;font-weight:700;font-size:34px;margin:0 0 32px;text-align:center">Made for Every Moment</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Morning refreshment</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Afternoon pick-me-up</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Lunch</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Dinner</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Weekend brunch</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Outdoor gatherings</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Picnics</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Family celebrations</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Barbecues</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Holiday entertaining</span>
+      <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Everyday enjoyment</span>
+    </div>
+  </section>
+
+  <section style="background:oklch(94% 0.018 60);padding:96px 48px">
+    <div style="max-width:1080px;margin:0 auto;display:flex;gap:56px;flex-wrap:wrap">
+      <div style="flex:1;min-width:280px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px">How to Enjoy</div>
+        <h2 style="font-family:'Domine',serif;font-weight:700;font-size:30px;margin:0 0 20px">For the Best Experience</h2>
+        <ul style="margin:0;padding:0 0 0 20px;font-size:15.5px;line-height:1.9;color:oklch(22% 0.02 40)">
+          <li>Chill before serving.</li>
+          <li>Pour over ice for maximum refreshment.</li>
+          <li>Garnish with fresh lemon, pineapple, or mint if desired.</li>
+          <li>Shake gently if the label recommends it.</li>
+          <li>Refrigerate after opening and enjoy within the recommended time on the bottle.</li>
+        </ul>
+        <p style="font-size:14.5px;line-height:1.65;color:rgba(34,30,26,.65);margin:18px 0 0">Delicious on its own, and a beautiful base for mocktails or creative beverage recipes.</p>
+      </div>
+      <div style="flex:1;min-width:280px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px">Food Pairings</div>
+        <h2 style="font-family:'Domine',serif;font-weight:700;font-size:30px;margin:0 0 20px">Pairs Beautifully</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:9px">
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Grilled chicken</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Seafood</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Rice dishes</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Salads</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Sandwiches</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Burgers</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">African cuisine</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Caribbean cuisine</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Asian-inspired meals</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Fresh fruit</span>
+          <span style="display:inline-block;white-space:nowrap;font-size:13.5px;font-weight:600;padding:7px 13px;border-radius:100px;border:1px solid rgba(34,30,26,.18)">Light desserts</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:oklch(16% 0.015 40);padding:88px 48px;text-align:center">
+    <div style="max-width:640px;margin:0 auto">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(74% 0.13 75);margin-bottom:20px">Crafted with Care</div>
+      <p style="font-size:19px;line-height:1.6;color:#fff;font-family:'Domine',serif;margin:0">Every bottle of Ruby Ginger Refresher reflects our commitment to quality — from ingredient selection to production and packaging, we focus on flavor, consistency, and food safety.</p>
+    </div>
+  </section>
+
+  <section style="padding:96px 48px;max-width:780px;margin:0 auto">
+    <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px;text-align:center">FAQ</div>
+    <h2 style="font-family:'Domine',serif;font-weight:700;font-size:34px;margin:0 0 40px;text-align:center">Frequently Asked Questions</h2>
+    <div style="display:flex;flex-direction:column;gap:26px">
+      <div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Is Ruby Ginger Refresher carbonated?</div>
+        <div style="font-size:15px;line-height:1.6;color:rgba(34,30,26,.7)">Please refer to the product label for product-specific information.</div>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Should it be refrigerated?</div>
+        <div style="font-size:15px;line-height:1.6;color:rgba(34,30,26,.7)">For the best taste, chill before serving. Refrigerate after opening.</div>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Is it suitable for family gatherings?</div>
+        <div style="font-size:15px;line-height:1.6;color:rgba(34,30,26,.7)">Yes. Ruby Ginger Refresher is crafted to be enjoyed during everyday meals, celebrations, and special occasions.</div>
+      </div>
+      <div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:6px">Can it be used in recipes?</div>
+        <div style="font-size:15px;line-height:1.6;color:rgba(34,30,26,.7)">Absolutely. It can be enjoyed on its own or used as an ingredient in mocktails, punches, and other creative beverages.</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:oklch(94% 0.018 60);padding:96px 48px">
+    <div style="max-width:1080px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:48px">
+        <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(50% 0.16 55);margin-bottom:16px">Why Customers Love It</div>
+        <h2 style="font-family:'Domine',serif;font-weight:700;font-size:34px;margin:0">Made to Be Remembered</h2>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;max-width:780px;margin:0 auto">
+        <div style="flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start"><span style="color:oklch(50% 0.16 55);font-weight:800">✓</span><span style="font-size:15px;line-height:1.5">Bold, distinctive flavor</span></div>
+        <div style="flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start"><span style="color:oklch(50% 0.16 55);font-weight:800">✓</span><span style="font-size:15px;line-height:1.5">Refreshing citrus finish</span></div>
+        <div style="flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start"><span style="color:oklch(50% 0.16 55);font-weight:800">✓</span><span style="font-size:15px;line-height:1.5">Premium ingredients</span></div>
+        <div style="flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start"><span style="color:oklch(50% 0.16 55);font-weight:800">✓</span><span style="font-size:15px;line-height:1.5">Crafted with care</span></div>
+        <div style="flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start"><span style="color:oklch(50% 0.16 55);font-weight:800">✓</span><span style="font-size:15px;line-height:1.5">Perfect for everyday refreshment</span></div>
+        <div style="flex:1;min-width:220px;display:flex;gap:10px;align-items:flex-start"><span style="color:oklch(50% 0.16 55);font-weight:800">✓</span><span style="font-size:15px;line-height:1.5">Made for sharing</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:oklch(45% 0.17 20);padding:96px 48px;text-align:center">
+    <div style="max-width:600px;margin:0 auto">
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:36px;line-height:1.2;color:#fff;margin:0 0 16px">Experience the Refreshment</h2>
+      <p style="font-size:16px;line-height:1.6;color:rgba(255,255,255,.85);margin:0 0 32px">Bring home the bold taste of Ruby Ginger Refresher today.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">
+        <a href="#" style="display:inline-block;white-space:nowrap;background:#fff;color:oklch(45% 0.17 20);padding:15px 28px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(96% 0.01 60)">Add to Cart</a>
+        <a href="#" style="display:inline-block;white-space:nowrap;border:1.5px solid rgba(255,255,255,.55);color:#fff;padding:14.5px 26px;border-radius:100px;font-size:15px;font-weight:700" style-hover="border-color:#fff">Subscribe &amp; Save</a>
+        <a href="#" style="display:inline-block;white-space:nowrap;border:1.5px solid rgba(255,255,255,.55);color:#fff;padding:14.5px 26px;border-radius:100px;font-size:15px;font-weight:700" style-hover="border-color:#fff">Find a Store</a>
+      </div>
+      <div style="font-family:'Domine',serif;font-style:italic;font-size:18px;color:oklch(74% 0.13 75)">"Drink Real. Feel Real."</div>
+    </div>
+  </section>
+
+  <section style="background:oklch(16% 0.015 40);padding:72px 48px;text-align:center">
+    <div style="max-width:520px;margin:0 auto">
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:28px;line-height:1.2;color:#fff;margin:0 0 20px">Try Ruby Sorrel Hibiscus Punch Next</h2>
+      <a href="Sorrel%20Hibiscus%20Punch.dc.html" style="display:inline-block;white-space:nowrap;background:oklch(45% 0.17 20);color:#fff;padding:14px 28px;border-radius:100px;font-size:14.5px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Explore Sorrel Hibiscus Punch</a>
+    </div>
+  </section>
+
+  <dc-import name="Site Footer" hint-size="100%,360px"></dc-import>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { variantIndex: 0, qty: 1, added: false };
+
+  variants() {
+    return [
+      { label: '12oz Single', price: 9.99 },
+      { label: '6-Pack', price: 54.99 },
+      { label: '12-Pack', price: 108.99 },
+      { label: '24-Case', price: 215.99 }
+    ];
+  }
+
+  selectVariant(i) { this.setState({ variantIndex: i, added: false }); }
+  incQty() { this.setState((s) => ({ qty: s.qty + 1 })); }
+  decQty() { this.setState((s) => ({ qty: Math.max(1, s.qty - 1) })); }
+
+  async handleAddToCart() {
+    const cart = await import('./cart-lib.js');
+    const v = this.variants()[this.state.variantIndex];
+    cart.addToCart({
+      productSlug: 'ginger-refresher',
+      productName: 'Ruby Ginger Refresher',
+      variantLabel: v.label,
+      unitPrice: v.price,
+      qty: this.state.qty,
+      image: 'product-ginger'
+    });
+    this.setState({ added: true });
+  }
+
+  async handleBuyNow() {
+    await this.handleAddToCart();
+    window.location.href = 'Checkout.dc.html';
+  }
+
+  renderVals() {
+    const ACCENT = 'oklch(50% 0.16 55)';
+    const idx = this.state.variantIndex;
+    const rawVariants = this.variants();
+    const variants = rawVariants.map((v, i) => ({
+      label: v.label,
+      select: () => this.selectVariant(i),
+      bg: i === idx ? ACCENT : 'transparent',
+      color: i === idx ? '#fff' : ACCENT,
+      border: ACCENT
+    }));
+    const price = rawVariants[idx].price;
+    const rating = 4.8;
+    const full = Math.round(rating);
+    return {
+      starsDisplay: '★'.repeat(full) + '☆'.repeat(5 - full),
+      rating,
+      reviewCount: 126,
+      variants,
+      priceDisplay: '$' + price.toFixed(2),
+      qty: this.state.qty,
+      incQty: () => this.incQty(),
+      decQty: () => this.decQty(),
+      handleAddToCart: () => this.handleAddToCart(),
+      handleBuyNow: () => this.handleBuyNow(),
+      added: this.state.added
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:oklch(45% 0.17 20);text-decoration:none}
+  a:hover{color:oklch(52% 0.19 20)}
+  *{box-sizing:border-box}
+</style>
+</helmet>
+
+<div style="background:oklch(97% 0.015 60);color:oklch(22% 0.02 40)">
+
+  <dc-import name="Site Nav" active="wholesale" hint-size="100%,76px"></dc-import>
+
+  <section style="padding:96px 48px 0;max-width:1280px;margin:0 auto;display:flex;gap:64px;flex-wrap:wrap;align-items:center;flex-direction:{{ direction }}">
+    <div style="flex:1;min-width:380px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:oklch(45% 0.17 20);margin-bottom:16px">Wholesale &amp; Distribution</div>
+      <h1 style="font-family:'Domine',serif;font-weight:700;font-size:44px;line-height:1.15;margin:0 0 22px">Grow With Ruby FoodHub</h1>
+      <p style="font-size:16px;line-height:1.65;color:rgba(34,30,26,.75);margin:0 0 24px">Ruby FoodHub proudly partners with retailers, restaurants, and distributors across the country. Whether you're serving one neighborhood or an entire region, we're committed to helping you offer premium beverages your customers will love.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:32px">
+        <sc-for list="{{ wholesalePartners }}" as="p" hint-placeholder-count="7">
+          <span style="display:inline-block;white-space:nowrap;font-size:14px;font-weight:600;padding:9px 16px;border-radius:100px;border:1px solid rgba(34,30,26,.18);color:oklch(22% 0.02 40)">{{ p }}</span>
+        </sc-for>
+      </div>
+      <a href="Contact.dc.html" style="display:inline-block;white-space:nowrap;background:oklch(45% 0.17 20);color:#fff;padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Become a Distribution Partner</a>
+    </div>
+    <div style="flex:1;min-width:320px">
+      <div style="width:100%;aspect-ratio:4/5;border-radius:22px;overflow:hidden;box-shadow:0 20px 44px rgba(34,30,26,.14)">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="wholesale-photo" shape="rect" placeholder="Retail shelf / distribution photo" hint-size="100%,100%" style="width:100%;height:100%"></x-import>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:oklch(94% 0.018 60);padding:96px 48px;margin-top:96px">
+    <div style="max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;gap:1px;background:rgba(34,30,26,.1);border:1px solid rgba(34,30,26,.1);border-radius:16px;overflow:hidden">
+      <div style="flex:1;min-width:260px;background:oklch(94% 0.018 60);padding:38px 32px">
+        <div style="font-family:'Domine',serif;font-weight:700;font-size:22px;margin-bottom:10px;color:oklch(45% 0.17 20)">Distributor-Ready</div>
+        <div style="font-size:14.5px;line-height:1.6;color:rgba(34,30,26,.68)">Premium packaging and branding, built to move off any shelf.</div>
+      </div>
+      <div style="flex:1;min-width:260px;background:oklch(94% 0.018 60);padding:38px 32px">
+        <div style="font-family:'Domine',serif;font-weight:700;font-size:22px;margin-bottom:10px;color:oklch(45% 0.17 20)">Consistent Supply</div>
+        <div style="font-size:14.5px;line-height:1.6;color:rgba(34,30,26,.68)">Reliable production and fulfillment as we expand nationally.</div>
+      </div>
+      <div style="flex:1;min-width:260px;background:oklch(94% 0.018 60);padding:38px 32px">
+        <div style="font-family:'Domine',serif;font-weight:700;font-size:22px;margin-bottom:10px;color:oklch(45% 0.17 20)">Dedicated Support</div>
+        <div style="font-size:14.5px;line-height:1.6;color:rgba(34,30,26,.68)">A direct line to our team for orders, marketing, and reorders.</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="background:oklch(45% 0.17 20);padding:88px 48px;text-align:center">
+    <div style="max-width:600px;margin:0 auto">
+      <h2 style="font-family:'Domine',serif;font-weight:700;font-size:34px;line-height:1.2;color:#fff;margin:0 0 20px">Let's Talk Distribution</h2>
+      <p style="font-size:16px;line-height:1.6;color:rgba(255,255,255,.85);margin:0 0 32px">Tell us about your store, region, or route — we'll follow up with pricing and availability.</p>
+      <a href="Contact.dc.html" style="display:inline-block;white-space:nowrap;background:#fff;color:oklch(45% 0.17 20);padding:15px 30px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(96% 0.01 60)">Contact Our Team</a>
+    </div>
+  </section>
+
+  <dc-import name="Site Footer" hint-size="100%,360px"></dc-import>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: {&quot;width&quot;: 1440},
+  &quot;photoSide&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;right&quot;, &quot;options&quot;: [&quot;left&quot;, &quot;right&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Layout&quot;}
+}">
+class Component extends DCLogic {
+  renderVals() {
+    const side = this.props.photoSide || 'right';
+    return {
+      direction: side === 'left' ? 'row-reverse' : 'row',
+      wholesalePartners: ['Grocery Stores', 'Supermarkets', 'Restaurants', 'Cafés', 'Convenience Stores', 'Food Service Companies', 'Wholesale Distributors']
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</helmet>
+<footer style="background:oklch(16% 0.015 40);color:rgba(255,255,255,.85);padding:72px 48px 32px;font-family:'Manrope',sans-serif">
+  <div style="max-width:1280px;margin:0 auto;display:flex;gap:56px;flex-wrap:wrap;padding-bottom:48px;border-bottom:1px solid rgba(255,255,255,.1)">
+    <div style="flex:2;min-width:280px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="width:30px;height:30px;border-radius:50%;background:oklch(45% 0.17 20);display:flex;align-items:center;justify-content:center">
+          <span style="font-family:'Domine',serif;font-weight:700;font-size:15px;color:#fff">R</span>
+        </div>
+        <span style="font-family:'Domine',serif;font-weight:700;font-size:19px;color:#fff">Ruby FoodHub</span>
+      </div>
+      <p style="font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.6);max-width:320px;margin:0 0 10px">Ruby FoodHub Inc. — premium beverages crafted from authentic ingredients.</p>
+      <div style="font-family:'Domine',serif;font-style:italic;font-size:15px;color:oklch(74% 0.13 75)">"Drink Real. Feel Real."</div>
+    </div>
+    <div style="flex:1;min-width:160px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Company</div>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <sc-for list="{{ footerCompany }}" as="l" hint-placeholder-count="3">
+          <a href="{{ l.href }}" style="font-size:14.5px;color:rgba(255,255,255,.8)" style-hover="color:#fff">{{ l.label }}</a>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex:1;min-width:160px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Products</div>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <sc-for list="{{ footerProducts }}" as="l" hint-placeholder-count="2">
+          <a href="{{ l.href }}" style="font-size:14.5px;color:rgba(255,255,255,.8)" style-hover="color:#fff">{{ l.label }}</a>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex:1.4;min-width:240px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Stay Connected</div>
+      <p style="font-size:14px;line-height:1.55;color:rgba(255,255,255,.6);margin:0 0 14px">Product updates, new flavors, and retail news.</p>
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        <input type="email" placeholder="Email address" style="flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 12px;color:#fff;font-size:13.5px"/>
+        <button style="background:oklch(45% 0.17 20);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Sign Up</button>
+      </div>
+      <div style="display:flex;gap:16px">
+        <sc-for list="{{ footerSocial }}" as="s" hint-placeholder-count="3">
+          <a href="{{ s.href }}" style="font-size:14px;color:rgba(255,255,255,.7)" style-hover="color:#fff">{{ s.label }}</a>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1280px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:24px;font-size:13px;color:rgba(255,255,255,.45)">
+    <span>© 2026 Ruby FoodHub Inc.</span>
+    <div style="display:flex;gap:20px">
+      <a href="#" style="color:rgba(255,255,255,.45)" style-hover="color:#fff">Privacy Policy</a>
+      <a href="#" style="color:rgba(255,255,255,.45)" style-hover="color:#fff">Terms</a>
+    </div>
+  </div>
+</footer>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1440, &quot;height&quot;: 360}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      footerCompany: [
+        { label: 'Our Story', href: 'Our%20Story.dc.html' },
+        { label: 'Wholesale', href: 'Wholesale.dc.html' },
+        { label: 'Locations', href: 'Locations.dc.html' },
+        { label: 'Contact', href: 'Contact.dc.html' }
+      ],
+      footerProducts: [
+        { label: 'Ginger Refresher', href: 'Ginger%20Refresher.dc.html' },
+        { label: 'Sorrel Hibiscus Punch', href: 'Sorrel%20Hibiscus%20Punch.dc.html' }
+      ],
+      footerSocial: [
+        { label: 'Instagram', href: '#' },
+        { label: 'Facebook', href: '#' },
+        { label: 'TikTok', href: '#' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
