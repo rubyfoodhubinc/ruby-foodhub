@@ -79,7 +79,10 @@
           <div style="display:flex;justify-content:space-between"><span>Tip</span><span>${{ tipDisplay }}</span></div>
           <div style="display:flex;justify-content:space-between;font-weight:800;font-size:17px;padding-top:10px;border-top:1px solid rgba(34,30,26,.1)"><span>Total</span><span>${{ totalDisplay }}</span></div>
         </div>
-        <button type="button" onClick="{{ placeOrder }}" style="width:100%;margin-top:22px;background:oklch(45% 0.17 20);color:#fff;padding:15px 0;border-radius:100px;font-size:15px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Place Order</button>
+        <button type="button" onClick="{{ placeOrder }}" disabled="{{ placeOrderDisabled }}" style="width:100%;margin-top:22px;background:oklch(45% 0.17 20);color:#fff;padding:15px 0;border-radius:100px;font-size:15px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">{{ placeOrderLabel }}</button>
+        <sc-if value="{{ showError }}" hint-placeholder-val="{{ false }}">
+          <p style="color:oklch(45% 0.17 20);font-size:13px;margin:12px 0 0;text-align:center">{{ errorMessage }}</p>
+        </sc-if>
         <a href="Cart.dc.html" style="display:block;text-align:center;margin-top:14px;font-size:13.5px;color:rgba(34,30,26,.55)">Back to Cart</a>
       </div>
     </section>
@@ -102,12 +105,36 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1200}}">
 class Component extends DCLogic {
-  state = { cart: null, zip: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', address: '', email: '', phone: '', placed: false, finalTotal: 0, orderNumber: '', finalEmail: '' };
+  state = { cart: null, zip: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', address: '', email: '', phone: '', placed: false, finalTotal: 0, orderNumber: '', finalEmail: '', submitting: false, errorMessage: '' };
 
   async componentDidMount() {
     const lib = await import('./cart-lib.js');
     this._lib = lib;
     const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+
+    if (sessionId) {
+      // Returning from Stripe Checkout — confirm the session actually paid
+      // before showing the "Thank You" state. The webhook remains the
+      // source of truth for fulfillment; this is just the on-page confirmation.
+      try {
+        const res = await fetch(`/api/checkout-session?session_id=${encodeURIComponent(sessionId)}`);
+        const data = await res.json();
+        if (res.ok && data.status === 'paid') {
+          lib.saveCart([]);
+          this.setState({
+            placed: true,
+            finalTotal: (data.amountTotal || 0) / 100,
+            orderNumber: data.orderNumber || '',
+            finalEmail: data.email || 'your email'
+          });
+          return;
+        }
+      } catch (e) {
+        // fall through to the normal form if verification fails
+      }
+    }
+
     const zip = params.get('zip') || '';
     this.setState({ cart: lib.getCart(), zip });
   }
@@ -123,31 +150,52 @@ class Component extends DCLogic {
     return 0;
   }
 
-  placeOrder() {
+  async placeOrder() {
+    if (this.state.submitting) return;
+
     const lib = this._lib;
     const cart = this.state.cart || [];
+    if (cart.length === 0) return;
+
     const subtotal = this.computeSubtotal(cart);
     const tier = lib.getTierForZip(this.state.zip);
     const shippingFee = this.state.zip ? lib.computeShippingFee(tier, subtotal) : 0;
-    // TODO: replace this placeholder with a real Stripe Tax calculation
-    // (based on the customer's shipping state) at payment integration time.
-    const tax = 0;
     const tip = this.computeTip(subtotal);
-    const total = subtotal + shippingFee + tax + tip;
 
+    // Reserved up-front so it can be sent to Stripe as the client_reference_id.
+    // If the customer abandons checkout at Stripe, this number is skipped —
+    // an acceptable tradeoff for keeping the order number available pre-payment.
     const orderNumber = lib.getNextOrderNumber();
-    const order = {
-      orderNumber,
-      items: cart,
-      subtotal, shippingTier: tier, shippingFee, tax, tip,
-      notes: this.state.notes, zip: this.state.zip, total,
-      fullName: this.state.fullName, address: this.state.address,
-      email: this.state.email, phone: this.state.phone,
-      placedAt: new Date().toISOString()
-    };
-    localStorage.setItem('rubyfoodhub_last_order', JSON.stringify(order));
-    lib.saveCart([]);
-    this.setState({ placed: true, finalTotal: total, orderNumber, finalEmail: this.state.email || 'your email' });
+
+    this.setState({ submitting: true, errorMessage: '' });
+
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart,
+          shippingFee,
+          tip,
+          orderNumber,
+          email: this.state.email,
+          fullName: this.state.fullName,
+          phone: this.state.phone,
+          address: this.state.address,
+          zip: this.state.zip,
+          notes: this.state.notes
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Something went wrong starting checkout.');
+      }
+
+      window.location.href = data.url;
+    } catch (err) {
+      this.setState({ submitting: false, errorMessage: err.message });
+    }
   }
 
   renderVals() {
@@ -202,7 +250,11 @@ class Component extends DCLogic {
       finalTotalDisplay: this.state.finalTotal.toFixed(2),
       orderNumber: this.state.orderNumber,
       finalEmail: this.state.finalEmail,
-      placeOrder: () => this.placeOrder()
+      placeOrder: () => this.placeOrder(),
+      placeOrderLabel: this.state.submitting ? 'Redirecting to Stripe…' : 'Place Order',
+      placeOrderDisabled: this.state.submitting,
+      showError: !!this.state.errorMessage,
+      errorMessage: this.state.errorMessage
     };
   }
 }

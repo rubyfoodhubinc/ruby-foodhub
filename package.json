@@ -1,0 +1,9 @@
+{
+  "name": "ruby-foodhub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ruby FoodHub site + Vercel serverless functions for Stripe Checkout",
+  "dependencies": {
+    "stripe": "^17.3.1"
+  }
+}
