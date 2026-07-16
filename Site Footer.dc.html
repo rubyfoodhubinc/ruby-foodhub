@@ -48,7 +48,7 @@
       </div>
       <div style="display:flex;gap:16px">
         <sc-for list="{{ footerSocial }}" as="s" hint-placeholder-count="3">
-          <a href="{{ s.href }}" style="font-size:14px;color:rgba(255,255,255,.7)" style-hover="color:#fff">{{ s.label }}</a>
+          <a href="{{ s.href }}" target="_blank" rel="noopener noreferrer" style="font-size:14px;color:rgba(255,255,255,.7)" style-hover="color:#fff">{{ s.label }}</a>
         </sc-for>
       </div>
     </div>
@@ -78,9 +78,9 @@ class Component extends DCLogic {
         { label: 'Sorrel Hibiscus Punch', href: 'Sorrel%20Hibiscus%20Punch.dc.html' }
       ],
       footerSocial: [
-        { label: 'Instagram', href: '#' },
+        { label: 'Instagram', href: 'https://www.instagram.com/rubyfoodhub' },
         { label: 'Facebook', href: '#' },
-        { label: 'TikTok', href: '#' }
+        { label: 'TikTok', href: 'https://www.tiktok.com/@rubyfoodhub' }
       ]
     };
   }
