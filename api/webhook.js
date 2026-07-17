@@ -1,5 +1,6 @@
 const Stripe = require('stripe');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
+const { supabase } = require('./_lib/supabase');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -12,21 +13,26 @@ function buffer(readable) {
   });
 }
 
-async function sendOrderEmails(session) {
+async function loadLineItems(sessionId) {
+  const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 100 });
+  return lineItems.data.map((li) => ({
+    description: li.description,
+    quantity: li.quantity,
+    amount: li.amount_total / 100,
+  }));
+}
+
+function itemsToText(items) {
+  if (!items.length) return '(unable to load line items)';
+  return items.map((li) => `- ${li.quantity} x ${li.description} — $${li.amount.toFixed(2)}`).join('\n');
+}
+
+async function sendOrderEmails(session, items) {
   const orderNumber = session.client_reference_id || session.id;
   const meta = session.metadata || {};
   const customerEmail = (session.customer_details && session.customer_details.email) || '';
   const total = ((session.amount_total || 0) / 100).toFixed(2);
-
-  let itemsText = '(unable to load line items)';
-  try {
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
-    itemsText = lineItems.data
-      .map((li) => `- ${li.quantity} x ${li.description} — $${(li.amount_total / 100).toFixed(2)}`)
-      .join('\n');
-  } catch (err) {
-    console.error(`Failed to load line items for session ${session.id}:`, err.message);
-  }
+  const itemsText = itemsToText(items);
 
   const orderDetailsText = `Order #${orderNumber}
 Total: $${total}
@@ -70,6 +76,36 @@ Notes: ${meta.notes || '(none)'}`;
   }
 }
 
+async function saveOrder(session, items) {
+  const orderNumber = session.client_reference_id || session.id;
+  const meta = session.metadata || {};
+  const customerEmail = (session.customer_details && session.customer_details.email) || null;
+
+  const { error } = await supabase
+    .from('orders')
+    .upsert(
+      {
+        order_id: orderNumber,
+        order_date: new Date((session.created || Date.now() / 1000) * 1000).toISOString(),
+        customer_name: meta.fullName || null,
+        email: customerEmail,
+        phone: meta.phone || null,
+        address: meta.address || null,
+        zip: meta.zip || null,
+        shipping_tier: meta.shippingTier || null,
+        notes: meta.notes || null,
+        items,
+        subtotal: meta.subtotal ? Number(meta.subtotal) : null,
+        shipping: meta.shippingFee ? Number(meta.shippingFee) : null,
+        tip: meta.tip ? Number(meta.tip) : null,
+        total: (session.amount_total || 0) / 100,
+      },
+      { onConflict: 'order_id' }
+    );
+
+  if (error) throw new Error(error.message || 'Failed to save order to Supabase');
+}
+
 async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -94,9 +130,24 @@ async function handler(req, res) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     console.log(`Order ${session.client_reference_id} paid — session ${session.id}`);
-    // Best-effort: email failures are logged but don't fail the webhook —
-    // Stripe would otherwise retry and risk sending duplicate confirmations.
-    await sendOrderEmails(session);
+
+    let items = [];
+    try {
+      items = await loadLineItems(session.id);
+    } catch (err) {
+      console.error(`Failed to load line items for session ${session.id}:`, err.message);
+    }
+
+    // Both are best-effort and independent: email failures shouldn't block
+    // the database write and vice versa, and neither should fail the
+    // webhook response — Stripe would otherwise retry and risk duplicate
+    // customer emails / redundant work.
+    await sendOrderEmails(session, items);
+    try {
+      await saveOrder(session, items);
+    } catch (err) {
+      console.error(`Failed to save order ${session.client_reference_id} to Supabase:`, err.message);
+    }
   }
 
   res.status(200).json({ received: true });

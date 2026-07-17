@@ -12,6 +12,7 @@ module.exports = async (req, res) => {
     const {
       items,
       shippingFee,
+      shippingTier,
       tip,
       orderNumber,
       email,
@@ -26,6 +27,12 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Cart is empty' });
     }
 
+    // Computed from the same unitAmount/quantity used to build the Stripe
+    // line items below, so it's authoritative rather than trusting a
+    // client-supplied total — this is what gets persisted to the orders
+    // table by the webhook.
+    let subtotalCents = 0;
+
     const line_items = items.map((item) => {
       const unitAmount = Math.round(Number(item.unitPrice) * 100);
       const quantity = Math.max(1, Math.min(50, Number(item.qty) || 1));
@@ -33,6 +40,8 @@ module.exports = async (req, res) => {
       if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
         throw new Error(`Invalid price for ${item.productName || 'item'}`);
       }
+
+      subtotalCents += unitAmount * quantity;
 
       return {
         price_data: {
@@ -90,6 +99,10 @@ module.exports = async (req, res) => {
         address: address || '',
         zip: zip || '',
         notes: notes || '',
+        shippingTier: shippingTier || '',
+        subtotal: (subtotalCents / 100).toFixed(2),
+        shippingFee: shippingAmount.toFixed(2),
+        tip: tipAmount.toFixed(2),
       },
     });
 

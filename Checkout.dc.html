@@ -176,6 +176,7 @@ class Component extends DCLogic {
         body: JSON.stringify({
           items: cart,
           shippingFee,
+          shippingTier: tier,
           tip,
           orderNumber,
           email: this.state.email,
