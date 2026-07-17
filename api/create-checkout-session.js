@@ -21,10 +21,17 @@ module.exports = async (req, res) => {
       address,
       zip,
       notes,
+      termsAgreedAt,
     } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Cart is empty' });
+    }
+
+    // Server-side enforcement, not just a disabled button — a request that
+    // bypasses the checkout page entirely shouldn't be able to skip this.
+    if (!termsAgreedAt) {
+      return res.status(400).json({ error: 'You must agree to the Terms of Service before placing an order.' });
     }
 
     // Computed from the same unitAmount/quantity used to build the Stripe
@@ -103,6 +110,7 @@ module.exports = async (req, res) => {
         subtotal: (subtotalCents / 100).toFixed(2),
         shippingFee: shippingAmount.toFixed(2),
         tip: tipAmount.toFixed(2),
+        termsAgreedAt,
       },
     });
 

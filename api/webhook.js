@@ -99,6 +99,7 @@ async function saveOrder(session, items) {
         shipping: meta.shippingFee ? Number(meta.shippingFee) : null,
         tip: meta.tip ? Number(meta.tip) : null,
         total: (session.amount_total || 0) / 100,
+        terms_agreed_at: meta.termsAgreedAt || null,
       },
       { onConflict: 'order_id' }
     );

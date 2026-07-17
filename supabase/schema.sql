@@ -17,6 +17,7 @@ create table if not exists orders (
   shipping numeric(10, 2),
   tip numeric(10, 2),
   total numeric(10, 2),
+  terms_agreed_at timestamptz,
   created_at timestamptz not null default now()
 );
 
