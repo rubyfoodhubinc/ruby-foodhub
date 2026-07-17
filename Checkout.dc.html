@@ -27,22 +27,29 @@
       <div style="flex:1.3;min-width:360px">
         <h1 style="font-family:'Domine',serif;font-weight:700;font-size:34px;margin:0 0 32px">Checkout</h1>
 
+        <div style="margin-bottom:16px;background:oklch(94% 0.02 60);border:1px solid rgba(34,30,26,.12);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.6;color:rgba(34,30,26,.75)">
+          <strong>Shipping &amp; delivery is available within the USA only.</strong> For orders outside of Texas or outside the United States, please <a href="Contact.dc.html" style="color:oklch(45% 0.17 20);font-weight:700">contact our sales team</a> before placing an order.
+        </div>
+
         <div style="margin-bottom:28px">
           <label style="display:block;font-size:12.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:10px">Contact &amp; Delivery Details</label>
           <div style="display:flex;flex-direction:column;gap:12px">
             <input type="text" value="{{ fullName }}" onChange="{{ onFullNameChange }}" placeholder="Full Name" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
-            <input type="text" value="{{ address }}" onChange="{{ onAddressChange }}" placeholder="Street Address, City, State" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <input type="text" value="{{ companyName }}" onChange="{{ onCompanyNameChange }}" placeholder="Company Name (optional)" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <input type="text" value="{{ addressLine1 }}" onChange="{{ onAddressLine1Change }}" placeholder="Address Line 1 (Street)" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <input type="text" value="{{ addressLine2 }}" onChange="{{ onAddressLine2Change }}" placeholder="Address Line 2 (Apt/Suite)" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <input type="text" value="{{ city }}" onChange="{{ onCityChange }}" placeholder="City" style="flex:2;min-width:160px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+              <input type="text" value="{{ addressState }}" onChange="{{ onAddressStateChange }}" placeholder="State" style="flex:1;min-width:90px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+              <input type="text" value="{{ zip }}" onChange="{{ onZipChange }}" placeholder="ZIP Code" style="flex:1;min-width:100px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            </div>
+            <input type="text" value="{{ country }}" disabled style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px;background:rgba(34,30,26,.05);color:rgba(34,30,26,.6)"/>
             <div style="display:flex;gap:12px;flex-wrap:wrap">
               <input type="email" value="{{ email }}" onChange="{{ onEmailChange }}" placeholder="Email Address" style="flex:1;min-width:200px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
               <input type="tel" value="{{ phone }}" onChange="{{ onPhoneChange }}" placeholder="Phone Number" style="flex:1;min-width:200px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
             </div>
           </div>
-        </div>
-
-        <div style="margin-bottom:28px">
-          <label style="display:block;font-size:12.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(34,30,26,.55);margin-bottom:8px">Delivery Zip Code</label>
-          <input type="text" value="{{ zip }}" onChange="{{ onZipChange }}" placeholder="e.g. 77002" style="width:100%;max-width:280px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
-          <div style="font-size:12.5px;color:rgba(34,30,26,.5);margin-top:6px">{{ tierNote }}</div>
+          <div style="font-size:12.5px;color:rgba(34,30,26,.5);margin-top:8px">{{ tierNote }}</div>
         </div>
 
         <div style="margin-bottom:28px">
@@ -105,7 +112,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1200}}">
 class Component extends DCLogic {
-  state = { cart: null, zip: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', address: '', email: '', phone: '', placed: false, finalTotal: 0, orderNumber: '', finalEmail: '', submitting: false, errorMessage: '' };
+  state = { cart: null, zip: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', companyName: '', addressLine1: '', addressLine2: '', city: '', addressState: '', country: 'United States', email: '', phone: '', placed: false, finalTotal: 0, orderNumber: '', finalEmail: '', submitting: false, errorMessage: '' };
 
   async componentDidMount() {
     const lib = await import('./cart-lib.js');
@@ -150,6 +157,17 @@ class Component extends DCLogic {
     return 0;
   }
 
+  buildAddressText() {
+    const lines = [
+      this.state.companyName,
+      this.state.addressLine1,
+      this.state.addressLine2,
+      [this.state.city, this.state.addressState, this.state.zip].filter(Boolean).join(', '),
+      this.state.country
+    ].filter((line) => line && line.trim());
+    return lines.join('\n');
+  }
+
   async placeOrder() {
     if (this.state.submitting) return;
 
@@ -182,7 +200,7 @@ class Component extends DCLogic {
           email: this.state.email,
           fullName: this.state.fullName,
           phone: this.state.phone,
-          address: this.state.address,
+          address: this.buildAddressText(),
           zip: this.state.zip,
           notes: this.state.notes
         })
@@ -221,8 +239,17 @@ class Component extends DCLogic {
       items: cart.map((item) => ({ ...item, lineTotalDisplay: (item.unitPrice * item.qty).toFixed(2) })),
       fullName: this.state.fullName,
       onFullNameChange: (e) => this.setState({ fullName: e.target.value }),
-      address: this.state.address,
-      onAddressChange: (e) => this.setState({ address: e.target.value }),
+      companyName: this.state.companyName,
+      onCompanyNameChange: (e) => this.setState({ companyName: e.target.value }),
+      addressLine1: this.state.addressLine1,
+      onAddressLine1Change: (e) => this.setState({ addressLine1: e.target.value }),
+      addressLine2: this.state.addressLine2,
+      onAddressLine2Change: (e) => this.setState({ addressLine2: e.target.value }),
+      city: this.state.city,
+      onCityChange: (e) => this.setState({ city: e.target.value }),
+      addressState: this.state.addressState,
+      onAddressStateChange: (e) => this.setState({ addressState: e.target.value }),
+      country: this.state.country,
       email: this.state.email,
       onEmailChange: (e) => this.setState({ email: e.target.value }),
       phone: this.state.phone,
