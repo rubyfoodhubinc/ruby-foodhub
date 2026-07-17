@@ -22,39 +22,66 @@ async function loadLineItems(sessionId) {
   }));
 }
 
+// "Delivery" and "Tip" are synthetic line items added in
+// create-checkout-session.js to get them onto the Stripe invoice — they
+// aren't products, so they're excluded here and reported via the
+// subtotal/shipping/tip breakdown instead.
+const NON_PRODUCT_LINE_NAMES = new Set(['Delivery', 'Tip']);
+
 function itemsToText(items) {
-  if (!items.length) return '(unable to load line items)';
-  return items.map((li) => `- ${li.quantity} x ${li.description} — $${li.amount.toFixed(2)}`).join('\n');
+  const productItems = items.filter((li) => !NON_PRODUCT_LINE_NAMES.has(li.description));
+  if (!productItems.length) return '(unable to load line items)';
+  return productItems.map((li) => `- ${li.quantity} x ${li.description} — $${li.amount.toFixed(2)}`).join('\n');
 }
 
-async function sendOrderEmails(session, items) {
+function buildOrderSummaryText(session, items) {
   const orderNumber = session.client_reference_id || session.id;
   const meta = session.metadata || {};
   const customerEmail = (session.customer_details && session.customer_details.email) || '';
   const total = ((session.amount_total || 0) / 100).toFixed(2);
-  const itemsText = itemsToText(items);
 
-  const couponLine = meta.couponCode ? `Coupon: ${meta.couponCode} (-$${Number(meta.discountAmount || 0).toFixed(2)})\n` : '';
+  const lines = [
+    `Order #${orderNumber}`,
+    '',
+    'Items:',
+    itemsToText(items),
+    '',
+    `Subtotal: $${Number(meta.subtotal || 0).toFixed(2)}`,
+    `Shipping: $${Number(meta.shippingFee || 0).toFixed(2)}`,
+  ];
 
-  const orderDetailsText = `Order #${orderNumber}
-Total: $${total}
-${couponLine}
-Items:
-${itemsText}
+  if (meta.couponCode) {
+    lines.push(`Discount (${meta.couponCode}): -$${Number(meta.discountAmount || 0).toFixed(2)}`);
+  }
 
-Customer: ${meta.fullName || '(not provided)'}
-Email: ${customerEmail || '(not provided)'}
-Phone: ${meta.phone || '(not provided)'}
-Address: ${meta.address || '(not provided)'}
-Zip: ${meta.zip || '(not provided)'}
-Notes: ${meta.notes || '(none)'}`;
+  lines.push(
+    `Tip: $${Number(meta.tip || 0).toFixed(2)}`,
+    `Total: $${total}`,
+    '',
+    'Delivery Details:',
+    `Name: ${meta.fullName || '(not provided)'}`,
+    `Email: ${customerEmail || '(not provided)'}`,
+    `Phone: ${meta.phone || '(not provided)'}`,
+    `Address: ${meta.address || '(not provided)'}`,
+    `Zip: ${meta.zip || '(not provided)'}`,
+    `Notes: ${meta.notes || '(none)'}`
+  );
+
+  return lines.join('\n');
+}
+
+async function sendOrderEmails(session, items) {
+  const orderNumber = session.client_reference_id || session.id;
+  const customerEmail = (session.customer_details && session.customer_details.email) || '';
+  const total = ((session.amount_total || 0) / 100).toFixed(2);
+  const summaryText = buildOrderSummaryText(session, items);
 
   try {
     const { error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: 'sales@rubyfoodhub.com',
       subject: `New order #${orderNumber} — $${total}`,
-      text: orderDetailsText,
+      text: summaryText,
     });
     if (error) throw new Error(error.message || 'Failed to send internal order notification');
   } catch (err) {
@@ -67,7 +94,7 @@ Notes: ${meta.notes || '(none)'}`;
         from: FROM_ADDRESS,
         to: customerEmail,
         subject: `Your Ruby FoodHub order #${orderNumber}`,
-        text: `Thanks for your order!\n\nOrder #${orderNumber}\nTotal: $${total}\n\nItems:\n${itemsText}\n\nWe'll be in touch if we need anything else to get your order to you.`,
+        text: `Thanks for your order!\n\n${summaryText}\n\nWe'll be in touch if we need anything else to get your order to you.`,
       });
       if (error) throw new Error(error.message || 'Failed to send customer confirmation');
     } catch (err) {
