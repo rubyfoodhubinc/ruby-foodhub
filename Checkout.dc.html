@@ -28,7 +28,7 @@
         <h1 style="font-family:'Domine',serif;font-weight:700;font-size:34px;margin:0 0 32px">Checkout</h1>
 
         <div style="margin-bottom:16px;background:oklch(94% 0.02 60);border:1px solid rgba(34,30,26,.12);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.6;color:rgba(34,30,26,.75)">
-          <strong>Shipping &amp; delivery is available within the USA only.</strong> For orders outside of Texas or outside the United States, please <a href="Contact.dc.html" style="color:oklch(45% 0.17 20);font-weight:700">contact our sales team</a> before placing an order.
+          <strong>Shipping &amp; delivery fee is priced for the State of Texas only.</strong> Orders from other states or outside the USA may require special shipping quotes from our carriers (USPS, UPS, FedEx) — please <a href="Contact.dc.html" style="color:oklch(45% 0.17 20);font-weight:700">contact our sales team</a> before placing your order.
         </div>
 
         <div style="margin-bottom:28px">
@@ -256,7 +256,7 @@ class Component extends DCLogic {
       onPhoneChange: (e) => this.setState({ phone: e.target.value }),
       zip: this.state.zip,
       onZipChange: (e) => this.setState({ zip: e.target.value }),
-      tierNote: this.state.zip ? 'Flat delivery fee: $14.99' : 'Enter your zip code for delivery.',
+      tierNote: this.state.zip ? 'Flat delivery fee: $14.99 (Texas only — see note above for other states)' : 'Enter your zip code for delivery.',
       tipPresets: presets,
       selectNoTip: () => this.selectNoTip(),
       noTipBg: this.state.tipMode === 'none' ? 'rgba(34,30,26,.08)' : 'transparent',
