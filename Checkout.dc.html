@@ -82,10 +82,16 @@
         <div style="display:flex;flex-direction:column;gap:10px;font-size:14.5px;padding-top:16px;border-top:1px solid rgba(34,30,26,.1)">
           <div style="display:flex;justify-content:space-between"><span>Subtotal</span><span>${{ subtotalDisplay }}</span></div>
           <div style="display:flex;justify-content:space-between"><span>Shipping</span><span>{{ shippingDisplay }}</span></div>
+          <sc-if value="{{ showCouponApplied }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:space-between;color:oklch(35% 0.1 150)"><span>Discount ({{ appliedCoupon }})</span><span>−${{ discountDisplay }}</span></div>
+          </sc-if>
           <div style="display:flex;justify-content:space-between;color:rgba(34,30,26,.55)"><span>Tax</span><span>Calculated at payment</span></div>
           <div style="display:flex;justify-content:space-between"><span>Tip</span><span>${{ tipDisplay }}</span></div>
           <div style="display:flex;justify-content:space-between;font-weight:800;font-size:17px;padding-top:10px;border-top:1px solid rgba(34,30,26,.1)"><span>Total</span><span>${{ totalDisplay }}</span></div>
         </div>
+        <sc-if value="{{ showCouponApplied }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:12px;color:rgba(34,30,26,.5);margin-top:8px">Coupon applied — <a href="Cart.dc.html" style="font-weight:700">change in cart</a></div>
+        </sc-if>
         <div style="display:flex;align-items:flex-start;gap:10px;margin-top:20px">
           <input type="checkbox" id="terms-checkbox" checked="{{ termsAgreed }}" onChange="{{ onTermsAgreedChange }}" style="margin-top:3px;flex:none;width:16px;height:16px"/>
           <label for="terms-checkbox" style="font-size:13px;line-height:1.5;color:rgba(34,30,26,.7)">I agree to the <a href="Terms%20of%20Service.dc.html" target="_blank" rel="noopener noreferrer" style="font-weight:700">Terms of Service</a>, including the no-returns policy on perishable orders.</label>
@@ -119,7 +125,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1200}}">
 class Component extends DCLogic {
-  state = { cart: null, zip: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', companyName: '', addressLine1: '', addressLine2: '', city: '', addressState: '', country: 'United States', email: '', phone: '', termsAgreed: false, placed: false, finalTotal: 0, orderNumber: '', finalEmail: '', submitting: false, errorMessage: '' };
+  state = { cart: null, zip: '', appliedCoupon: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', companyName: '', addressLine1: '', addressLine2: '', city: '', addressState: '', country: 'United States', email: '', phone: '', termsAgreed: false, placed: false, finalTotal: 0, orderNumber: '', finalEmail: '', submitting: false, errorMessage: '' };
 
   async componentDidMount() {
     const lib = await import('./cart-lib.js');
@@ -136,6 +142,7 @@ class Component extends DCLogic {
         const data = await res.json();
         if (res.ok && data.status === 'paid') {
           lib.saveCart([]);
+          lib.clearCoupon();
           this.setState({
             placed: true,
             finalTotal: (data.amountTotal || 0) / 100,
@@ -150,7 +157,7 @@ class Component extends DCLogic {
     }
 
     const zip = params.get('zip') || '';
-    this.setState({ cart: lib.getCart(), zip });
+    this.setState({ cart: lib.getCart(), zip, appliedCoupon: lib.getCoupon() });
   }
 
   selectTipPercent(pct) { this.setState({ tipMode: 'percent', tipPercent: pct, customTip: '' }); }
@@ -218,7 +225,8 @@ class Component extends DCLogic {
           address: this.buildAddressText(),
           zip: this.state.zip,
           notes: this.state.notes,
-          termsAgreedAt
+          termsAgreedAt,
+          couponCode: this.state.appliedCoupon
         })
       });
 
@@ -240,7 +248,10 @@ class Component extends DCLogic {
     const tier = lib ? lib.getTierForZip(this.state.zip) : '50+';
     const shippingFee = (lib && this.state.zip) ? lib.computeShippingFee(tier, subtotal) : 0;
     const tip = this.computeTip(subtotal);
-    const total = subtotal + shippingFee + tip;
+    const discount = (lib && this.state.appliedCoupon)
+      ? lib.evaluateCoupon(this.state.appliedCoupon, subtotal + shippingFee + tip).discount
+      : 0;
+    const total = subtotal + shippingFee + tip - discount;
 
     const presets = [10, 15, 20].map((pct) => ({
       label: pct + '%',
@@ -283,6 +294,9 @@ class Component extends DCLogic {
       onNotesChange: (e) => this.setState({ notes: e.target.value }),
       subtotalDisplay: subtotal.toFixed(2),
       shippingDisplay: this.state.zip ? '$' + shippingFee.toFixed(2) : 'Enter zip',
+      showCouponApplied: !!this.state.appliedCoupon,
+      appliedCoupon: this.state.appliedCoupon,
+      discountDisplay: discount.toFixed(2),
       tipDisplay: tip.toFixed(2),
       totalDisplay: total.toFixed(2),
       finalTotalDisplay: this.state.finalTotal.toFixed(2),

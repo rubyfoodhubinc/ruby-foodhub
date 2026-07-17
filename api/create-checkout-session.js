@@ -1,6 +1,10 @@
 const Stripe = require('stripe');
+const { evaluateCoupon } = require('./_lib/coupons');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Stripe's minimum charge for a USD Checkout Session.
+const MIN_CHARGE_CENTS = 50;
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -22,6 +26,7 @@ module.exports = async (req, res) => {
       zip,
       notes,
       termsAgreedAt,
+      couponCode,
     } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -90,11 +95,43 @@ module.exports = async (req, res) => {
       });
     }
 
+    // Coupon validation happens here, server-side, against the same
+    // authoritative pre-discount total used to build the line items above —
+    // never trust a discount amount computed by the client. Only one code
+    // can ever be applied (the frontend only ever stores a single one).
+    let discountCents = 0;
+    let appliedCouponCode = '';
+
+    if (couponCode && String(couponCode).trim()) {
+      const preDiscountCents = subtotalCents + Math.round(shippingAmount * 100) + Math.round(tipAmount * 100);
+      const result = evaluateCoupon(couponCode, preDiscountCents);
+
+      if (!result.valid) {
+        return res.status(400).json({ error: `"${couponCode}" is not a valid coupon code.` });
+      }
+
+      // Never discount past Stripe's minimum chargeable amount.
+      discountCents = Math.min(result.discountCents, Math.max(0, preDiscountCents - MIN_CHARGE_CENTS));
+      appliedCouponCode = result.code;
+    }
+
+    let discounts;
+    if (discountCents > 0) {
+      const stripeCoupon = await stripe.coupons.create({
+        amount_off: discountCents,
+        currency: 'usd',
+        duration: 'once',
+        name: appliedCouponCode,
+      });
+      discounts = [{ coupon: stripeCoupon.id }];
+    }
+
     const origin = req.headers.origin || `https://${req.headers.host}`;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items,
+      discounts,
       customer_email: email || undefined,
       client_reference_id: orderNumber || undefined,
       success_url: `${origin}/Checkout.dc.html?session_id={CHECKOUT_SESSION_ID}`,
@@ -111,6 +148,8 @@ module.exports = async (req, res) => {
         shippingFee: shippingAmount.toFixed(2),
         tip: tipAmount.toFixed(2),
         termsAgreedAt,
+        couponCode: appliedCouponCode,
+        discountAmount: (discountCents / 100).toFixed(2),
       },
     });
 

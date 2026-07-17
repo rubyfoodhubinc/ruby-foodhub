@@ -34,9 +34,11 @@ async function sendOrderEmails(session, items) {
   const total = ((session.amount_total || 0) / 100).toFixed(2);
   const itemsText = itemsToText(items);
 
+  const couponLine = meta.couponCode ? `Coupon: ${meta.couponCode} (-$${Number(meta.discountAmount || 0).toFixed(2)})\n` : '';
+
   const orderDetailsText = `Order #${orderNumber}
 Total: $${total}
-
+${couponLine}
 Items:
 ${itemsText}
 
@@ -100,6 +102,8 @@ async function saveOrder(session, items) {
         tip: meta.tip ? Number(meta.tip) : null,
         total: (session.amount_total || 0) / 100,
         terms_agreed_at: meta.termsAgreedAt || null,
+        coupon_code: meta.couponCode || null,
+        discount: meta.discountAmount ? Number(meta.discountAmount) : null,
       },
       { onConflict: 'order_id' }
     );

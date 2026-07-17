@@ -72,3 +72,39 @@ export function getNextOrderNumber() {
   localStorage.setItem(ORDER_SEQ_KEY, String(next));
   return 'RFH' + String(next).padStart(13, '0');
 }
+
+// Only one coupon is ever stored — applying a new code overwrites it, there's
+// no concept of stacking multiple codes.
+const COUPON_KEY = 'rubyfoodhub_coupon_v1';
+
+export function getCoupon() {
+  return localStorage.getItem(COUPON_KEY) || '';
+}
+
+export function setCoupon(code) {
+  localStorage.setItem(COUPON_KEY, code);
+  window.dispatchEvent(new CustomEvent('cart:updated'));
+}
+
+export function clearCoupon() {
+  localStorage.removeItem(COUPON_KEY);
+  window.dispatchEvent(new CustomEvent('cart:updated'));
+}
+
+// Client-side preview only, so the customer sees the discount before
+// redirecting to Stripe. The authoritative copy that actually determines
+// the charge lives server-side in api/_lib/coupons.js — keep both in sync.
+export function evaluateCoupon(code, amountBeforeDiscount) {
+  const normalized = String(code || '').trim().toUpperCase();
+
+  if (normalized === 'WELCOME5') {
+    return { valid: true, code: normalized, discount: Math.min(5, amountBeforeDiscount) };
+  }
+  if (normalized === 'TAKEOFF20') {
+    return { valid: true, code: normalized, discount: Math.min(20, amountBeforeDiscount) };
+  }
+  if (normalized === 'WILLDOPSY') {
+    return { valid: true, code: normalized, discount: Math.max(0, amountBeforeDiscount - 1) };
+  }
+  return { valid: false, code: normalized, discount: 0 };
+}

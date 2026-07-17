@@ -18,6 +18,8 @@ create table if not exists orders (
   tip numeric(10, 2),
   total numeric(10, 2),
   terms_agreed_at timestamptz,
+  coupon_code text,
+  discount numeric(10, 2),
   created_at timestamptz not null default now()
 );
 
