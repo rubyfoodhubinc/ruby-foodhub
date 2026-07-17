@@ -14,11 +14,13 @@ export function getTierForZip(zip) {
   return ZIP_TIER_TABLE[String(zip || '').trim()] || '50+';
 }
 
-// $10 local delivery under $100 subtotal (0-20mi), free at/above $100. Flat fees for the other tiers.
-export function computeShippingFee(tier, subtotal) {
-  if (tier === '0-20') return subtotal >= 100 ? 0 : 10;
-  if (tier === '20-50') return 50;
-  return 75;
+// Flat delivery fee regardless of distance tier or subtotal. The tier is
+// still computed (see getTierForZip above) and stored with the order for
+// logistics/planning purposes, it just no longer affects the price.
+const FLAT_SHIPPING_FEE = 14.99;
+
+export function computeShippingFee() {
+  return FLAT_SHIPPING_FEE;
 }
 
 const CART_KEY = 'rubyfoodhub_cart_v1';

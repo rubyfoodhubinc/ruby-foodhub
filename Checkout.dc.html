@@ -208,12 +208,6 @@ class Component extends DCLogic {
     const tip = this.computeTip(subtotal);
     const total = subtotal + shippingFee + tip;
 
-    const tierNotes = {
-      '0-20': subtotal >= 100 ? 'Local delivery (0–20mi): free over $100 subtotal.' : 'Local delivery (0–20mi): $10 flat fee under $100 subtotal.',
-      '20-50': 'Regional delivery (20–50mi): $50 flat fee.',
-      '50+': 'Extended delivery (50mi+): $75 flat fee.'
-    };
-
     const presets = [10, 15, 20].map((pct) => ({
       label: pct + '%',
       select: () => this.selectTipPercent(pct),
@@ -235,7 +229,7 @@ class Component extends DCLogic {
       onPhoneChange: (e) => this.setState({ phone: e.target.value }),
       zip: this.state.zip,
       onZipChange: (e) => this.setState({ zip: e.target.value }),
-      tierNote: this.state.zip ? tierNotes[tier] : 'Enter your zip code to calculate shipping.',
+      tierNote: this.state.zip ? 'Flat delivery fee: $14.99' : 'Enter your zip code for delivery.',
       tipPresets: presets,
       selectNoTip: () => this.selectNoTip(),
       noTipBg: this.state.tipMode === 'none' ? 'rgba(34,30,26,.08)' : 'transparent',
