@@ -135,7 +135,9 @@ async function saveOrder(session, items) {
       { onConflict: 'order_id' }
     );
 
-  if (error) throw new Error(error.message || 'Failed to save order to Supabase');
+  // Supabase errors can have an empty .message with the real cause in
+  // .code/.details/.hint, so serialize the whole object.
+  if (error) throw new Error(JSON.stringify(error));
 }
 
 async function handler(req, res) {
@@ -159,9 +161,15 @@ async function handler(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  // console.error rather than console.log: Vercel's runtime log view
+  // reliably captures stderr (confirmed via a deprecation warning showing
+  // up there) while stdout lines were absent — these are diagnostics, so
+  // they go where they're guaranteed to be visible.
+  console.error(`[webhook] received event type: ${event.type}`);
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    console.log(`Order ${session.client_reference_id} paid — session ${session.id}`);
+    console.error(`[webhook] order ${session.client_reference_id} paid — session ${session.id}`);
 
     let items = [];
     try {
@@ -177,8 +185,9 @@ async function handler(req, res) {
     await sendOrderEmails(session, items);
     try {
       await saveOrder(session, items);
+      console.error(`[webhook] order ${session.client_reference_id} saved to Supabase OK`);
     } catch (err) {
-      console.error(`Failed to save order ${session.client_reference_id} to Supabase:`, err.message);
+      console.error(`[webhook] FAILED to save order ${session.client_reference_id} to Supabase:`, err.message);
     }
   }
 
