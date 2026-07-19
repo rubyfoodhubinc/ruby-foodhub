@@ -23,6 +23,7 @@
   .table-scroll { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid rgba(34,30,26,.08); white-space: nowrap; }
+  td.truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
   th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.55); cursor: pointer; user-select: none; }
   th:hover { color: oklch(45% 0.17 20); }
   tr.summary-row { cursor: pointer; }
@@ -83,16 +84,6 @@
   let sortDir = 'desc';
   const expanded = new Set();
 
-  const columns = [
-    { key: 'order_date', label: 'Date' },
-    { key: 'order_id', label: 'Order #' },
-    { key: 'customer_name', label: 'Customer' },
-    { key: 'email', label: 'Email' },
-    { key: 'coupon_code', label: 'Coupon' },
-    { key: 'total', label: 'Total' },
-    { key: 'status', label: 'Status' }
-  ];
-
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -111,15 +102,49 @@
     return '$' + Number(value).toFixed(2);
   }
 
+  function itemsSummary(items) {
+    if (!Array.isArray(items) || items.length === 0) return '—';
+    return items.map((it) => it.quantity + '× ' + it.description).join('; ');
+  }
+
+  // Every column stored in the Supabase orders table, in order.
+  // "truncate" caps the cell width; the full value is always in the
+  // expandable detail row.
+  const columns = [
+    { key: 'order_date', label: 'Date', render: (o) => esc(formatDate(o.order_date)) },
+    { key: 'order_id', label: 'Order #', render: (o) => esc(o.order_id || '—') },
+    { key: 'customer_name', label: 'Customer', render: (o) => esc(o.customer_name || '—') },
+    { key: 'email', label: 'Email', render: (o) => esc(o.email || '—') },
+    { key: 'phone', label: 'Phone', render: (o) => esc(o.phone || '—') },
+    { key: 'address', label: 'Address', truncate: true, render: (o) => esc((o.address || '—').replace(/\n/g, ', ')) },
+    { key: 'zip', label: 'Zip', render: (o) => esc(o.zip || '—') },
+    { key: 'shipping_tier', label: 'Tier', render: (o) => esc(o.shipping_tier || '—') },
+    { key: 'notes', label: 'Notes', truncate: true, render: (o) => esc(o.notes || '—') },
+    { key: 'items', label: 'Items', truncate: true, render: (o) => esc(itemsSummary(o.items)) },
+    { key: 'subtotal', label: 'Subtotal', money: true, render: (o) => esc(formatMoney(o.subtotal)) },
+    { key: 'shipping', label: 'Shipping', money: true, render: (o) => esc(formatMoney(o.shipping)) },
+    { key: 'coupon_code', label: 'Coupon', render: (o) => esc(o.coupon_code || '—') },
+    { key: 'discount', label: 'Discount', money: true, render: (o) => esc(o.discount ? '−' + formatMoney(o.discount) : '—') },
+    { key: 'tip', label: 'Tip', money: true, render: (o) => esc(formatMoney(o.tip)) },
+    { key: 'total', label: 'Total', money: true, render: (o) => '<strong>' + esc(formatMoney(o.total)) + '</strong>' },
+    { key: 'terms_agreed_at', label: 'Terms Agreed', render: (o) => esc(o.terms_agreed_at ? formatDate(o.terms_agreed_at) : '—') },
+    { key: 'created_at', label: 'Recorded', render: (o) => esc(o.created_at ? formatDate(o.created_at) : '—') },
+    { key: 'status', label: 'Status', render: () => '<span class="status-pill">Paid</span>' }
+  ];
+
+  function sortValue(order, key) {
+    if (key === 'status') return 'Paid';
+    if (key === 'items') return itemsSummary(order.items);
+    const moneyKeys = ['subtotal', 'shipping', 'discount', 'tip', 'total'];
+    if (moneyKeys.includes(key)) return Number(order[key]) || 0;
+    return order[key] ?? '';
+  }
+
   function sortedOrders() {
     const copy = orders.slice();
     copy.sort((a, b) => {
-      let av = a[sortKey];
-      let bv = b[sortKey];
-      if (sortKey === 'status') { av = 'Paid'; bv = 'Paid'; }
-      if (sortKey === 'total') { av = Number(av) || 0; bv = Number(bv) || 0; }
-      av = av ?? '';
-      bv = bv ?? '';
+      const av = sortValue(a, sortKey);
+      const bv = sortValue(b, sortKey);
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
       return 0;
@@ -173,16 +198,13 @@
     const colCount = columns.length + 1;
     const rows = sortedOrders().map((o) => {
       const isOpen = expanded.has(o.order_id);
+      const cells = columns.map((col) =>
+        '<td' + (col.truncate ? ' class="truncate"' : '') + '>' + col.render(o) + '</td>'
+      ).join('');
       const summary =
         '<tr class="summary-row" data-order="' + esc(o.order_id) + '">' +
         '<td><span class="expand-caret">' + (isOpen ? '▼' : '►') + '</span></td>' +
-        '<td>' + formatDate(o.order_date) + '</td>' +
-        '<td>' + esc(o.order_id || '—') + '</td>' +
-        '<td>' + esc(o.customer_name || '—') + '</td>' +
-        '<td>' + esc(o.email || '—') + '</td>' +
-        '<td>' + esc(o.coupon_code || '—') + '</td>' +
-        '<td>' + formatMoney(o.total) + '</td>' +
-        '<td><span class="status-pill">Paid</span></td>' +
+        cells +
         '</tr>';
       const detail = isOpen
         ? '<tr><td class="detail-cell" colspan="' + colCount + '">' + renderDetail(o) + '</td></tr>'
