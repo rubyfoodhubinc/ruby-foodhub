@@ -16,6 +16,9 @@ async function loadLineItems(stripe, sessionId) {
   }));
 }
 
+// Deliberately does NOT set order_status: the column's DB default covers
+// new rows, and including it here would let a Stripe webhook retry or a
+// reconciliation upsert reset a manually-set "delivered" back to "pending".
 function buildOrderRow(session, items) {
   const orderNumber = session.client_reference_id || session.id;
   const meta = session.metadata || {};

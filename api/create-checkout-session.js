@@ -39,6 +39,19 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'You must agree to the Terms of Service before placing an order.' });
     }
 
+    // Contact/delivery details are required — mirrors the client-side
+    // validation so a direct API call can't skip it either.
+    const phoneDigits = String(phone || '').replace(/\D/g, '');
+    if (
+      !String(fullName || '').trim() ||
+      !String(address || '').trim() ||
+      !/^\d{5}(-\d{4})?$/.test(String(zip || '').trim()) ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim()) ||
+      phoneDigits.length < 7
+    ) {
+      return res.status(400).json({ error: 'Please fill in your name, delivery address, ZIP code, email, and phone number before checkout.' });
+    }
+
     // Computed from the same unitAmount/quantity used to build the Stripe
     // line items below, so it's authoritative rather than trusting a
     // client-supplied total — this is what gets persisted to the orders

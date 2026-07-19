@@ -20,6 +20,8 @@ create table if not exists orders (
   terms_agreed_at timestamptz,
   coupon_code text,
   discount numeric(10, 2),
+  order_status text not null default 'pending',
+  customer_id uuid,
   created_at timestamptz not null default now()
 );
 

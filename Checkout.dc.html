@@ -171,6 +171,18 @@ class Component extends DCLogic {
     return 0;
   }
 
+  validateCheckoutFields() {
+    const missing = [];
+    if (!this.state.fullName.trim()) missing.push('Full Name');
+    if (!this.state.addressLine1.trim()) missing.push('Address Line 1 (Street)');
+    if (!this.state.city.trim()) missing.push('City');
+    if (!this.state.addressState.trim()) missing.push('State');
+    if (!/^\d{5}(-\d{4})?$/.test(this.state.zip.trim())) missing.push('a valid ZIP Code');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.state.email.trim())) missing.push('a valid Email Address');
+    if (this.state.phone.replace(/\D/g, '').length < 7) missing.push('a valid Phone Number');
+    return missing;
+  }
+
   buildAddressText() {
     const lines = [
       this.state.companyName,
@@ -188,6 +200,12 @@ class Component extends DCLogic {
     const lib = this._lib;
     const cart = this.state.cart || [];
     if (cart.length === 0) return;
+
+    const missing = this.validateCheckoutFields();
+    if (missing.length > 0) {
+      this.setState({ errorMessage: 'Please provide: ' + missing.join(', ') + '.' });
+      return;
+    }
 
     // Defense in depth — the button is already disabled without this, but a
     // direct API call could otherwise skip the checkbox entirely.
