@@ -7,7 +7,7 @@
 <style>
   body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: oklch(97% 0.015 60); color: oklch(22% 0.02 40); }
   * { box-sizing: border-box; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
   .login-card { max-width: 360px; margin: 120px auto; background: #fff; border-radius: 16px; box-shadow: 0 6px 18px rgba(34,30,26,.08); padding: 36px; text-align: center; }
   .login-card h1 { font-size: 20px; margin: 0 0 20px; }
   input[type="password"] { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14.5px; margin-bottom: 14px; }
@@ -15,17 +15,33 @@
   button:hover { background: oklch(52% 0.19 20); }
   button:disabled { background: #ccc; cursor: not-allowed; }
   .error { color: oklch(45% 0.17 20); font-size: 13px; margin: 12px 0 0; }
-  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
   .top-bar h1 { font-size: 22px; margin: 0; }
-  .logout-btn { width: auto; padding: 9px 18px; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(34,30,26,.06); }
-  th, td { text-align: left; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid rgba(34,30,26,.08); }
-  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.55); cursor: pointer; user-select: none; white-space: nowrap; }
+  .top-actions { display: flex; gap: 10px; }
+  .small-btn { width: auto; padding: 9px 18px; font-size: 13px; }
+  .sync-note { font-size: 13px; color: rgba(34,30,26,.6); margin: 0 0 18px; min-height: 18px; }
+  .table-scroll { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid rgba(34,30,26,.08); white-space: nowrap; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.55); cursor: pointer; user-select: none; }
   th:hover { color: oklch(45% 0.17 20); }
+  tr.summary-row { cursor: pointer; }
+  tr.summary-row:hover td { background: oklch(98% 0.01 60); }
   tr:last-child td { border-bottom: none; }
   .status-pill { display: inline-block; background: oklch(90% 0.08 150); color: oklch(35% 0.1 150); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
   .empty, .loading { text-align: center; padding: 60px 0; color: rgba(34,30,26,.5); }
   .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.6; }
+  .expand-caret { display: inline-block; width: 16px; color: rgba(34,30,26,.45); font-size: 11px; }
+  .detail-cell { background: oklch(98.5% 0.008 60); padding: 18px 24px 22px; white-space: normal; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 28px; margin-bottom: 14px; }
+  .detail-field .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.5); margin-bottom: 3px; }
+  .detail-field .value { font-size: 14px; white-space: pre-line; }
+  .items-block { border-top: 1px solid rgba(34,30,26,.08); padding-top: 12px; }
+  .items-block .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.5); margin-bottom: 6px; }
+  .items-table { width: auto; min-width: 320px; }
+  .items-table td, .items-table th { padding: 5px 14px 5px 0; font-size: 13.5px; border: none; }
+  .money-summary { margin-top: 12px; font-size: 13.5px; color: rgba(34,30,26,.75); }
+  .money-summary strong { color: oklch(22% 0.02 40); }
 </style>
 </head>
 <body>
@@ -40,8 +56,12 @@
 <div id="admin-view" class="wrap" hidden>
   <div class="top-bar">
     <h1>Orders</h1>
-    <button type="button" class="logout-btn" id="logout-btn">Log Out</button>
+    <div class="top-actions">
+      <button type="button" class="small-btn" id="sync-btn">Sync from Stripe</button>
+      <button type="button" class="small-btn" id="logout-btn">Log Out</button>
+    </div>
   </div>
+  <p class="sync-note" id="sync-note"></p>
   <div id="table-container"><div class="loading">Loading orders…</div></div>
 </div>
 
@@ -54,19 +74,30 @@
   const loginBtn = document.getElementById('login-btn');
   const loginError = document.getElementById('login-error');
   const logoutBtn = document.getElementById('logout-btn');
+  const syncBtn = document.getElementById('sync-btn');
+  const syncNote = document.getElementById('sync-note');
   const tableContainer = document.getElementById('table-container');
 
   let orders = [];
   let sortKey = 'order_date';
   let sortDir = 'desc';
+  const expanded = new Set();
 
   const columns = [
     { key: 'order_date', label: 'Date' },
     { key: 'order_id', label: 'Order #' },
     { key: 'customer_name', label: 'Customer' },
+    { key: 'email', label: 'Email' },
+    { key: 'coupon_code', label: 'Coupon' },
     { key: 'total', label: 'Total' },
     { key: 'status', label: 'Status' }
   ];
+
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function formatDate(value) {
     if (!value) return '—';
@@ -87,11 +118,50 @@
       let bv = b[sortKey];
       if (sortKey === 'status') { av = 'Paid'; bv = 'Paid'; }
       if (sortKey === 'total') { av = Number(av) || 0; bv = Number(bv) || 0; }
+      av = av ?? '';
+      bv = bv ?? '';
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
     return copy;
+  }
+
+  function detailField(label, value) {
+    return '<div class="detail-field"><div class="label">' + esc(label) + '</div>' +
+      '<div class="value">' + (value ? esc(value) : '—') + '</div></div>';
+  }
+
+  function renderDetail(o) {
+    const fields =
+      detailField('Phone', o.phone) +
+      detailField('Delivery Address', o.address) +
+      detailField('Zip', o.zip) +
+      detailField('Shipping Tier', o.shipping_tier) +
+      detailField('Order Notes', o.notes) +
+      detailField('Terms Agreed At', o.terms_agreed_at ? formatDate(o.terms_agreed_at) : '') +
+      detailField('Recorded At', o.created_at ? formatDate(o.created_at) : '');
+
+    const items = Array.isArray(o.items) ? o.items : [];
+    const itemRows = items.map((it) =>
+      '<tr><td>' + esc(it.quantity) + ' ×</td><td>' + esc(it.description) + '</td><td>' + formatMoney(it.amount) + '</td></tr>'
+    ).join('');
+    const itemsBlock =
+      '<div class="items-block"><div class="label">Items</div>' +
+      (itemRows ? '<table class="items-table"><tbody>' + itemRows + '</tbody></table>' : '<div class="value">—</div>') +
+      '</div>';
+
+    const discountPart = o.coupon_code
+      ? ' &nbsp;·&nbsp; Discount (' + esc(o.coupon_code) + '): −' + formatMoney(o.discount)
+      : '';
+    const money =
+      '<div class="money-summary">Subtotal: ' + formatMoney(o.subtotal) +
+      ' &nbsp;·&nbsp; Shipping: ' + formatMoney(o.shipping) +
+      discountPart +
+      ' &nbsp;·&nbsp; Tip: ' + formatMoney(o.tip) +
+      ' &nbsp;·&nbsp; <strong>Total: ' + formatMoney(o.total) + '</strong></div>';
+
+    return '<div class="detail-grid">' + fields + '</div>' + itemsBlock + money;
   }
 
   function renderTable() {
@@ -100,29 +170,38 @@
       return;
     }
 
-    const rows = sortedOrders().map((o) => `
-      <tr>
-        <td>${formatDate(o.order_date)}</td>
-        <td>${o.order_id || '—'}</td>
-        <td>${o.customer_name || '—'}</td>
-        <td>${formatMoney(o.total)}</td>
-        <td><span class="status-pill">Paid</span></td>
-      </tr>
-    `).join('');
-
-    const headerCells = columns.map((col) => {
-      const arrow = sortKey === col.key ? (sortDir === 'asc' ? '▲' : '▼') : '';
-      return `<th data-key="${col.key}">${col.label}<span class="sort-arrow">${arrow}</span></th>`;
+    const colCount = columns.length + 1;
+    const rows = sortedOrders().map((o) => {
+      const isOpen = expanded.has(o.order_id);
+      const summary =
+        '<tr class="summary-row" data-order="' + esc(o.order_id) + '">' +
+        '<td><span class="expand-caret">' + (isOpen ? '▼' : '►') + '</span></td>' +
+        '<td>' + formatDate(o.order_date) + '</td>' +
+        '<td>' + esc(o.order_id || '—') + '</td>' +
+        '<td>' + esc(o.customer_name || '—') + '</td>' +
+        '<td>' + esc(o.email || '—') + '</td>' +
+        '<td>' + esc(o.coupon_code || '—') + '</td>' +
+        '<td>' + formatMoney(o.total) + '</td>' +
+        '<td><span class="status-pill">Paid</span></td>' +
+        '</tr>';
+      const detail = isOpen
+        ? '<tr><td class="detail-cell" colspan="' + colCount + '">' + renderDetail(o) + '</td></tr>'
+        : '';
+      return summary + detail;
     }).join('');
 
-    tableContainer.innerHTML = `
-      <table>
-        <thead><tr>${headerCells}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
+    const headerCells = '<th></th>' + columns.map((col) => {
+      const arrow = sortKey === col.key ? (sortDir === 'asc' ? '▲' : '▼') : '';
+      return '<th data-key="' + col.key + '">' + esc(col.label) + '<span class="sort-arrow">' + arrow + '</span></th>';
+    }).join('');
 
-    tableContainer.querySelectorAll('th').forEach((th) => {
+    tableContainer.innerHTML =
+      '<div class="table-scroll"><table>' +
+      '<thead><tr>' + headerCells + '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+      '</table></div>';
+
+    tableContainer.querySelectorAll('th[data-key]').forEach((th) => {
       th.addEventListener('click', () => {
         const key = th.dataset.key;
         if (sortKey === key) {
@@ -131,6 +210,15 @@
           sortKey = key;
           sortDir = 'asc';
         }
+        renderTable();
+      });
+    });
+
+    tableContainer.querySelectorAll('tr.summary-row').forEach((tr) => {
+      tr.addEventListener('click', () => {
+        const id = tr.dataset.order;
+        if (expanded.has(id)) expanded.delete(id);
+        else expanded.add(id);
         renderTable();
       });
     });
@@ -193,6 +281,38 @@
     adminView.hidden = true;
     loginView.hidden = false;
     passwordInput.value = '';
+  });
+
+  syncBtn.addEventListener('click', async () => {
+    const password = sessionStorage.getItem(STORAGE_KEY);
+    if (!password) return;
+
+    syncBtn.disabled = true;
+    syncBtn.textContent = 'Syncing…';
+    syncNote.textContent = '';
+
+    try {
+      const response = await fetch('/api/reconcile-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Sync failed');
+
+      const n = data.backfilled.length;
+      syncNote.textContent = 'Checked ' + data.checked + ' paid Stripe session(s) from the last 30 days — ' +
+        (n ? 'recovered ' + n + ' missing order(s).' : 'no missing orders found.') +
+        (data.failed.length ? ' ' + data.failed.length + ' failed — see logs.' : '');
+
+      orders = await fetchOrders(password);
+      renderTable();
+    } catch (err) {
+      syncNote.textContent = 'Sync error: ' + err.message;
+    } finally {
+      syncBtn.disabled = false;
+      syncBtn.textContent = 'Sync from Stripe';
+    }
   });
 
   const savedPassword = sessionStorage.getItem(STORAGE_KEY);

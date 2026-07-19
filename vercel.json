@@ -2,5 +2,8 @@
   "rewrites": [
     { "source": "/", "destination": "/Home.dc.html" },
     { "source": "/admin", "destination": "/admin.html" }
+  ],
+  "crons": [
+    { "path": "/api/reconcile-orders", "schedule": "0 12 * * *" }
   ]
 }

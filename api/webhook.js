@@ -1,6 +1,7 @@
 const Stripe = require('stripe');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { supabase } = require('./_lib/supabase');
+const { NON_PRODUCT_LINE_NAMES, loadLineItems, buildOrderRow } = require('./_lib/orders');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -12,21 +13,6 @@ function buffer(readable) {
     readable.on('error', reject);
   });
 }
-
-async function loadLineItems(sessionId) {
-  const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 100 });
-  return lineItems.data.map((li) => ({
-    description: li.description,
-    quantity: li.quantity,
-    amount: li.amount_total / 100,
-  }));
-}
-
-// "Delivery" and "Tip" are synthetic line items added in
-// create-checkout-session.js to get them onto the Stripe invoice — they
-// aren't products, so they're excluded here and reported via the
-// subtotal/shipping/tip breakdown instead.
-const NON_PRODUCT_LINE_NAMES = new Set(['Delivery', 'Tip']);
 
 function itemsToText(items) {
   const productItems = items.filter((li) => !NON_PRODUCT_LINE_NAMES.has(li.description));
@@ -106,34 +92,10 @@ async function sendOrderEmails(session, items) {
 }
 
 async function saveOrder(session, items) {
-  const orderNumber = session.client_reference_id || session.id;
-  const meta = session.metadata || {};
-  const customerEmail = (session.customer_details && session.customer_details.email) || null;
-
+  const row = buildOrderRow(session, items);
   const { error } = await supabase
     .from('orders')
-    .upsert(
-      {
-        order_id: orderNumber,
-        order_date: new Date((session.created || Date.now() / 1000) * 1000).toISOString(),
-        customer_name: meta.fullName || null,
-        email: customerEmail,
-        phone: meta.phone || null,
-        address: meta.address || null,
-        zip: meta.zip || null,
-        shipping_tier: meta.shippingTier || null,
-        notes: meta.notes || null,
-        items,
-        subtotal: meta.subtotal ? Number(meta.subtotal) : null,
-        shipping: meta.shippingFee ? Number(meta.shippingFee) : null,
-        tip: meta.tip ? Number(meta.tip) : null,
-        total: (session.amount_total || 0) / 100,
-        terms_agreed_at: meta.termsAgreedAt || null,
-        coupon_code: meta.couponCode || null,
-        discount: meta.discountAmount ? Number(meta.discountAmount) : null,
-      },
-      { onConflict: 'order_id' }
-    );
+    .upsert(row, { onConflict: 'order_id' });
 
   // Supabase errors can have an empty .message with the real cause in
   // .code/.details/.hint, so serialize the whole object.
@@ -173,7 +135,7 @@ async function handler(req, res) {
 
     let items = [];
     try {
-      items = await loadLineItems(session.id);
+      items = await loadLineItems(stripe, session.id);
     } catch (err) {
       console.error(`Failed to load line items for session ${session.id}:`, err.message);
     }
