@@ -19,7 +19,14 @@
   .top-bar h1 { font-size: 22px; margin: 0; }
   .top-actions { display: flex; gap: 10px; }
   .small-btn { width: auto; padding: 9px 18px; font-size: 13px; }
-  .sync-note { font-size: 13px; color: rgba(34,30,26,.6); margin: 0 0 18px; min-height: 18px; }
+  .sync-note { font-size: 13px; color: rgba(34,30,26,.6); margin: 0 0 14px; min-height: 18px; }
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .filter-bar input[type="search"] { flex: 1; min-width: 220px; padding: 10px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14px; font-family: inherit; }
+  .filter-bar input[type="date"] { padding: 9px 12px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 13.5px; font-family: inherit; color: oklch(22% 0.02 40); }
+  .filter-bar .date-label { font-size: 12.5px; color: rgba(34,30,26,.55); }
+  .clear-btn { width: auto; padding: 9px 16px; font-size: 13px; background: transparent; color: oklch(45% 0.17 20); border: 1.5px solid oklch(45% 0.17 20); }
+  .clear-btn:hover { background: oklch(45% 0.17 20); color: #fff; }
+  .result-count { font-size: 12.5px; color: rgba(34,30,26,.55); margin: 0 0 10px; }
   .table-scroll { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid rgba(34,30,26,.08); white-space: nowrap; }
@@ -63,6 +70,15 @@
     </div>
   </div>
   <p class="sync-note" id="sync-note"></p>
+  <div class="filter-bar">
+    <input type="search" id="search-input" placeholder="Search name, phone, email, address, order #…" />
+    <span class="date-label">From</span>
+    <input type="date" id="date-from" />
+    <span class="date-label">To</span>
+    <input type="date" id="date-to" />
+    <button type="button" class="clear-btn" id="clear-filters-btn">Clear</button>
+  </div>
+  <p class="result-count" id="result-count"></p>
   <div id="table-container"><div class="loading">Loading orders…</div></div>
 </div>
 
@@ -78,6 +94,11 @@
   const syncBtn = document.getElementById('sync-btn');
   const syncNote = document.getElementById('sync-note');
   const tableContainer = document.getElementById('table-container');
+  const searchInput = document.getElementById('search-input');
+  const dateFromInput = document.getElementById('date-from');
+  const dateToInput = document.getElementById('date-to');
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+  const resultCount = document.getElementById('result-count');
 
   let orders = [];
   let sortKey = 'order_date';
@@ -140,8 +161,32 @@
     return order[key] ?? '';
   }
 
+  function filteredOrders() {
+    const query = searchInput.value.trim().toLowerCase();
+    const from = dateFromInput.value ? new Date(dateFromInput.value + 'T00:00:00') : null;
+    const to = dateToInput.value ? new Date(dateToInput.value + 'T23:59:59.999') : null;
+
+    return orders.filter((o) => {
+      if (from || to) {
+        const orderDate = o.order_date ? new Date(o.order_date) : null;
+        if (!orderDate) return false;
+        if (from && orderDate < from) return false;
+        if (to && orderDate > to) return false;
+      }
+
+      if (query) {
+        const haystack = [o.customer_name, o.phone, o.email, o.address, o.order_id]
+          .map((v) => String(v ?? '').toLowerCase())
+          .join(' ');
+        if (!haystack.includes(query)) return false;
+      }
+
+      return true;
+    });
+  }
+
   function sortedOrders() {
-    const copy = orders.slice();
+    const copy = filteredOrders();
     copy.sort((a, b) => {
       const av = sortValue(a, sortKey);
       const bv = sortValue(b, sortKey);
@@ -191,12 +236,23 @@
 
   function renderTable() {
     if (orders.length === 0) {
+      resultCount.textContent = '';
       tableContainer.innerHTML = '<div class="empty">No orders yet.</div>';
       return;
     }
 
+    const visible = sortedOrders();
+    resultCount.textContent = visible.length === orders.length
+      ? orders.length + ' order' + (orders.length === 1 ? '' : 's')
+      : visible.length + ' of ' + orders.length + ' orders match';
+
+    if (visible.length === 0) {
+      tableContainer.innerHTML = '<div class="empty">No orders match these filters.</div>';
+      return;
+    }
+
     const colCount = columns.length + 1;
-    const rows = sortedOrders().map((o) => {
+    const rows = visible.map((o) => {
       const isOpen = expanded.has(o.order_id);
       const cells = columns.map((col) =>
         '<td' + (col.truncate ? ' class="truncate"' : '') + '>' + col.render(o) + '</td>'
@@ -303,6 +359,17 @@
     adminView.hidden = true;
     loginView.hidden = false;
     passwordInput.value = '';
+  });
+
+  searchInput.addEventListener('input', renderTable);
+  dateFromInput.addEventListener('change', renderTable);
+  dateToInput.addEventListener('change', renderTable);
+
+  clearFiltersBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    dateFromInput.value = '';
+    dateToInput.value = '';
+    renderTable();
   });
 
   syncBtn.addEventListener('click', async () => {
