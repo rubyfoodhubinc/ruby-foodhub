@@ -130,6 +130,7 @@ class Component extends DCLogic {
   async componentDidMount() {
     const lib = await import('./cart-lib.js');
     this._lib = lib;
+    this.initAuth(); // fire-and-forget: prefills from the customer's profile if signed in
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
 
@@ -158,6 +159,40 @@ class Component extends DCLogic {
 
     const zip = params.get('zip') || '';
     this.setState({ cart: lib.getCart(), zip, appliedCoupon: lib.getCoupon() });
+  }
+
+  async initAuth() {
+    try {
+      const cfg = await (await fetch('/api/public-config')).json();
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+      this._sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+      const { data: { session } } = await this._sb.auth.getSession();
+      if (!session || !session.user) return;
+      this._accessToken = session.access_token;
+
+      const { data: profile } = await this._sb
+        .from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+
+      // Prefill only fields the customer hasn't already typed into.
+      const patch = {};
+      if (!this.state.email) patch.email = session.user.email || '';
+      if (profile) {
+        if (!this.state.fullName && profile.full_name) patch.fullName = profile.full_name;
+        if (!this.state.phone && profile.phone) patch.phone = profile.phone;
+        const addr = Array.isArray(profile.addresses) && profile.addresses[0];
+        if (addr && !this.state.addressLine1) {
+          patch.addressLine1 = addr.line1 || '';
+          patch.addressLine2 = addr.line2 || '';
+          patch.city = addr.city || '';
+          patch.addressState = addr.state || '';
+          if (!this.state.zip) patch.zip = addr.zip || '';
+        }
+      }
+      if (Object.keys(patch).length) this.setState(patch);
+    } catch (e) {
+      // Signed-out or auth unavailable — guest checkout continues unaffected.
+    }
   }
 
   selectTipPercent(pct) { this.setState({ tipMode: 'percent', tipPercent: pct, customTip: '' }); }
@@ -228,9 +263,12 @@ class Component extends DCLogic {
     this.setState({ submitting: true, errorMessage: '' });
 
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (this._accessToken) headers['Authorization'] = 'Bearer ' + this._accessToken;
+
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           items: cart,
           shippingFee,

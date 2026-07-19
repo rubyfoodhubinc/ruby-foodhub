@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Domine:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:oklch(45% 0.17 20);text-decoration:none}
+  a:hover{color:oklch(52% 0.19 20)}
+  *{box-sizing:border-box}
+</style>
+</helmet>
+
+<div style="background:oklch(97% 0.015 60);color:oklch(22% 0.02 40);min-height:100vh">
+
+  <dc-import name="Site Nav" active="account" hint-size="100%,76px"></dc-import>
+
+  <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ true }}">
+    <section style="padding:120px 48px;text-align:center;color:rgba(34,30,26,.55)">Loading your account…</section>
+  </sc-if>
+
+  <sc-if value="{{ showAuth }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:64px 24px 120px;max-width:440px;margin:0 auto">
+      <div style="background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(34,30,26,.07);padding:36px">
+        <div style="display:flex;gap:8px;margin-bottom:24px">
+          <button type="button" onClick="{{ showSignInTab }}" style="flex:1;padding:10px 0;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid oklch(45% 0.17 20);background:{{ signInTabBg }};color:{{ signInTabColor }}">Sign In</button>
+          <button type="button" onClick="{{ showSignUpTab }}" style="flex:1;padding:10px 0;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid oklch(45% 0.17 20);background:{{ signUpTabBg }};color:{{ signUpTabColor }}">Create Account</button>
+        </div>
+
+        <sc-if value="{{ showInfo }}" hint-placeholder-val="{{ false }}">
+          <p style="background:oklch(94% 0.05 150);color:oklch(35% 0.1 150);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin:0 0 16px">{{ infoMessage }}</p>
+        </sc-if>
+        <sc-if value="{{ showAuthError }}" hint-placeholder-val="{{ false }}">
+          <p style="background:oklch(95% 0.03 20);color:oklch(45% 0.17 20);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin:0 0 16px">{{ authError }}</p>
+        </sc-if>
+
+        <sc-if value="{{ showSignIn }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <input type="email" value="{{ email }}" onChange="{{ onEmailChange }}" placeholder="Email Address" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <input type="password" value="{{ password }}" onChange="{{ onPasswordChange }}" placeholder="Password" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <button type="button" onClick="{{ signIn }}" disabled="{{ busy }}" style="width:100%;background:oklch(45% 0.17 20);color:#fff;padding:13px 0;border-radius:100px;font-size:14.5px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">{{ signInLabel }}</button>
+            <button type="button" onClick="{{ signInWithGoogle }}" disabled="{{ busy }}" style="width:100%;background:#fff;color:oklch(22% 0.02 40);padding:12px 0;border-radius:100px;font-size:14.5px;font-weight:700;border:1.5px solid rgba(34,30,26,.25);cursor:pointer" style-hover="border-color:oklch(22% 0.02 40)">Continue with Google</button>
+            <a href="#" onClick="{{ showForgotTab }}" style="text-align:center;font-size:13px;margin-top:4px">Forgot your password?</a>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showSignUp }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <input type="text" value="{{ signUpName }}" onChange="{{ onSignUpNameChange }}" placeholder="Full Name" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <input type="email" value="{{ email }}" onChange="{{ onEmailChange }}" placeholder="Email Address" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <input type="password" value="{{ password }}" onChange="{{ onPasswordChange }}" placeholder="Password (8+ characters)" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <button type="button" onClick="{{ signUp }}" disabled="{{ busy }}" style="width:100%;background:oklch(45% 0.17 20);color:#fff;padding:13px 0;border-radius:100px;font-size:14.5px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">{{ signUpLabel }}</button>
+            <button type="button" onClick="{{ signInWithGoogle }}" disabled="{{ busy }}" style="width:100%;background:#fff;color:oklch(22% 0.02 40);padding:12px 0;border-radius:100px;font-size:14.5px;font-weight:700;border:1.5px solid rgba(34,30,26,.25);cursor:pointer" style-hover="border-color:oklch(22% 0.02 40)">Continue with Google</button>
+            <p style="font-size:12px;color:rgba(34,30,26,.55);margin:4px 0 0;text-align:center">We'll send a verification link to your email before you can sign in.</p>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showForgot }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <p style="font-size:13.5px;color:rgba(34,30,26,.7);margin:0">Enter your email and we'll send you a password reset link.</p>
+            <input type="email" value="{{ email }}" onChange="{{ onEmailChange }}" placeholder="Email Address" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+            <button type="button" onClick="{{ sendReset }}" disabled="{{ busy }}" style="width:100%;background:oklch(45% 0.17 20);color:#fff;padding:13px 0;border-radius:100px;font-size:14.5px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">{{ sendResetLabel }}</button>
+            <a href="#" onClick="{{ showSignInTab }}" style="text-align:center;font-size:13px">Back to sign in</a>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{ showRecovery }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:64px 24px 120px;max-width:440px;margin:0 auto">
+      <div style="background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(34,30,26,.07);padding:36px">
+        <h1 style="font-family:'Domine',serif;font-weight:700;font-size:22px;margin:0 0 16px">Set a New Password</h1>
+        <sc-if value="{{ showAuthError }}" hint-placeholder-val="{{ false }}">
+          <p style="background:oklch(95% 0.03 20);color:oklch(45% 0.17 20);border-radius:10px;padding:12px 14px;font-size:13.5px;margin:0 0 16px">{{ authError }}</p>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <input type="password" value="{{ newPassword }}" onChange="{{ onNewPasswordChange }}" placeholder="New password (8+ characters)" style="width:100%;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+          <button type="button" onClick="{{ updatePassword }}" disabled="{{ busy }}" style="width:100%;background:oklch(45% 0.17 20);color:#fff;padding:13px 0;border-radius:100px;font-size:14.5px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">{{ updatePasswordLabel }}</button>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{ showDashboard }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:48px 24px 120px;max-width:960px;margin:0 auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+        <h1 style="font-family:'Domine',serif;font-weight:700;font-size:30px;margin:0">My Account</h1>
+        <button type="button" onClick="{{ signOut }}" style="background:transparent;color:oklch(45% 0.17 20);border:1.5px solid oklch(45% 0.17 20);padding:9px 18px;border-radius:100px;font-size:13px;font-weight:700;cursor:pointer">Sign Out</button>
+      </div>
+      <p style="font-size:13px;color:rgba(34,30,26,.55);margin:0 0 28px">Signed in as {{ userEmail }} · Customer ID: <span style="font-family:ui-monospace,monospace">{{ customerId }}</span></p>
+
+      <sc-if value="{{ showDashMessage }}" hint-placeholder-val="{{ false }}">
+        <p style="background:oklch(94% 0.05 150);color:oklch(35% 0.1 150);border-radius:10px;padding:12px 14px;font-size:13.5px;margin:0 0 20px">{{ dashMessage }}</p>
+      </sc-if>
+
+      <div style="background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(34,30,26,.07);padding:28px;margin-bottom:24px">
+        <h2 style="font-family:'Domine',serif;font-weight:700;font-size:19px;margin:0 0 16px">Profile</h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <input type="text" value="{{ profileName }}" onChange="{{ onProfileNameChange }}" placeholder="Full Name" style="flex:2;min-width:200px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+          <input type="tel" value="{{ profilePhone }}" onChange="{{ onProfilePhoneChange }}" placeholder="Phone Number" style="flex:1;min-width:160px;padding:11px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14.5px"/>
+          <button type="button" onClick="{{ saveProfile }}" disabled="{{ busy }}" style="flex:none;background:oklch(45% 0.17 20);color:#fff;padding:11px 24px;border-radius:100px;font-size:14px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Save</button>
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(34,30,26,.07);padding:28px;margin-bottom:24px">
+        <h2 style="font-family:'Domine',serif;font-weight:700;font-size:19px;margin:0 0 6px">Delivery Addresses</h2>
+        <p style="font-size:12.5px;color:rgba(34,30,26,.55);margin:0 0 16px">Save up to 3 addresses. Your first address is used to pre-fill checkout.</p>
+
+        <sc-for list="{{ addresses }}" as="addr" hint-placeholder-count="1">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border:1px solid rgba(34,30,26,.12);border-radius:10px;padding:14px 16px;margin-bottom:10px">
+            <div style="font-size:14px;line-height:1.55;white-space:pre-line">{{ addr.text }}</div>
+            <button type="button" onClick="{{ addr.remove }}" style="flex:none;background:transparent;border:none;color:rgba(34,30,26,.45);font-size:13px;font-weight:700;cursor:pointer" style-hover="color:oklch(45% 0.17 20)">Remove</button>
+          </div>
+        </sc-for>
+
+        <sc-if value="{{ canAddAddress }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid rgba(34,30,26,.08);padding-top:16px;margin-top:6px">
+            <input type="text" value="{{ newAddrLine1 }}" onChange="{{ onNewAddrLine1 }}" placeholder="Address Line 1 (Street)" style="width:100%;padding:10px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14px"/>
+            <input type="text" value="{{ newAddrLine2 }}" onChange="{{ onNewAddrLine2 }}" placeholder="Address Line 2 (Apt/Suite)" style="width:100%;padding:10px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14px"/>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <input type="text" value="{{ newAddrCity }}" onChange="{{ onNewAddrCity }}" placeholder="City" style="flex:2;min-width:140px;padding:10px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14px"/>
+              <input type="text" value="{{ newAddrState }}" onChange="{{ onNewAddrState }}" placeholder="State" style="flex:1;min-width:80px;padding:10px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14px"/>
+              <input type="text" value="{{ newAddrZip }}" onChange="{{ onNewAddrZip }}" placeholder="ZIP" style="flex:1;min-width:90px;padding:10px 14px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:14px"/>
+            </div>
+            <button type="button" onClick="{{ addAddress }}" disabled="{{ busy }}" style="align-self:flex-start;background:oklch(45% 0.17 20);color:#fff;padding:10px 22px;border-radius:100px;font-size:13.5px;font-weight:700;border:none;cursor:pointer" style-hover="background:oklch(52% 0.19 20)">Add Address</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ atAddressLimit }}" hint-placeholder-val="{{ false }}">
+          <p style="font-size:12.5px;color:rgba(34,30,26,.5);margin:8px 0 0">You've saved the maximum of 3 addresses — remove one to add another.</p>
+        </sc-if>
+      </div>
+
+      <div style="background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(34,30,26,.07);padding:28px">
+        <h2 style="font-family:'Domine',serif;font-weight:700;font-size:19px;margin:0 0 16px">Order History</h2>
+        <sc-if value="{{ hasOrders }}" hint-placeholder-val="{{ false }}">
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:rgba(34,30,26,.5);white-space:nowrap">Date</th>
+                  <th style="text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:rgba(34,30,26,.5);white-space:nowrap">Order #</th>
+                  <th style="text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:rgba(34,30,26,.5);white-space:nowrap">Items</th>
+                  <th style="text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:rgba(34,30,26,.5);white-space:nowrap">Delivery Address</th>
+                  <th style="text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:rgba(34,30,26,.5);white-space:nowrap">Total</th>
+                  <th style="text-align:left;padding:10px 14px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:rgba(34,30,26,.5);white-space:nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ orderRows }}" as="o" hint-placeholder-count="2">
+                  <tr>
+                    <td style="padding:10px 14px;font-size:13.5px;border-top:1px solid rgba(34,30,26,.08);white-space:nowrap">{{ o.date }}</td>
+                    <td style="padding:10px 14px;font-size:13.5px;border-top:1px solid rgba(34,30,26,.08);white-space:nowrap">{{ o.orderId }}</td>
+                    <td style="padding:10px 14px;font-size:13.5px;border-top:1px solid rgba(34,30,26,.08)">{{ o.items }}</td>
+                    <td style="padding:10px 14px;font-size:13.5px;border-top:1px solid rgba(34,30,26,.08);white-space:pre-line">{{ o.address }}</td>
+                    <td style="padding:10px 14px;font-size:13.5px;border-top:1px solid rgba(34,30,26,.08);white-space:nowrap;font-weight:700">{{ o.total }}</td>
+                    <td style="padding:10px 14px;border-top:1px solid rgba(34,30,26,.08)"><span style="display:inline-block;font-size:12px;font-weight:700;padding:4px 12px;border-radius:100px;background:{{ o.statusBg }};color:{{ o.statusColor }}">{{ o.status }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasNoOrders }}" hint-placeholder-val="{{ true }}">
+          <p style="font-size:14px;color:rgba(34,30,26,.55);margin:0">No orders yet — orders you place while signed in will appear here. <a href="Products.dc.html" style="font-weight:700">Shop products</a></p>
+        </sc-if>
+      </div>
+    </section>
+  </sc-if>
+
+  <dc-import name="Site Footer" hint-size="100%,360px"></dc-import>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1200}}">
+class Component extends DCLogic {
+  state = {
+    mode: 'loading', authTab: 'signin', busy: false,
+    email: '', password: '', signUpName: '', newPassword: '',
+    authError: '', infoMessage: '', dashMessage: '',
+    user: null, profileName: '', profilePhone: '', addresses: [],
+    newAddrLine1: '', newAddrLine2: '', newAddrCity: '', newAddrState: '', newAddrZip: '',
+    orders: []
+  };
+
+  async componentDidMount() {
+    try {
+      const cfg = await (await fetch('/api/public-config')).json();
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+      this._sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+      // Fires for OAuth returns, email-verification links, and password
+      // recovery links (Supabase puts the session in the URL fragment).
+      this._sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          this.setState({ mode: 'recovery', busy: false });
+        } else if (event === 'SIGNED_IN' && this.state.mode !== 'recovery') {
+          this.enterDashboard(session.user);
+        } else if (event === 'SIGNED_OUT') {
+          this.setState({ mode: 'auth', user: null, orders: [], addresses: [] });
+        }
+      });
+
+      const { data: { session } } = await this._sb.auth.getSession();
+      if (session && session.user) {
+        await this.enterDashboard(session.user);
+      } else if (this.state.mode === 'loading') {
+        this.setState({ mode: 'auth' });
+      }
+    } catch (err) {
+      this.setState({ mode: 'auth', authError: 'Could not load account services: ' + err.message });
+    }
+  }
+
+  async enterDashboard(user) {
+    this.setState({ mode: 'dashboard', user, busy: false, authError: '' });
+
+    const fallbackName = (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || '';
+
+    const { data: profile } = await this._sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (profile) {
+      this.setState({
+        profileName: profile.full_name || fallbackName,
+        profilePhone: profile.phone || '',
+        addresses: Array.isArray(profile.addresses) ? profile.addresses : []
+      });
+    } else {
+      await this._sb.from('profiles').upsert({ id: user.id, full_name: fallbackName });
+      this.setState({ profileName: fallbackName, profilePhone: '', addresses: [] });
+    }
+
+    const { data: orders } = await this._sb
+      .from('orders')
+      .select('*')
+      .order('order_date', { ascending: false });
+    this.setState({ orders: orders || [] });
+  }
+
+  async signIn() {
+    if (this.state.busy) return;
+    this.setState({ busy: true, authError: '', infoMessage: '' });
+    const { error } = await this._sb.auth.signInWithPassword({
+      email: this.state.email.trim(),
+      password: this.state.password
+    });
+    if (error) this.setState({ busy: false, authError: error.message });
+    // success is handled by onAuthStateChange -> enterDashboard
+  }
+
+  async signUp() {
+    if (this.state.busy) return;
+    if (!this.state.signUpName.trim()) {
+      this.setState({ authError: 'Please enter your full name.' });
+      return;
+    }
+    if (this.state.password.length < 8) {
+      this.setState({ authError: 'Password must be at least 8 characters.' });
+      return;
+    }
+    this.setState({ busy: true, authError: '', infoMessage: '' });
+    const { data, error } = await this._sb.auth.signUp({
+      email: this.state.email.trim(),
+      password: this.state.password,
+      options: {
+        data: { full_name: this.state.signUpName.trim() },
+        emailRedirectTo: window.location.origin + '/Account.dc.html'
+      }
+    });
+    if (error) {
+      this.setState({ busy: false, authError: error.message });
+    } else if (data.session) {
+      // Email confirmation disabled in Supabase settings — signed straight in.
+      this.enterDashboard(data.user);
+    } else {
+      this.setState({
+        busy: false, authTab: 'signin', password: '',
+        infoMessage: 'Almost done! Check your email (' + this.state.email.trim() + ') for a verification link, then sign in.'
+      });
+    }
+  }
+
+  async signInWithGoogle() {
+    if (this.state.busy) return;
+    this.setState({ busy: true, authError: '' });
+    const { error } = await this._sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/Account.dc.html' }
+    });
+    if (error) this.setState({ busy: false, authError: error.message });
+  }
+
+  async sendReset() {
+    if (this.state.busy) return;
+    this.setState({ busy: true, authError: '', infoMessage: '' });
+    const { error } = await this._sb.auth.resetPasswordForEmail(this.state.email.trim(), {
+      redirectTo: window.location.origin + '/Account.dc.html'
+    });
+    if (error) this.setState({ busy: false, authError: error.message });
+    else this.setState({ busy: false, authTab: 'signin', infoMessage: 'Password reset link sent — check your email.' });
+  }
+
+  async updatePassword() {
+    if (this.state.busy) return;
+    if (this.state.newPassword.length < 8) {
+      this.setState({ authError: 'Password must be at least 8 characters.' });
+      return;
+    }
+    this.setState({ busy: true, authError: '' });
+    const { data, error } = await this._sb.auth.updateUser({ password: this.state.newPassword });
+    if (error) this.setState({ busy: false, authError: error.message });
+    else this.enterDashboard(data.user);
+  }
+
+  async signOut() {
+    await this._sb.auth.signOut();
+    this.setState({ mode: 'auth', authTab: 'signin', user: null, email: '', password: '', orders: [], addresses: [] });
+  }
+
+  async saveProfile() {
+    if (this.state.busy || !this.state.user) return;
+    this.setState({ busy: true, dashMessage: '' });
+    const { error } = await this._sb.from('profiles').upsert({
+      id: this.state.user.id,
+      full_name: this.state.profileName.trim(),
+      phone: this.state.profilePhone.trim(),
+      addresses: this.state.addresses
+    });
+    this.setState({ busy: false, dashMessage: error ? 'Save failed: ' + error.message : 'Profile saved.' });
+  }
+
+  async persistAddresses(addresses) {
+    const { error } = await this._sb.from('profiles').upsert({
+      id: this.state.user.id,
+      full_name: this.state.profileName.trim(),
+      phone: this.state.profilePhone.trim(),
+      addresses
+    });
+    if (error) {
+      this.setState({ dashMessage: 'Address save failed: ' + error.message });
+    } else {
+      this.setState({ addresses, dashMessage: 'Addresses updated.' });
+    }
+  }
+
+  async addAddress() {
+    if (this.state.busy || !this.state.user) return;
+    if (this.state.addresses.length >= 3) return;
+    const line1 = this.state.newAddrLine1.trim();
+    const city = this.state.newAddrCity.trim();
+    const stateVal = this.state.newAddrState.trim();
+    const zip = this.state.newAddrZip.trim();
+    if (!line1 || !city || !stateVal || !/^\d{5}(-\d{4})?$/.test(zip)) {
+      this.setState({ dashMessage: 'Please fill in street, city, state, and a valid ZIP for the new address.' });
+      return;
+    }
+    const next = this.state.addresses.concat([{
+      line1, line2: this.state.newAddrLine2.trim(), city, state: stateVal, zip
+    }]);
+    await this.persistAddresses(next);
+    this.setState({ newAddrLine1: '', newAddrLine2: '', newAddrCity: '', newAddrState: '', newAddrZip: '' });
+  }
+
+  async removeAddress(index) {
+    const next = this.state.addresses.filter((_, i) => i !== index);
+    await this.persistAddresses(next);
+  }
+
+  formatAddress(a) {
+    return [a.line1, a.line2, [a.city, a.state, a.zip].filter(Boolean).join(', ')].filter(Boolean).join('\n');
+  }
+
+  renderVals() {
+    const RUBY = 'oklch(45% 0.17 20)';
+    const tab = this.state.authTab;
+    const orders = this.state.orders || [];
+
+    return {
+      showLoading: this.state.mode === 'loading',
+      showAuth: this.state.mode === 'auth',
+      showRecovery: this.state.mode === 'recovery',
+      showDashboard: this.state.mode === 'dashboard',
+
+      showSignIn: tab === 'signin',
+      showSignUp: tab === 'signup',
+      showForgot: tab === 'forgot',
+      showSignInTab: (e) => { if (e && e.preventDefault) e.preventDefault(); this.setState({ authTab: 'signin', authError: '' }); },
+      showSignUpTab: () => this.setState({ authTab: 'signup', authError: '', infoMessage: '' }),
+      showForgotTab: (e) => { if (e && e.preventDefault) e.preventDefault(); this.setState({ authTab: 'forgot', authError: '', infoMessage: '' }); },
+      signInTabBg: tab !== 'signup' ? RUBY : 'transparent',
+      signInTabColor: tab !== 'signup' ? '#fff' : RUBY,
+      signUpTabBg: tab === 'signup' ? RUBY : 'transparent',
+      signUpTabColor: tab === 'signup' ? '#fff' : RUBY,
+
+      busy: this.state.busy,
+      email: this.state.email,
+      onEmailChange: (e) => this.setState({ email: e.target.value }),
+      password: this.state.password,
+      onPasswordChange: (e) => this.setState({ password: e.target.value }),
+      signUpName: this.state.signUpName,
+      onSignUpNameChange: (e) => this.setState({ signUpName: e.target.value }),
+      newPassword: this.state.newPassword,
+      onNewPasswordChange: (e) => this.setState({ newPassword: e.target.value }),
+
+      signIn: () => this.signIn(),
+      signInLabel: this.state.busy ? 'Signing in…' : 'Sign In',
+      signUp: () => this.signUp(),
+      signUpLabel: this.state.busy ? 'Creating account…' : 'Create Account',
+      signInWithGoogle: () => this.signInWithGoogle(),
+      sendReset: () => this.sendReset(),
+      sendResetLabel: this.state.busy ? 'Sending…' : 'Send Reset Link',
+      updatePassword: () => this.updatePassword(),
+      updatePasswordLabel: this.state.busy ? 'Updating…' : 'Update Password',
+      signOut: () => this.signOut(),
+
+      showAuthError: !!this.state.authError,
+      authError: this.state.authError,
+      showInfo: !!this.state.infoMessage,
+      infoMessage: this.state.infoMessage,
+      showDashMessage: !!this.state.dashMessage,
+      dashMessage: this.state.dashMessage,
+
+      userEmail: this.state.user ? this.state.user.email : '',
+      customerId: this.state.user ? this.state.user.id : '',
+
+      profileName: this.state.profileName,
+      onProfileNameChange: (e) => this.setState({ profileName: e.target.value }),
+      profilePhone: this.state.profilePhone,
+      onProfilePhoneChange: (e) => this.setState({ profilePhone: e.target.value }),
+      saveProfile: () => this.saveProfile(),
+
+      addresses: this.state.addresses.map((a, i) => ({
+        text: this.formatAddress(a),
+        remove: () => this.removeAddress(i)
+      })),
+      canAddAddress: this.state.addresses.length < 3,
+      atAddressLimit: this.state.addresses.length >= 3,
+      newAddrLine1: this.state.newAddrLine1,
+      onNewAddrLine1: (e) => this.setState({ newAddrLine1: e.target.value }),
+      newAddrLine2: this.state.newAddrLine2,
+      onNewAddrLine2: (e) => this.setState({ newAddrLine2: e.target.value }),
+      newAddrCity: this.state.newAddrCity,
+      onNewAddrCity: (e) => this.setState({ newAddrCity: e.target.value }),
+      newAddrState: this.state.newAddrState,
+      onNewAddrState: (e) => this.setState({ newAddrState: e.target.value }),
+      newAddrZip: this.state.newAddrZip,
+      onNewAddrZip: (e) => this.setState({ newAddrZip: e.target.value }),
+      addAddress: () => this.addAddress(),
+
+      hasOrders: orders.length > 0,
+      hasNoOrders: orders.length === 0,
+      orderRows: orders.map((o) => {
+        const items = Array.isArray(o.items) && o.items.length
+          ? o.items.map((it) => it.quantity + '× ' + it.description).join('; ')
+          : '—';
+        const delivered = (o.order_status || 'pending') === 'delivered';
+        return {
+          date: o.order_date ? new Date(o.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+          orderId: o.order_id,
+          items,
+          address: o.address || '—',
+          total: '$' + Number(o.total || 0).toFixed(2),
+          status: delivered ? 'Delivered' : 'Pending',
+          statusBg: delivered ? 'oklch(90% 0.08 150)' : 'oklch(93% 0.06 75)',
+          statusColor: delivered ? 'oklch(35% 0.1 150)' : 'oklch(40% 0.1 75)'
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

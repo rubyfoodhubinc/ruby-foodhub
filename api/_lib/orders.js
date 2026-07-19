@@ -42,6 +42,7 @@ function buildOrderRow(session, items) {
     terms_agreed_at: meta.termsAgreedAt || null,
     coupon_code: meta.couponCode || null,
     discount: meta.discountAmount ? Number(meta.discountAmount) : null,
+    customer_id: meta.customerId || null,
   };
 }
 

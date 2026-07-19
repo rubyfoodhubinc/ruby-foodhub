@@ -1,5 +1,6 @@
 const Stripe = require('stripe');
 const { evaluateCoupon } = require('./_lib/coupons');
+const { supabase } = require('./_lib/supabase');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -139,6 +140,20 @@ module.exports = async (req, res) => {
       discounts = [{ coupon: stripeCoupon.id }];
     }
 
+    // If the shopper is signed in, the page sends their Supabase access
+    // token — verify it server-side (never trust a client-supplied user id)
+    // and attach the customer ID to the order. Guests simply have no header.
+    let customerId = '';
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      try {
+        const { data, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
+        if (!authError && data && data.user) customerId = data.user.id;
+      } catch (err) {
+        console.error('create-checkout-session: token verification failed:', err.message);
+      }
+    }
+
     const origin = req.headers.origin || `https://${req.headers.host}`;
 
     const session = await stripe.checkout.sessions.create({
@@ -163,6 +178,7 @@ module.exports = async (req, res) => {
         termsAgreedAt,
         couponCode: appliedCouponCode,
         discountAmount: (discountCents / 100).toFixed(2),
+        customerId,
       },
     });
 
