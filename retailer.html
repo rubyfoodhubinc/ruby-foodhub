@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retailer Portal — Ruby FoodHub</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: oklch(97% 0.015 60); color: oklch(22% 0.02 40); }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; cursor: pointer; }
+  a { color: oklch(45% 0.17 20); text-decoration: none; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 28px 20px 80px; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 14px 20px; background: #fff; border-bottom: 1px solid rgba(34,30,26,.08); }
+  .topbar img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+  .topbar .t { font-weight: 800; font-size: 15px; }
+  .topbar .sub { font-size: 12px; color: rgba(34,30,26,.55); }
+  .topbar .spacer { flex: 1; }
+  .card { background: #fff; border-radius: 16px; box-shadow: 0 6px 18px rgba(34,30,26,.07); padding: 30px; }
+  .auth-card { max-width: 420px; margin: 60px auto; }
+  .auth-card h1 { font-size: 20px; margin: 0 0 18px; text-align: center; }
+  input, textarea, select { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14.5px; margin-bottom: 12px; font-family: inherit; background: #fff; }
+  .btn { background: oklch(45% 0.17 20); color: #fff; border: none; border-radius: 100px; padding: 12px 20px; font-size: 14px; font-weight: 700; }
+  .btn:hover { background: oklch(52% 0.19 20); }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-full { width: 100%; }
+  .btn-outline { background: transparent; color: oklch(45% 0.17 20); border: 1.5px solid oklch(45% 0.17 20); }
+  .btn-outline:hover { background: oklch(45% 0.17 20); color: #fff; }
+  .btn-sm { padding: 8px 14px; font-size: 12.5px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tabs button { flex: 1; padding: 10px 0; border-radius: 100px; font-size: 14px; font-weight: 700; border: 1.5px solid oklch(45% 0.17 20); background: transparent; color: oklch(45% 0.17 20); }
+  .tabs button.active { background: oklch(45% 0.17 20); color: #fff; }
+  .error { color: oklch(45% 0.17 20); font-size: 13px; margin: 10px 0 0; text-align: center; }
+  .notice { background: oklch(93% 0.06 75); color: oklch(40% 0.1 75); border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.5; margin-bottom: 18px; }
+  .notice.good { background: oklch(94% 0.05 150); color: oklch(35% 0.1 150); }
+  .portal-nav { display: flex; gap: 8px; margin: 22px 0; flex-wrap: wrap; }
+  .portal-nav button { border: 1.5px solid rgba(34,30,26,.18); background: #fff; border-radius: 100px; padding: 9px 18px; font-size: 13.5px; font-weight: 700; color: rgba(34,30,26,.7); }
+  .portal-nav button.active { background: oklch(45% 0.17 20); border-color: oklch(45% 0.17 20); color: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 14px; font-size: 13.5px; border-bottom: 1px solid rgba(34,30,26,.08); }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; color: rgba(34,30,26,.5); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .table-scroll { overflow-x: auto; }
+  .pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 100px; white-space: nowrap; }
+  .pill-green { background: oklch(90% 0.08 150); color: oklch(35% 0.1 150); }
+  .pill-amber { background: oklch(93% 0.06 75); color: oklch(40% 0.1 75); }
+  .pill-blue { background: oklch(92% 0.05 250); color: oklch(40% 0.1 250); }
+  .qty-input { width: 80px; padding: 8px 10px; margin: 0; }
+  .order-total { font-size: 17px; font-weight: 800; margin: 16px 0; }
+  .pay-choice { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
+  .pay-choice label { flex: 1; min-width: 220px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 12px; padding: 14px 16px; font-size: 14px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; }
+  .pay-choice label.selected { border-color: oklch(45% 0.17 20); background: oklch(97% 0.02 20); }
+  .pay-choice input { width: auto; margin: 3px 0 0; }
+  .note { font-size: 12.5px; color: rgba(34,30,26,.6); margin: 8px 0; min-height: 16px; }
+  .empty { text-align: center; padding: 40px 0; color: rgba(34,30,26,.5); }
+  h2 { font-size: 17px; margin: 0 0 14px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="logo-mark-small.png" alt=""/>
+  <div><div class="t">Ruby FoodHub</div><div class="sub">Retailer Portal</div></div>
+  <div class="spacer"></div>
+  <span class="sub" id="whoami"></span>
+  <button type="button" class="btn btn-outline btn-sm" id="logout-btn" hidden>Sign Out</button>
+</div>
+
+<div class="wrap">
+
+  <div class="card auth-card" id="auth-view">
+    <h1>Retailer Portal</h1>
+    <div class="tabs">
+      <button type="button" id="tab-signin" class="active">Sign In</button>
+      <button type="button" id="tab-apply">Apply for Access</button>
+    </div>
+
+    <div id="signin-form">
+      <input type="email" id="li-email" placeholder="Email" autocomplete="username" />
+      <input type="password" id="li-password" placeholder="Password" autocomplete="current-password" />
+      <button type="button" class="btn btn-full" id="li-btn">Sign In</button>
+    </div>
+
+    <div id="apply-form" hidden>
+      <p class="note" style="text-align:center">Apply for a wholesale account. Orders unlock once our team approves your application.</p>
+      <input type="text" id="ap-business" placeholder="Business name" />
+      <input type="text" id="ap-contact" placeholder="Contact person" />
+      <input type="email" id="ap-email" placeholder="Business email" autocomplete="username" />
+      <input type="tel" id="ap-phone" placeholder="Phone" />
+      <textarea id="ap-address" rows="2" placeholder="Business address"></textarea>
+      <input type="password" id="ap-password" placeholder="Choose a password (10+ characters)" autocomplete="new-password" />
+      <button type="button" class="btn btn-full" id="ap-btn">Submit Application</button>
+    </div>
+    <p class="error" id="auth-error" hidden></p>
+  </div>
+
+  <div id="portal-view" hidden>
+    <div id="status-banner"></div>
+
+    <div class="portal-nav" id="portal-nav" hidden>
+      <button type="button" data-view="dashboard" class="active">Dashboard</button>
+      <button type="button" data-view="order">Place New Order</button>
+      <button type="button" data-view="profile">Profile</button>
+    </div>
+
+    <div class="card" id="view-dashboard" hidden>
+      <h2>Your Orders</h2>
+      <div id="orders-container"><div class="empty">Loading…</div></div>
+    </div>
+
+    <div class="card" id="view-order" hidden>
+      <h2>Place a Wholesale Order</h2>
+      <div id="catalog-container"><div class="empty">Loading wholesale catalog…</div></div>
+      <div class="order-total" id="order-total">Total: $0.00</div>
+      <div class="pay-choice" id="pay-choice">
+        <label id="pay-stripe-label" class="selected"><input type="radio" name="pay" value="stripe" checked />
+          <span><strong>Pay now via Stripe</strong><br><span class="note">Card payment — order confirms immediately.</span></span></label>
+        <label id="pay-pod-label"><input type="radio" name="pay" value="pay_on_delivery" />
+          <span><strong>Pay on delivery</strong><br><span class="note">Order submits now; pay when your delivery arrives.</span></span></label>
+      </div>
+      <button type="button" class="btn" id="place-order-btn">Place Order</button>
+      <p class="note" id="order-note"></p>
+    </div>
+
+    <div class="card" id="view-profile" hidden>
+      <h2>Business Profile</h2>
+      <input type="text" id="pr-business" placeholder="Business name" />
+      <input type="text" id="pr-contact" placeholder="Contact person" />
+      <input type="email" id="pr-email" disabled />
+      <input type="tel" id="pr-phone" placeholder="Phone" />
+      <textarea id="pr-address" rows="2" placeholder="Business address"></textarea>
+      <button type="button" class="btn" id="pr-save-btn">Save Profile</button>
+      <p class="note" id="pr-note"></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const STORAGE_KEY = 'rfh_retailer_session';
+
+  const authView = document.getElementById('auth-view');
+  const portalView = document.getElementById('portal-view');
+  const authError = document.getElementById('auth-error');
+  const statusBanner = document.getElementById('status-banner');
+  const portalNav = document.getElementById('portal-nav');
+  const whoami = document.getElementById('whoami');
+  const logoutBtn = document.getElementById('logout-btn');
+  const orderNote = document.getElementById('order-note');
+
+  let catalog = [];
+  const quantities = new Map();
+
+  function getSession() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; }
+    catch (e) { return null; }
+  }
+  function setSession(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+  function clearSession() { localStorage.removeItem(STORAGE_KEY); }
+
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+  function money(v) { return '$' + Number(v || 0).toFixed(2); }
+  function fdate(v) {
+    return v ? new Date(v).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+  }
+
+  async function api(path, body) {
+    const session = getSession();
+    const response = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token: session ? session.token : '' }, body || {}))
+    });
+    const data = await response.json();
+    if (response.status === 401) { backToAuth(data.error); throw new Error(data.error || 'Signed out'); }
+    if (!response.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  function backToAuth(message) {
+    clearSession();
+    portalView.hidden = true;
+    authView.hidden = false;
+    logoutBtn.hidden = true;
+    whoami.textContent = '';
+    if (message) { authError.textContent = message; authError.hidden = false; }
+  }
+
+  /* ---------- auth tabs ---------- */
+  document.getElementById('tab-signin').addEventListener('click', () => {
+    document.getElementById('tab-signin').classList.add('active');
+    document.getElementById('tab-apply').classList.remove('active');
+    document.getElementById('signin-form').hidden = false;
+    document.getElementById('apply-form').hidden = true;
+    authError.hidden = true;
+  });
+  document.getElementById('tab-apply').addEventListener('click', () => {
+    document.getElementById('tab-apply').classList.add('active');
+    document.getElementById('tab-signin').classList.remove('active');
+    document.getElementById('apply-form').hidden = false;
+    document.getElementById('signin-form').hidden = true;
+    authError.hidden = true;
+  });
+
+  document.getElementById('li-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('li-btn');
+    btn.disabled = true; authError.hidden = true;
+    try {
+      const response = await fetch('/api/retailer-auth', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', email: document.getElementById('li-email').value, password: document.getElementById('li-password').value })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Login failed');
+      setSession({ token: data.token, account: data.account });
+      enterPortal(data.account);
+    } catch (err) { authError.textContent = err.message; authError.hidden = false; }
+    finally { btn.disabled = false; }
+  });
+
+  document.getElementById('li-password').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('li-btn').click();
+  });
+
+  document.getElementById('ap-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('ap-btn');
+    btn.disabled = true; authError.hidden = true;
+    try {
+      const response = await fetch('/api/retailer-auth', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'signup',
+          businessName: document.getElementById('ap-business').value,
+          contactName: document.getElementById('ap-contact').value,
+          email: document.getElementById('ap-email').value,
+          phone: document.getElementById('ap-phone').value,
+          address: document.getElementById('ap-address').value,
+          password: document.getElementById('ap-password').value
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Signup failed');
+      setSession({ token: data.token, account: data.account });
+      enterPortal(data.account);
+    } catch (err) { authError.textContent = err.message; authError.hidden = false; }
+    finally { btn.disabled = false; }
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    const session = getSession();
+    if (session) {
+      try { await fetch('/api/retailer-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout', token: session.token }) }); }
+      catch (e) { /* cleared locally regardless */ }
+    }
+    backToAuth();
+  });
+
+  /* ---------- portal ---------- */
+  function enterPortal(account) {
+    authView.hidden = true;
+    portalView.hidden = false;
+    logoutBtn.hidden = false;
+    whoami.textContent = account.business_name + ' · ' + account.email;
+
+    if (account.account_status === 'pending') {
+      statusBanner.innerHTML = '<div class="notice">Your application is <strong>pending approval</strong>. Our team reviews new retailer accounts quickly — you\'ll get an email at ' + esc(account.email) + ' once you\'re approved and can start ordering.</div>';
+      portalNav.hidden = true;
+      showView(null);
+      fillProfile(account);
+      document.getElementById('view-profile').hidden = false;
+      return;
+    }
+    if (account.account_status === 'suspended') {
+      statusBanner.innerHTML = '<div class="notice">Your account is <strong>suspended</strong>. Contact <a href="mailto:sales@rubyfoodhub.com">sales@rubyfoodhub.com</a> for help.</div>';
+      portalNav.hidden = true;
+      showView(null);
+      return;
+    }
+
+    statusBanner.innerHTML = '';
+    portalNav.hidden = false;
+    fillProfile(account);
+    showView('dashboard');
+    loadOrders();
+    loadCatalog();
+    handleStripeReturn();
+  }
+
+  function showView(name) {
+    ['dashboard', 'order', 'profile'].forEach((v) => {
+      document.getElementById('view-' + v).hidden = v !== name;
+    });
+    portalNav.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
+  }
+
+  portalNav.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => showView(btn.dataset.view));
+  });
+
+  async function handleStripeReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const wsSession = params.get('ws_session_id');
+    if (params.get('ws_canceled')) {
+      statusBanner.innerHTML = '<div class="notice">Payment was canceled — your order is saved as unpaid. You can pay later or contact us.</div>';
+      history.replaceState({}, '', '/retailer');
+      loadOrders();
+      return;
+    }
+    if (!wsSession) return;
+    try {
+      const data = await api('/api/retailer-portal', { action: 'verify-stripe', sessionId: wsSession });
+      if (data.paid) {
+        statusBanner.innerHTML = '<div class="notice good">Payment received — order <strong>' + esc(data.orderNumber) + '</strong> is confirmed as paid. Thank you!</div>';
+      }
+    } catch (e) { /* order list will still show current status */ }
+    history.replaceState({}, '', '/retailer');
+    loadOrders();
+  }
+
+  /* ---------- dashboard ---------- */
+  function paymentPill(o) {
+    if (o.payment_status === 'paid') return '<span class="pill pill-green">Paid (Stripe)</span>';
+    if (o.payment_status === 'confirmed_by_admin') return '<span class="pill pill-green">Payment Confirmed</span>';
+    return '<span class="pill pill-amber">Payment Pending</span>';
+  }
+  function statusPill(o) {
+    if (o.order_status === 'fulfilled') return '<span class="pill pill-green">Fulfilled</span>';
+    if (o.order_status === 'confirmed') return '<span class="pill pill-blue">Confirmed</span>';
+    return '<span class="pill pill-amber">Pending</span>';
+  }
+
+  async function loadOrders() {
+    try {
+      const data = await api('/api/retailer-portal', { action: 'orders' });
+      const container = document.getElementById('orders-container');
+      if (!data.orders.length) { container.innerHTML = '<div class="empty">No orders yet — place your first wholesale order.</div>'; return; }
+      const rows = data.orders.map((o) => {
+        const items = (Array.isArray(o.items) ? o.items : []).map((i) => i.quantity + '× ' + i.product + ' — ' + i.variant).join('; ');
+        return '<tr>' +
+          '<td style="white-space:nowrap">' + esc(fdate(o.created_at)) + '</td>' +
+          '<td style="white-space:nowrap">' + esc(o.order_number) + '</td>' +
+          '<td>' + esc(items) + '</td>' +
+          '<td style="white-space:nowrap;font-weight:700">' + money(o.total) + '</td>' +
+          '<td>' + esc(o.payment_method === 'stripe' ? 'Stripe' : 'Pay on delivery') + '</td>' +
+          '<td>' + paymentPill(o) + '</td>' +
+          '<td>' + statusPill(o) + '</td>' +
+          '</tr>';
+      }).join('');
+      container.innerHTML = '<div class="table-scroll"><table><thead><tr>' +
+        '<th>Date</th><th>Order #</th><th>Items</th><th>Total</th><th>Method</th><th>Payment</th><th>Status</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    } catch (err) {
+      document.getElementById('orders-container').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  /* ---------- new order ---------- */
+  async function loadCatalog() {
+    try {
+      const data = await api('/api/retailer-portal', { action: 'catalog' });
+      catalog = data.catalog;
+      const container = document.getElementById('catalog-container');
+      if (!catalog.length) { container.innerHTML = '<div class="empty">No wholesale products are available yet — check back soon.</div>'; return; }
+      const rows = catalog.map((c) =>
+        '<tr>' +
+        '<td>' + esc(c.name) + '</td>' +
+        '<td>' + esc(c.variant) + '</td>' +
+        '<td style="white-space:nowrap;font-weight:700">' + money(c.wholesale_price) + '</td>' +
+        '<td><input type="number" min="0" max="1000" value="0" class="qty-input" data-id="' + esc(c.product_id) + '"/></td>' +
+        '</tr>'
+      ).join('');
+      container.innerHTML = '<div class="table-scroll"><table><thead><tr>' +
+        '<th>Product</th><th>Variant</th><th>Wholesale Price</th><th>Quantity</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+      container.querySelectorAll('.qty-input').forEach((input) => {
+        input.addEventListener('input', () => {
+          quantities.set(input.dataset.id, Number(input.value) || 0);
+          updateTotal();
+        });
+      });
+    } catch (err) {
+      document.getElementById('catalog-container').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  function updateTotal() {
+    let total = 0;
+    for (const c of catalog) {
+      total += (quantities.get(c.product_id) || 0) * c.wholesale_price;
+    }
+    document.getElementById('order-total').textContent = 'Total: ' + money(total);
+    return total;
+  }
+
+  document.querySelectorAll('input[name="pay"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      document.getElementById('pay-stripe-label').classList.toggle('selected', radio.value === 'stripe' && radio.checked);
+      document.getElementById('pay-pod-label').classList.toggle('selected', radio.value === 'pay_on_delivery' && radio.checked);
+    });
+  });
+
+  document.getElementById('place-order-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('place-order-btn');
+    orderNote.textContent = '';
+    const items = catalog
+      .map((c) => ({ product_id: c.product_id, quantity: quantities.get(c.product_id) || 0 }))
+      .filter((i) => i.quantity > 0);
+    if (!items.length) { orderNote.textContent = 'Enter a quantity for at least one product.'; return; }
+
+    const paymentMethod = document.querySelector('input[name="pay"]:checked').value;
+    const total = updateTotal();
+    if (!window.confirm('Place wholesale order for ' + money(total) + (paymentMethod === 'stripe' ? ' and pay now via Stripe?' : ', to be paid on delivery?'))) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Placing order…';
+    try {
+      const data = await api('/api/retailer-portal', { action: 'place-order', items, paymentMethod });
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+      orderNote.textContent = 'Order ' + data.orderNumber + ' submitted — payment due on delivery. Our team will confirm your delivery date.';
+      quantities.clear();
+      loadCatalog();
+      updateTotal();
+      loadOrders();
+      showView('dashboard');
+    } catch (err) {
+      orderNote.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Place Order';
+    }
+  });
+
+  /* ---------- profile ---------- */
+  function fillProfile(account) {
+    document.getElementById('pr-business').value = account.business_name || '';
+    document.getElementById('pr-contact').value = account.contact_name || '';
+    document.getElementById('pr-email').value = account.email || '';
+    document.getElementById('pr-phone').value = account.phone || '';
+    document.getElementById('pr-address').value = account.address || '';
+  }
+
+  document.getElementById('pr-save-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('pr-save-btn');
+    btn.disabled = true;
+    try {
+      await api('/api/retailer-portal', {
+        action: 'profile-update',
+        businessName: document.getElementById('pr-business').value,
+        contactName: document.getElementById('pr-contact').value,
+        phone: document.getElementById('pr-phone').value,
+        address: document.getElementById('pr-address').value
+      });
+      document.getElementById('pr-note').textContent = 'Profile saved.';
+      const session = getSession();
+      if (session) {
+        session.account.business_name = document.getElementById('pr-business').value;
+        setSession(session);
+        whoami.textContent = session.account.business_name + ' · ' + session.account.email;
+      }
+    } catch (err) {
+      document.getElementById('pr-note').textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  /* ---------- init ---------- */
+  (async () => {
+    const session = getSession();
+    if (!session) return;
+    try {
+      const data = await fetch('/api/retailer-auth', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'me', token: session.token })
+      }).then((r) => r.json());
+      if (data.account) {
+        setSession({ token: session.token, account: data.account });
+        enterPortal(data.account);
+      } else {
+        clearSession();
+      }
+    } catch (e) { clearSession(); }
+  })();
+</script>
+</body>
+</html>

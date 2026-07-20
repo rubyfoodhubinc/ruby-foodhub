@@ -2,7 +2,9 @@
   "rewrites": [
     { "source": "/", "destination": "/Home.dc.html" },
     { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/account", "destination": "/Account.dc.html" }
+    { "source": "/account", "destination": "/Account.dc.html" },
+    { "source": "/retailer", "destination": "/retailer.html" },
+    { "source": "/retailer/login", "destination": "/retailer.html" }
   ],
   "crons": [
     { "path": "/api/reconcile-orders", "schedule": "0 12 * * *" }

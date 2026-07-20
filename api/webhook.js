@@ -146,6 +146,41 @@ async function handler(req, res) {
   // they go where they're guaranteed to be visible.
   console.error(`[webhook] received event type: ${event.type}`);
 
+  // Wholesale orders ride the same Stripe account but are a separate flow:
+  // mark the wholesale_orders row paid and notify — no retail order row,
+  // no retail confirmation emails.
+  if (event.type === 'checkout.session.completed' && event.data.object.metadata && event.data.object.metadata.wholesaleOrderId) {
+    const session = event.data.object;
+    const orderId = session.metadata.wholesaleOrderId;
+    try {
+      const { data, error } = await supabase
+        .from('wholesale_orders')
+        .update({ payment_status: 'paid' })
+        .eq('id', orderId)
+        .neq('payment_status', 'paid')
+        .select('order_number, total, retailer_id');
+      if (error) throw new Error(JSON.stringify(error));
+
+      if (data && data.length) {
+        await logAudit(null, 'wholesale_order_paid', { order_id: orderId, order_number: data[0].order_number, stripe_session_id: session.id });
+        try {
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: 'sales@rubyfoodhub.com',
+            subject: `Wholesale order ${data[0].order_number} PAID via Stripe — $${Number(data[0].total).toFixed(2)}`,
+            text: `Wholesale order ${data[0].order_number} was paid via Stripe ($${Number(data[0].total).toFixed(2)}). Details are in Admin -> Wholesale.`,
+          });
+        } catch (e) {
+          console.error('[webhook] wholesale paid notification failed:', e.message);
+        }
+      }
+      console.error(`[webhook] wholesale order ${orderId} marked paid`);
+    } catch (err) {
+      console.error(`[webhook] FAILED to mark wholesale order ${orderId} paid:`, err.message);
+    }
+    return res.status(200).json({ received: true });
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     console.error(`[webhook] order ${session.client_reference_id} paid — session ${session.id}`);

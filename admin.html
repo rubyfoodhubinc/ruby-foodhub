@@ -148,6 +148,7 @@
     <button type="button" class="nav-item" data-section="sales">Sales</button>
     <button type="button" class="nav-item" data-section="products">Products</button>
     <button type="button" class="nav-item" data-section="emails">Emails</button>
+    <button type="button" class="nav-item" data-section="wholesale">Wholesale</button>
     <button type="button" class="nav-item" data-section="users" id="nav-users" hidden>Users</button>
     <div class="spacer"></div>
     <div class="whoami" id="logged-in-as"></div>
@@ -244,6 +245,29 @@
         <h2>Sending History</h2>
         <p class="note">Open/click stats live in the Resend dashboard (resend.com → Broadcasts) — each campaign below records its broadcast ID(s).</p>
         <div id="em-history"><div class="loading">Loading history…</div></div>
+      </div>
+    </section>
+
+    <section id="section-wholesale" hidden>
+      <h1>Wholesale</h1>
+      <p class="note">Retailer accounts, their wholesale orders, and pay-on-delivery confirmations. Wholesale prices are edited in the Products tab.</p>
+      <div id="ws-container"><div class="loading">Loading retailers…</div></div>
+
+      <div class="panel" style="margin-top:22px">
+        <h2>Email Selected Retailer(s)</h2>
+        <p class="note" id="ws-selected-note">Tick retailers in the table above, pick a reason, edit the message, send.</p>
+        <div class="compose-grid">
+          <select id="ws-reason">
+            <option value="custom">Custom / News message</option>
+            <option value="low_stock">Low Stock Alert</option>
+            <option value="delivery_update">Delivery Date Update</option>
+            <option value="payment_reminder">Pending Payment Reminder</option>
+          </select>
+          <input type="text" id="ws-subject" placeholder="Subject" />
+          <textarea id="ws-body" rows="5" placeholder="Message to the selected retailers…"></textarea>
+          <div><button type="button" class="btn btn-sm" id="ws-email-btn">Send to Selected Retailers</button></div>
+          <p class="note" id="ws-email-note"></p>
+        </div>
       </div>
     </section>
 
@@ -366,12 +390,13 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      ['orders', 'sales', 'products', 'emails', 'users'].forEach((name) => {
+      ['orders', 'sales', 'products', 'emails', 'wholesale', 'users'].forEach((name) => {
         document.getElementById('section-' + name).hidden = name !== btn.dataset.section;
       });
       if (btn.dataset.section === 'sales') renderStats();
       if (btn.dataset.section === 'products' && !productsLoaded) loadProducts();
       if (btn.dataset.section === 'emails' && !emailsLoaded) loadEmails();
+      if (btn.dataset.section === 'wholesale' && !wholesaleLoaded) loadWholesale();
       if (btn.dataset.section === 'users' && !usersLoaded) loadUsers();
     });
   });
@@ -663,10 +688,16 @@
   }
 
   /* ---------- PRODUCTS ---------- */
+  let wholesalePriceMap = new Map();
+
   async function loadProducts() {
     try {
-      const data = await api('/api/admin-products', { action: 'list' });
+      const [data, wp] = await Promise.all([
+        api('/api/admin-products', { action: 'list' }),
+        api('/api/admin-wholesale', { action: 'wholesale-prices' }).catch(() => ({ prices: [] })),
+      ]);
       products = data.products;
+      wholesalePriceMap = new Map((wp.prices || []).map((p) => [p.product_id, Number(p.wholesale_price)]));
       productsLoaded = true;
       renderProducts();
     } catch (err) {
@@ -678,21 +709,42 @@
     const container = document.getElementById('products-container');
     if (!products.length) { container.innerHTML = '<div class="empty">No products yet.</div>'; return; }
 
-    const rows = products.map((p) =>
-      '<tr>' +
+    const rows = products.map((p) => {
+      const wp = wholesalePriceMap.get(p.id);
+      return '<tr>' +
       '<td>' + esc(p.name) + '</td>' +
       '<td>' + esc(p.variant) + '</td>' +
       '<td><input type="number" step="0.01" min="0.01" class="price-input" value="' + esc(Number(p.price).toFixed(2)) + '" data-id="' + esc(p.id) + '"/></td>' +
       '<td><button type="button" class="btn btn-sm save-price" data-id="' + esc(p.id) + '">Save</button></td>' +
+      '<td><input type="number" step="0.01" min="0.01" class="price-input wprice-input" placeholder="not set" value="' + (wp ? esc(wp.toFixed(2)) : '') + '" data-id="' + esc(p.id) + '"/></td>' +
+      '<td><button type="button" class="btn btn-outline btn-sm save-wprice" data-id="' + esc(p.id) + '">Save</button></td>' +
       '<td>' + (p.active ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Inactive</span>') + '</td>' +
       '<td><button type="button" class="btn btn-outline btn-sm toggle-active" data-id="' + esc(p.id) + '" data-active="' + (p.active ? '1' : '0') + '">' + (p.active ? 'Deactivate' : 'Activate') + '</button></td>' +
-      '</tr>'
-    ).join('');
+      '</tr>';
+    }).join('');
 
     container.innerHTML =
       '<div class="table-scroll"><table><thead><tr>' +
-      '<th>Product</th><th>Variant</th><th>Price</th><th></th><th>Status</th><th></th>' +
+      '<th>Product</th><th>Variant</th><th>Retail Price</th><th></th><th>Wholesale Price</th><th></th><th>Status</th><th></th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+    container.querySelectorAll('.save-wprice').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const input = container.querySelector('.wprice-input[data-id="' + id + '"]');
+        btn.disabled = true;
+        prodNote.textContent = '';
+        try {
+          await api('/api/admin-wholesale', { action: 'set-wholesale-price', productId: id, price: Number(input.value) });
+          wholesalePriceMap.set(id, Number(input.value));
+          prodNote.textContent = 'Wholesale price saved — visible to approved retailers immediately.';
+        } catch (err) {
+          prodNote.textContent = 'Error: ' + err.message;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
 
     container.querySelectorAll('.save-price').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -906,6 +958,225 @@
       loadEmailHistory();
     } catch (err) { emNote.textContent = 'Error: ' + err.message; }
     finally { btn.disabled = false; emUpdateVisibility(); }
+  });
+
+  /* ---------- WHOLESALE ---------- */
+  let wholesaleLoaded = false;
+  let retailers = [];
+  const wsExpanded = new Set();
+  const wsSelected = new Set();
+  const wsOrdersCache = new Map();
+
+  const WS_REASON_TEMPLATES = {
+    custom: { subject: '', body: '' },
+    low_stock: {
+      subject: 'Ruby FoodHub — Low Stock Alert',
+      body: "Hi,\n\nA quick heads-up: some Ruby FoodHub products are running low. If you're planning a reorder, please place it soon so we can guarantee your quantities.\n\nThank you!\nRuby FoodHub Wholesale Team"
+    },
+    delivery_update: {
+      subject: 'Ruby FoodHub — Delivery Date Update',
+      body: "Hi,\n\nAn update about your upcoming Ruby FoodHub delivery: [add the new date/details here].\n\nQuestions? Just reply to this email.\n\nRuby FoodHub Wholesale Team"
+    },
+    payment_reminder: {
+      subject: 'Ruby FoodHub — Pending Payment Reminder',
+      body: "Hi,\n\nA friendly reminder that you have a pending balance on a recent pay-on-delivery order. Please have payment ready at delivery, or reply to this email to arrange payment.\n\nThank you!\nRuby FoodHub Wholesale Team"
+    }
+  };
+
+  document.getElementById('ws-reason').addEventListener('change', (e) => {
+    const t = WS_REASON_TEMPLATES[e.target.value] || WS_REASON_TEMPLATES.custom;
+    document.getElementById('ws-subject').value = t.subject;
+    document.getElementById('ws-body').value = t.body;
+  });
+
+  function wsAccountPill(status) {
+    if (status === 'active') return '<span class="pill pill-green">Active</span>';
+    if (status === 'suspended') return '<span class="pill pill-gray">Suspended</span>';
+    return '<span class="pill pill-amber">Pending</span>';
+  }
+  function wsPaymentPill(o) {
+    if (o.payment_status === 'paid') return '<span class="pill pill-green">Paid (Stripe)</span>';
+    if (o.payment_status === 'confirmed_by_admin') return '<span class="pill pill-green">Confirmed by Admin</span>';
+    return '<span class="pill pill-amber">Pending</span>';
+  }
+
+  async function loadWholesale() {
+    wholesaleLoaded = true;
+    try {
+      const data = await api('/api/admin-wholesale', { action: 'retailers' });
+      retailers = data.retailers;
+      renderWholesale();
+    } catch (err) {
+      document.getElementById('ws-container').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  function renderWholesale() {
+    const container = document.getElementById('ws-container');
+    if (!retailers.length) {
+      container.innerHTML = '<div class="empty">No retailer accounts yet. Signups from the Wholesale page appear here for approval.</div>';
+      return;
+    }
+
+    const rows = retailers.map((r) => {
+      const qty = Object.entries(r.stats.qtyByProduct).map(([p, q]) => esc(p) + ': ' + q).join(' · ') || '—';
+      const isOpen = wsExpanded.has(r.id);
+      const statusOptions = ['pending', 'active', 'suspended'].map((s) =>
+        '<option value="' + s + '"' + (s === r.account_status ? ' selected' : '') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'
+      ).join('');
+      const summary =
+        '<tr class="summary-row" data-retailer="' + esc(r.id) + '">' +
+        '<td><input type="checkbox" class="ws-check" data-id="' + esc(r.id) + '"' + (wsSelected.has(r.id) ? ' checked' : '') + '/></td>' +
+        '<td><span class="expand-caret">' + (isOpen ? '▼' : '►') + '</span></td>' +
+        '<td>' + esc(r.business_name) + '</td>' +
+        '<td>' + esc(r.contact_name || '—') + '</td>' +
+        '<td>' + esc(r.email) + '</td>' +
+        '<td>' + wsAccountPill(r.account_status) + '</td>' +
+        '<td><select class="status-select is-pending ws-account-status" data-id="' + esc(r.id) + '">' + statusOptions + '</select></td>' +
+        '<td>' + r.stats.orderCount + '</td>' +
+        '<td class="truncate">' + qty + '</td>' +
+        '<td>' + formatMoney(r.stats.paidTotal) + '</td>' +
+        '<td>' + formatMoney(r.stats.pendingTotal) + '</td>' +
+        '</tr>';
+      const detail = isOpen
+        ? '<tr><td class="detail-cell" colspan="11"><div id="ws-orders-' + esc(r.id) + '"><div class="loading">Loading orders…</div></div></td></tr>'
+        : '';
+      return summary + detail;
+    }).join('');
+
+    container.innerHTML =
+      '<div class="table-scroll"><table><thead><tr>' +
+      '<th></th><th></th><th>Business</th><th>Contact</th><th>Email</th><th>Status</th><th>Set Status</th><th>Orders</th><th>Qty by Product</th><th>Paid $</th><th>Pending $</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+    container.querySelectorAll('tr.summary-row').forEach((tr) => {
+      tr.addEventListener('click', () => {
+        const id = tr.dataset.retailer;
+        if (wsExpanded.has(id)) wsExpanded.delete(id);
+        else wsExpanded.add(id);
+        renderWholesale();
+      });
+    });
+
+    container.querySelectorAll('.ws-check').forEach((cb) => {
+      cb.addEventListener('click', (e) => e.stopPropagation());
+      cb.addEventListener('change', () => {
+        if (cb.checked) wsSelected.add(cb.dataset.id);
+        else wsSelected.delete(cb.dataset.id);
+        document.getElementById('ws-selected-note').textContent = wsSelected.size + ' retailer(s) selected.';
+      });
+    });
+
+    container.querySelectorAll('.ws-account-status').forEach((select) => {
+      select.addEventListener('click', (e) => e.stopPropagation());
+      select.addEventListener('change', async (e) => {
+        e.stopPropagation();
+        select.disabled = true;
+        try {
+          await api('/api/admin-wholesale', { action: 'set-account-status', retailerId: select.dataset.id, status: select.value });
+          const r = retailers.find((x) => x.id === select.dataset.id);
+          if (r) r.account_status = select.value;
+        } catch (err) {
+          alert('Status change failed: ' + err.message);
+        } finally {
+          renderWholesale();
+        }
+      });
+    });
+
+    for (const id of wsExpanded) loadRetailerOrders(id);
+  }
+
+  async function loadRetailerOrders(retailerId) {
+    const target = document.getElementById('ws-orders-' + retailerId);
+    if (!target) return;
+    try {
+      let orders = wsOrdersCache.get(retailerId);
+      if (!orders) {
+        const data = await api('/api/admin-wholesale', { action: 'retailer-orders', retailerId });
+        orders = data.orders;
+        wsOrdersCache.set(retailerId, orders);
+      }
+      if (!orders.length) { target.innerHTML = '<div class="empty" style="padding:16px 0">No orders yet.</div>'; return; }
+
+      const rows = orders.map((o) => {
+        const items = (Array.isArray(o.items) ? o.items : []).map((i) => i.quantity + '× ' + i.product + ' — ' + i.variant + ' @ ' + formatMoney(i.wholesale_price)).join('<br>');
+        const canConfirm = o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending';
+        const statusOptions = ['pending', 'confirmed', 'fulfilled'].map((s) =>
+          '<option value="' + s + '"' + (s === o.order_status ? ' selected' : '') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'
+        ).join('');
+        return '<tr>' +
+          '<td style="white-space:nowrap">' + esc(formatDate(o.created_at)) + '</td>' +
+          '<td style="white-space:nowrap">' + esc(o.order_number) + '</td>' +
+          '<td>' + items + '</td>' +
+          '<td style="white-space:nowrap;font-weight:700">' + formatMoney(o.total) + '</td>' +
+          '<td>' + esc(o.payment_method === 'stripe' ? 'Stripe' : 'Pay on delivery') + '</td>' +
+          '<td>' + wsPaymentPill(o) +
+            (canConfirm ? ' <button type="button" class="btn btn-sm ws-confirm-pay" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">Confirm Payment Received</button>' : '') + '</td>' +
+          '<td><select class="status-select is-pending ws-order-status" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">' + statusOptions + '</select></td>' +
+          '</tr>';
+      }).join('');
+
+      target.innerHTML = '<div class="table-scroll"><table><thead><tr>' +
+        '<th>Date</th><th>Order #</th><th>Items</th><th>Total</th><th>Method</th><th>Payment</th><th>Order Status</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+      target.querySelectorAll('.ws-confirm-pay').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!window.confirm('Confirm that payment for this order has been received in person?')) return;
+          btn.disabled = true;
+          try {
+            await api('/api/admin-wholesale', { action: 'confirm-payment', orderId: btn.dataset.order });
+            wsOrdersCache.delete(btn.dataset.retailer);
+            wholesaleLoaded = false;
+            loadWholesale();
+          } catch (err) { alert('Confirm failed: ' + err.message); btn.disabled = false; }
+        });
+      });
+
+      target.querySelectorAll('.ws-order-status').forEach((select) => {
+        select.addEventListener('click', (e) => e.stopPropagation());
+        select.addEventListener('change', async (e) => {
+          e.stopPropagation();
+          select.disabled = true;
+          try {
+            await api('/api/admin-wholesale', { action: 'set-order-status', orderId: select.dataset.order, status: select.value });
+            wsOrdersCache.delete(select.dataset.retailer);
+          } catch (err) { alert('Status change failed: ' + err.message); }
+          finally { select.disabled = false; }
+        });
+      });
+    } catch (err) {
+      target.innerHTML = '<div class="empty" style="padding:16px 0">' + esc(err.message) + '</div>';
+    }
+  }
+
+  document.getElementById('ws-email-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('ws-email-btn');
+    const note = document.getElementById('ws-email-note');
+    note.textContent = '';
+    if (!wsSelected.size) { note.textContent = 'Select at least one retailer in the table first.'; return; }
+    const subject = document.getElementById('ws-subject').value.trim();
+    const bodyText = document.getElementById('ws-body').value.trim();
+    if (!subject || !bodyText) { note.textContent = 'Subject and message are required.'; return; }
+    if (!window.confirm('Send "' + subject + '" to ' + wsSelected.size + ' retailer(s)?')) return;
+
+    btn.disabled = true;
+    try {
+      const html = '<p style="font-family:sans-serif;line-height:1.6">' + esc(bodyText).replace(/\n/g, '<br>') + '</p>';
+      const data = await api('/api/admin-wholesale', {
+        action: 'email-retailers',
+        retailerIds: [...wsSelected],
+        reason: document.getElementById('ws-reason').value,
+        subject, html
+      });
+      note.textContent = 'Sent to ' + data.sent + ' retailer(s).' + (data.failed.length ? ' Failed: ' + data.failed.join(', ') : '');
+    } catch (err) {
+      note.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   /* ---------- USERS ---------- */
