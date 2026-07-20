@@ -45,6 +45,8 @@
   .pill-green { background: oklch(90% 0.08 150); color: oklch(35% 0.1 150); }
   .pill-amber { background: oklch(93% 0.06 75); color: oklch(40% 0.1 75); }
   .pill-blue { background: oklch(92% 0.05 250); color: oklch(40% 0.1 250); }
+  .pill-gray { background: rgba(34,30,26,.08); color: rgba(34,30,26,.6); }
+  .cancel-reason { font-size: 12px; color: rgba(34,30,26,.55); margin-top: 4px; max-width: 240px; white-space: normal; }
   .qty-input { width: 80px; padding: 8px 10px; margin: 0; }
   .order-total { font-size: 17px; font-weight: 800; margin: 16px 0; }
   .pay-choice { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
@@ -325,9 +327,14 @@
   function paymentPill(o) {
     if (o.payment_status === 'paid') return '<span class="pill pill-green">Paid (Stripe)</span>';
     if (o.payment_status === 'confirmed_by_admin') return '<span class="pill pill-green">Payment Confirmed</span>';
+    if (o.order_status === 'canceled') return '<span class="pill pill-gray">No Charge</span>';
     return '<span class="pill pill-amber">Payment Pending</span>';
   }
   function statusPill(o) {
+    if (o.order_status === 'canceled') {
+      return '<span class="pill pill-gray">Canceled</span>' +
+        (o.cancel_reason ? '<div class="cancel-reason">Reason: ' + esc(o.cancel_reason) + '</div>' : '');
+    }
     if (o.order_status === 'fulfilled') return '<span class="pill pill-green">Fulfilled</span>';
     if (o.order_status === 'confirmed') return '<span class="pill pill-blue">Confirmed</span>';
     return '<span class="pill pill-amber">Pending</span>';

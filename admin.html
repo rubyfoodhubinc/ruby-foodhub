@@ -1101,10 +1101,16 @@
 
       const rows = orders.map((o) => {
         const items = (Array.isArray(o.items) ? o.items : []).map((i) => i.quantity + '× ' + i.product + ' — ' + i.variant + ' @ ' + formatMoney(i.wholesale_price)).join('<br>');
-        const canConfirm = o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending';
+        const isCanceled = o.order_status === 'canceled';
+        const canConfirm = !isCanceled && o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending';
         const statusOptions = ['pending', 'confirmed', 'fulfilled'].map((s) =>
           '<option value="' + s + '"' + (s === o.order_status ? ' selected' : '') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'
         ).join('');
+        const statusCell = isCanceled
+          ? '<span class="pill pill-gray">Canceled</span>' +
+            (o.cancel_reason ? '<div class="note" style="max-width:220px;white-space:normal">Reason: ' + esc(o.cancel_reason) + '</div>' : '')
+          : '<select class="status-select is-pending ws-order-status" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">' + statusOptions + '</select>' +
+            ' <button type="button" class="btn btn-outline btn-sm ws-cancel" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">Cancel</button>';
         return '<tr>' +
           '<td style="white-space:nowrap">' + esc(formatDate(o.created_at)) + '</td>' +
           '<td style="white-space:nowrap">' + esc(o.order_number) + '</td>' +
@@ -1113,7 +1119,7 @@
           '<td>' + esc(o.payment_method === 'stripe' ? 'Stripe' : 'Pay on delivery') + '</td>' +
           '<td>' + wsPaymentPill(o) +
             (canConfirm ? ' <button type="button" class="btn btn-sm ws-confirm-pay" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">Confirm Payment Received</button>' : '') + '</td>' +
-          '<td><select class="status-select is-pending ws-order-status" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">' + statusOptions + '</select></td>' +
+          '<td>' + statusCell + '</td>' +
           '</tr>';
       }).join('');
 
@@ -1132,6 +1138,24 @@
             wholesaleLoaded = false;
             loadWholesale();
           } catch (err) { alert('Confirm failed: ' + err.message); btn.disabled = false; }
+        });
+      });
+
+      target.querySelectorAll('.ws-cancel').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const reason = prompt('Reason for canceling this order (the retailer will be emailed this reason):');
+          if (reason === null) return;
+          if (!reason.trim()) { alert('A cancellation reason is required.'); return; }
+          if (!window.confirm('Cancel this order and email the retailer the reason?')) return;
+          btn.disabled = true;
+          try {
+            const data = await api('/api/admin-wholesale', { action: 'cancel-order', orderId: btn.dataset.order, reason: reason.trim() });
+            if (data.note) alert(data.note);
+            wsOrdersCache.delete(btn.dataset.retailer);
+            wholesaleLoaded = false;
+            loadWholesale();
+          } catch (err) { alert('Cancel failed: ' + err.message); btn.disabled = false; }
         });
       });
 

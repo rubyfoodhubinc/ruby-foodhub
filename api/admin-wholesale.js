@@ -93,12 +93,65 @@ async function handler(req, res) {
         .from('wholesale_orders')
         .update({ order_status: status })
         .eq('id', orderId)
+        .neq('order_status', 'canceled')
         .select('order_number');
       if (error) throw new Error(JSON.stringify(error));
-      if (!data || !data.length) return res.status(404).json({ error: 'Order not found.' });
+      if (!data || !data.length) return res.status(404).json({ error: 'Order not found (or it has been canceled).' });
 
       await logAudit(actor.id, 'wholesale_order_status_change', { order_id: orderId, order_number: data[0].order_number, status });
       return res.status(200).json({ success: true });
+    }
+
+    if (action === 'cancel-order') {
+      const { orderId, reason } = req.body;
+      const cleanReason = String(reason || '').trim();
+      if (!orderId || !cleanReason) {
+        return res.status(400).json({ error: 'A cancellation reason is required.' });
+      }
+
+      const { data: order, error: getErr } = await supabase
+        .from('wholesale_orders')
+        .select('id, order_number, total, payment_status, order_status, retailer_accounts(business_name, email)')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (getErr) throw new Error(JSON.stringify(getErr));
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+      if (order.order_status === 'canceled') return res.status(400).json({ error: 'Order is already canceled.' });
+
+      const { error } = await supabase
+        .from('wholesale_orders')
+        .update({ order_status: 'canceled', cancel_reason: cleanReason, canceled_at: new Date().toISOString() })
+        .eq('id', orderId);
+      if (error) throw new Error(JSON.stringify(error));
+
+      await logAudit(actor.id, 'wholesale_order_canceled', {
+        order_id: orderId, order_number: order.order_number,
+        reason: cleanReason, payment_status_at_cancel: order.payment_status,
+      });
+
+      // Tell the retailer, including the reason.
+      const retailer = order.retailer_accounts;
+      if (retailer && isValidEmail(retailer.email)) {
+        try {
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: retailer.email,
+            subject: `Ruby FoodHub — order ${order.order_number} has been canceled`,
+            html: `<p style="font-family:sans-serif;line-height:1.6">Hi ${retailer.business_name},<br><br>` +
+              `Your wholesale order <strong>${order.order_number}</strong> ($${Number(order.total).toFixed(2)}) has been canceled.<br><br>` +
+              `<strong>Reason:</strong> ${cleanReason}<br><br>` +
+              `If you have questions, just reply to this email.</p>` + RETAILER_EMAIL_FOOTER,
+          });
+        } catch (e) {
+          console.error('cancel notification email failed:', e.message);
+        }
+      }
+
+      const wasPaid = order.payment_status === 'paid';
+      return res.status(200).json({
+        success: true,
+        note: wasPaid ? 'This order was PAID via Stripe — issue the refund from the Stripe dashboard (Payments → find the charge → Refund).' : null,
+      });
     }
 
     if (action === 'set-account-status') {
