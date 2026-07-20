@@ -21,11 +21,12 @@ module.exports = async (req, res) => {
     }
 
     const user = await verifyLogin(email, password);
-    if (!user) {
+    if (!user || user.active === false) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     const token = await createSession(user.id);
+    await supabase.from('admin_users').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
     await logAudit(user.id, 'admin_login', { email: user.email });
 
     res.status(200).json({ token, name: user.name, role: user.role });

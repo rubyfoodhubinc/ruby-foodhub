@@ -298,10 +298,24 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { variantIndex: 0, qty: 1, added: false };
+  state = { variantIndex: 0, qty: 1, added: false, liveVariants: null };
+
+  componentDidMount() {
+    // Live catalog from the products table (admin-managed prices). The
+    // hardcoded list below is only a fallback if the API is unreachable.
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((data) => {
+        const mine = (data.products || [])
+          .filter((p) => p.slug === 'ginger-refresher')
+          .map((p) => ({ label: p.variant, price: Number(p.price) }));
+        if (mine.length) this.setState({ liveVariants: mine, variantIndex: 0 });
+      })
+      .catch(() => {});
+  }
 
   variants() {
-    return [
+    return this.state.liveVariants || [
       { label: '12oz Single', price: 9.99 },
       { label: '6-Pack', price: 54.99 },
       { label: '12-Pack', price: 108.99 },

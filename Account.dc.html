@@ -462,16 +462,22 @@ class Component extends DCLogic {
         const items = Array.isArray(o.items) && o.items.length
           ? o.items.map((it) => it.quantity + '× ' + it.description).join('; ')
           : '—';
-        const delivered = (o.order_status || 'pending') === 'delivered';
+        const status = o.order_status || 'pending';
+        const statusStyles = {
+          pending: { label: 'Pending', bg: 'oklch(93% 0.06 75)', color: 'oklch(40% 0.1 75)' },
+          fulfilled: { label: 'Fulfilled', bg: 'oklch(92% 0.05 250)', color: 'oklch(40% 0.1 250)' },
+          delivered: { label: 'Delivered', bg: 'oklch(90% 0.08 150)', color: 'oklch(35% 0.1 150)' }
+        };
+        const s = statusStyles[status] || statusStyles.pending;
         return {
           date: o.order_date ? new Date(o.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
           orderId: o.order_id,
           items,
           address: o.address || '—',
           total: '$' + Number(o.total || 0).toFixed(2),
-          status: delivered ? 'Delivered' : 'Pending',
-          statusBg: delivered ? 'oklch(90% 0.08 150)' : 'oklch(93% 0.06 75)',
-          statusColor: delivered ? 'oklch(35% 0.1 150)' : 'oklch(40% 0.1 75)'
+          status: s.label,
+          statusBg: s.bg,
+          statusColor: s.color
         };
       })
     };

@@ -1,7 +1,7 @@
 const { supabase } = require('./_lib/supabase');
 const { requireSession, logAudit } = require('./_lib/admin-auth');
 
-const ALLOWED_STATUSES = ['pending', 'delivered'];
+const ALLOWED_STATUSES = ['pending', 'fulfilled', 'delivered'];
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
   }
 
   if (!orderId || !ALLOWED_STATUSES.includes(status)) {
-    return res.status(400).json({ error: 'orderId and a status of pending/delivered are required.' });
+    return res.status(400).json({ error: 'orderId and a status of pending/fulfilled/delivered are required.' });
   }
 
   try {

@@ -55,7 +55,10 @@ async function requireSession(token) {
     return null;
   }
 
-  return session.admin_users || null;
+  const user = session.admin_users || null;
+  // Deactivated accounts lose access immediately, even mid-session.
+  if (user && user.active === false) return null;
+  return user;
 }
 
 async function destroySession(token) {

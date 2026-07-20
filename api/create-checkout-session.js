@@ -53,18 +53,28 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Please fill in your name, delivery address, ZIP code, email, and phone number before checkout.' });
     }
 
-    // Computed from the same unitAmount/quantity used to build the Stripe
-    // line items below, so it's authoritative rather than trusting a
-    // client-supplied total — this is what gets persisted to the orders
-    // table by the webhook.
+    // Prices are looked up from the products table by slug+variant — the
+    // client-side unitPrice is ignored entirely, so a tampered request
+    // can't change what Stripe charges. The subtotal computed here is what
+    // gets persisted to the orders table by the webhook.
+    const { data: catalog, error: catalogError } = await supabase
+      .from('products')
+      .select('slug, variant, price')
+      .eq('active', true);
+    if (catalogError) throw new Error('Could not load the product catalog.');
+
+    const priceBySlugVariant = new Map(
+      (catalog || []).map((p) => [`${p.slug}::${p.variant}`, Math.round(Number(p.price) * 100)])
+    );
+
     let subtotalCents = 0;
 
     const line_items = items.map((item) => {
-      const unitAmount = Math.round(Number(item.unitPrice) * 100);
+      const unitAmount = priceBySlugVariant.get(`${item.productSlug}::${item.variantLabel}`);
       const quantity = Math.max(1, Math.min(50, Number(item.qty) || 1));
 
       if (!Number.isFinite(unitAmount) || unitAmount <= 0) {
-        throw new Error(`Invalid price for ${item.productName || 'item'}`);
+        throw new Error(`"${item.productName || 'An item'} — ${item.variantLabel || ''}" is no longer available. Please remove it from your cart and re-add it.`);
       }
 
       subtotalCents += unitAmount * quantity;

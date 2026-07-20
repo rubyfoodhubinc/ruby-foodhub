@@ -3,46 +3,65 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruby FoodHub — Orders</title>
+<title>Ruby FoodHub — Admin</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
   body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: oklch(97% 0.015 60); color: oklch(22% 0.02 40); }
   * { box-sizing: border-box; }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ---------- Login / setup ---------- */
   .login-card { max-width: 360px; margin: 120px auto; background: #fff; border-radius: 16px; box-shadow: 0 6px 18px rgba(34,30,26,.08); padding: 36px; text-align: center; }
   .login-card h1 { font-size: 20px; margin: 0 0 20px; }
-  .login-card input, .team-card input, .team-card select { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14.5px; margin-bottom: 14px; font-family: inherit; background: #fff; }
-  .team-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); padding: 24px; margin-top: 28px; max-width: 420px; }
-  .team-card h2 { font-size: 16px; margin: 0 0 14px; }
-  .team-note { font-size: 12.5px; color: rgba(34,30,26,.55); margin: 10px 0 0; min-height: 16px; }
-  button { background: oklch(45% 0.17 20); color: #fff; border: none; border-radius: 100px; padding: 12px 0; width: 100%; font-size: 14.5px; font-weight: 700; cursor: pointer; }
-  button:hover { background: oklch(52% 0.19 20); }
-  button:disabled { background: #ccc; cursor: not-allowed; }
-  .error { color: oklch(45% 0.17 20); font-size: 13px; margin: 12px 0 0; }
-  .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-  .top-bar h1 { font-size: 22px; margin: 0; }
-  .top-actions { display: flex; gap: 10px; }
-  .small-btn { width: auto; padding: 9px 18px; font-size: 13px; }
-  .sync-note { font-size: 13px; color: rgba(34,30,26,.6); margin: 0 0 14px; min-height: 18px; }
-  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-  .filter-bar input[type="search"] { flex: 1; min-width: 220px; padding: 10px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14px; font-family: inherit; }
-  .filter-bar input[type="date"] { padding: 9px 12px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 13.5px; font-family: inherit; color: oklch(22% 0.02 40); }
-  .filter-bar .date-label { font-size: 12.5px; color: rgba(34,30,26,.55); }
-  .clear-btn { width: auto; padding: 9px 16px; font-size: 13px; background: transparent; color: oklch(45% 0.17 20); border: 1.5px solid oklch(45% 0.17 20); }
-  .clear-btn:hover { background: oklch(45% 0.17 20); color: #fff; }
-  .result-count { font-size: 12.5px; color: rgba(34,30,26,.55); margin: 0 0 10px; }
+  .login-card input, .form-stack input, .form-stack select { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14.5px; margin-bottom: 12px; font-family: inherit; background: #fff; }
+  .btn { background: oklch(45% 0.17 20); color: #fff; border: none; border-radius: 100px; padding: 12px 18px; font-size: 14px; font-weight: 700; }
+  .btn:hover { background: oklch(52% 0.19 20); }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-full { width: 100%; }
+  .btn-outline { background: transparent; color: oklch(45% 0.17 20); border: 1.5px solid oklch(45% 0.17 20); }
+  .btn-outline:hover { background: oklch(45% 0.17 20); color: #fff; }
+  .btn-sm { padding: 8px 14px; font-size: 12.5px; }
+  .error { color: oklch(45% 0.17 20); font-size: 13px; margin: 10px 0 0; }
+
+  /* ---------- Shell ---------- */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; flex: none; background: #fff; border-right: 1px solid rgba(34,30,26,.08); display: flex; flex-direction: column; padding: 20px 14px; gap: 4px; }
+  .sidebar .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; padding: 4px 10px 18px; }
+  .sidebar .brand img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+  .nav-item { display: block; width: 100%; text-align: left; background: transparent; border: none; border-radius: 10px; padding: 11px 14px; font-size: 14px; font-weight: 600; color: rgba(34,30,26,.75); }
+  .nav-item:hover { background: oklch(96% 0.02 60); }
+  .nav-item.active { background: oklch(45% 0.17 20); color: #fff; }
+  .sidebar .spacer { flex: 1; }
+  .sidebar .whoami { font-size: 12px; color: rgba(34,30,26,.55); padding: 10px 14px 8px; line-height: 1.5; border-top: 1px solid rgba(34,30,26,.08); }
+  .content { flex: 1; min-width: 0; padding: 32px 28px 64px; }
+  .content h1 { font-size: 22px; margin: 0 0 18px; }
+  @media (max-width: 760px) {
+    .shell { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: none; border-bottom: 1px solid rgba(34,30,26,.08); }
+    .sidebar .brand { padding-bottom: 4px; }
+    .nav-item { width: auto; }
+    .sidebar .spacer { display: none; }
+    .sidebar .whoami { border-top: none; }
+  }
+
+  /* ---------- Tables ---------- */
   .table-scroll { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid rgba(34,30,26,.08); white-space: nowrap; }
   td.truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
-  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.55); cursor: pointer; user-select: none; }
-  th:hover { color: oklch(45% 0.17 20); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.55); user-select: none; }
+  th.sortable { cursor: pointer; }
+  th.sortable:hover { color: oklch(45% 0.17 20); }
+  tr:last-child td { border-bottom: none; }
   tr.summary-row { cursor: pointer; }
   tr.summary-row:hover td { background: oklch(98% 0.01 60); }
-  tr:last-child td { border-bottom: none; }
-  .status-pill { display: inline-block; background: oklch(90% 0.08 150); color: oklch(35% 0.1 150); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
-  .status-select { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 100px; border: 1.5px solid transparent; cursor: pointer; font-family: inherit; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
+  .pill-green { background: oklch(90% 0.08 150); color: oklch(35% 0.1 150); }
+  .pill-amber { background: oklch(93% 0.06 75); color: oklch(40% 0.1 75); }
+  .pill-gray { background: rgba(34,30,26,.08); color: rgba(34,30,26,.6); }
+  .status-select { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 100px; border: 1.5px solid transparent; font-family: inherit; }
   .status-select.is-pending { background: oklch(93% 0.06 75); color: oklch(40% 0.1 75); }
+  .status-select.is-fulfilled { background: oklch(92% 0.05 250); color: oklch(40% 0.1 250); }
   .status-select.is-delivered { background: oklch(90% 0.08 150); color: oklch(35% 0.1 150); }
   .status-select:disabled { opacity: 0.5; cursor: wait; }
   .empty, .loading { text-align: center; padding: 60px 0; color: rgba(34,30,26,.5); }
@@ -55,18 +74,47 @@
   .items-block { border-top: 1px solid rgba(34,30,26,.08); padding-top: 12px; }
   .items-block .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.5); margin-bottom: 6px; }
   .items-table { width: auto; min-width: 320px; }
-  .items-table td, .items-table th { padding: 5px 14px 5px 0; font-size: 13.5px; border: none; }
+  .items-table td { padding: 5px 14px 5px 0; font-size: 13.5px; border: none; }
   .money-summary { margin-top: 12px; font-size: 13.5px; color: rgba(34,30,26,.75); }
   .money-summary strong { color: oklch(22% 0.02 40); }
+
+  /* ---------- Filters / toolbars ---------- */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .toolbar input[type="search"] { flex: 1; min-width: 200px; padding: 10px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14px; font-family: inherit; }
+  .toolbar input[type="date"] { padding: 9px 12px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 13.5px; font-family: inherit; }
+  .toolbar select { padding: 9px 12px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 13.5px; font-family: inherit; background: #fff; }
+  .toolbar .lbl { font-size: 12.5px; color: rgba(34,30,26,.55); }
+  .note { font-size: 12.5px; color: rgba(34,30,26,.6); margin: 8px 0 12px; min-height: 16px; }
+
+  /* ---------- KPI cards & charts ---------- */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 26px; }
+  .kpi-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); padding: 18px 20px; }
+  .kpi-card .period { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(34,30,26,.5); margin-bottom: 8px; }
+  .kpi-card .rev { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+  .kpi-card .sub { font-size: 12.5px; color: rgba(34,30,26,.6); }
+  .panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); padding: 22px; margin-bottom: 22px; }
+  .panel h2 { font-size: 15px; margin: 0 0 14px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .bar-row .bar-label { width: 220px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .bar-track { flex: 1; background: oklch(96% 0.01 60); border-radius: 6px; height: 20px; position: relative; }
+  .bar-row .bar-fill { height: 100%; border-radius: 6px; background: oklch(45% 0.17 20); min-width: 2px; }
+  .bar-row .bar-val { width: 90px; flex: none; text-align: right; font-weight: 700; }
+  .trend { display: flex; align-items: flex-end; gap: 4px; height: 140px; padding-top: 8px; }
+  .trend .day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+  .trend .day .col { width: 100%; max-width: 34px; background: oklch(45% 0.17 20); border-radius: 4px 4px 0 0; min-height: 2px; }
+  .trend .day .dlbl { font-size: 9.5px; color: rgba(34,30,26,.5); white-space: nowrap; }
+
+  .form-stack { max-width: 420px; }
+  .price-input { width: 90px; padding: 7px 10px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 8px; font-size: 13.5px; font-family: inherit; }
 </style>
 </head>
 <body>
 
 <div id="login-view" class="login-card">
-  <h1>Ruby FoodHub — Orders</h1>
+  <h1>Ruby FoodHub — Admin</h1>
   <input type="email" id="email-input" placeholder="Email" autocomplete="username" />
   <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
-  <button type="button" id="login-btn">Log In</button>
+  <button type="button" class="btn btn-full" id="login-btn">Log In</button>
   <p class="error" id="login-error" hidden></p>
 </div>
 
@@ -77,42 +125,87 @@
   <input type="text" id="setup-name" placeholder="Your full name" />
   <input type="email" id="setup-email" placeholder="Your email" autocomplete="username" />
   <input type="password" id="setup-password" placeholder="New personal password (10+ chars)" autocomplete="new-password" />
-  <button type="button" id="setup-btn">Create Owner Account</button>
+  <button type="button" class="btn btn-full" id="setup-btn">Create Owner Account</button>
   <p class="error" id="setup-error" hidden></p>
 </div>
 
-<div id="admin-view" class="wrap" hidden>
-  <div class="top-bar">
-    <h1>Orders</h1>
-    <div class="top-actions">
-      <span id="logged-in-as" style="align-self:center;font-size:13px;color:rgba(34,30,26,.6)"></span>
-      <button type="button" class="small-btn" id="sync-btn">Sync from Stripe</button>
-      <button type="button" class="small-btn" id="logout-btn">Log Out</button>
-    </div>
+<div id="admin-view" class="shell" hidden>
+  <div class="sidebar">
+    <div class="brand"><img src="logo-mark-small.png" alt=""/> Ruby FoodHub</div>
+    <button type="button" class="nav-item active" data-section="orders">Orders</button>
+    <button type="button" class="nav-item" data-section="sales">Sales</button>
+    <button type="button" class="nav-item" data-section="products">Products</button>
+    <button type="button" class="nav-item" data-section="users" id="nav-users" hidden>Users</button>
+    <div class="spacer"></div>
+    <div class="whoami" id="logged-in-as"></div>
+    <button type="button" class="btn btn-outline btn-sm" id="logout-btn" style="margin:6px 10px 0">Log Out</button>
   </div>
-  <p class="sync-note" id="sync-note"></p>
-  <div class="filter-bar">
-    <input type="search" id="search-input" placeholder="Search name, phone, email, address, order #…" />
-    <span class="date-label">From</span>
-    <input type="date" id="date-from" />
-    <span class="date-label">To</span>
-    <input type="date" id="date-to" />
-    <button type="button" class="clear-btn" id="clear-filters-btn">Clear</button>
-  </div>
-  <p class="result-count" id="result-count"></p>
-  <div id="table-container"><div class="loading">Loading orders…</div></div>
 
-  <div class="team-card" id="team-card" hidden>
-    <h2>Add Team Member</h2>
-    <input type="text" id="team-name" placeholder="Full name" />
-    <input type="email" id="team-email" placeholder="Email" />
-    <input type="password" id="team-password" placeholder="Temporary password (10+ chars)" autocomplete="new-password" />
-    <select id="team-role">
-      <option value="manager" selected>Manager</option>
-      <option value="owner">Owner</option>
-    </select>
-    <button type="button" class="small-btn" id="team-add-btn">Add Team Member</button>
-    <p class="team-note" id="team-note"></p>
+  <div class="content">
+
+    <section id="section-orders">
+      <h1>Orders</h1>
+      <div class="toolbar">
+        <input type="search" id="search-input" placeholder="Search name, phone, email, address, order #…" />
+        <span class="lbl">From</span><input type="date" id="date-from" />
+        <span class="lbl">To</span><input type="date" id="date-to" />
+        <select id="status-filter">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="fulfilled">Fulfilled</option>
+          <option value="delivered">Delivered</option>
+        </select>
+        <button type="button" class="btn btn-outline btn-sm" id="clear-filters-btn">Clear</button>
+        <button type="button" class="btn btn-sm" id="sync-btn">Sync from Stripe</button>
+      </div>
+      <p class="note" id="sync-note"></p>
+      <p class="note" id="result-count"></p>
+      <div id="table-container"><div class="loading">Loading orders…</div></div>
+    </section>
+
+    <section id="section-sales" hidden>
+      <h1>Sales</h1>
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="panel"><h2>Revenue by Product</h2><div id="by-product"></div></div>
+      <div class="panel"><h2>Revenue by Size / Variant</h2><div id="by-variant"></div></div>
+      <div class="panel"><h2>Daily Revenue — Last 14 Days</h2><div class="trend" id="trend"></div></div>
+    </section>
+
+    <section id="section-products" hidden>
+      <h1>Products</h1>
+      <p class="note">Prices here drive the live storefront and checkout. Marking a variant inactive hides it from the store without touching past orders.</p>
+      <div id="products-container"><div class="loading">Loading products…</div></div>
+      <div class="panel" style="max-width:460px;margin-top:22px">
+        <h2>Add New Product / Variant</h2>
+        <div class="form-stack">
+          <input type="text" id="prod-name" placeholder="Product name (e.g. Ruby Ginger Refresher)" />
+          <input type="text" id="prod-variant" placeholder="Variant (e.g. 6-Pack)" />
+          <input type="number" step="0.01" min="0.01" id="prod-price" placeholder="Price (USD)" />
+          <button type="button" class="btn" id="prod-add-btn">Add Product</button>
+          <p class="note" id="prod-note"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="section-users" hidden>
+      <h1>Users</h1>
+      <div id="users-container"><div class="loading">Loading users…</div></div>
+      <div class="panel" style="max-width:460px;margin-top:22px">
+        <h2>Add Team Member</h2>
+        <div class="form-stack">
+          <input type="text" id="team-name" placeholder="Full name" />
+          <input type="email" id="team-email" placeholder="Email" />
+          <input type="password" id="team-password" placeholder="Temporary password (10+ chars)" autocomplete="new-password" />
+          <select id="team-role">
+            <option value="manager" selected>Manager</option>
+            <option value="owner">Owner</option>
+          </select>
+          <button type="button" class="btn" id="team-add-btn">Add Team Member</button>
+          <p class="note" id="team-note"></p>
+        </div>
+      </div>
+    </section>
+
   </div>
 </div>
 
@@ -129,15 +222,34 @@
   const setupBtn = document.getElementById('setup-btn');
   const setupError = document.getElementById('setup-error');
   const loggedInAs = document.getElementById('logged-in-as');
-  const teamCard = document.getElementById('team-card');
-  const teamNote = document.getElementById('team-note');
   const logoutBtn = document.getElementById('logout-btn');
+  const syncBtn = document.getElementById('sync-btn');
+  const syncNote = document.getElementById('sync-note');
+  const tableContainer = document.getElementById('table-container');
+  const searchInput = document.getElementById('search-input');
+  const dateFromInput = document.getElementById('date-from');
+  const dateToInput = document.getElementById('date-to');
+  const statusFilter = document.getElementById('status-filter');
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+  const resultCount = document.getElementById('result-count');
+  const teamNote = document.getElementById('team-note');
+  const prodNote = document.getElementById('prod-note');
 
+  let orders = [];
+  let products = [];
+  let users = [];
+  let productsLoaded = false;
+  let usersLoaded = false;
+  let sortKey = 'order_date';
+  let sortDir = 'desc';
+  const expanded = new Set();
+
+  /* ---------- session ---------- */
   function getSession() {
     try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || null; }
     catch (e) { return null; }
   }
-  function setSession(session) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session)); }
+  function setSession(s) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
   function clearSession() { sessionStorage.removeItem(STORAGE_KEY); }
 
   function enterAdminUI(session) {
@@ -145,7 +257,7 @@
     setupView.hidden = true;
     adminView.hidden = false;
     loggedInAs.textContent = 'Logged in as ' + session.name + ' (' + session.role + ')';
-    teamCard.hidden = session.role !== 'owner';
+    document.getElementById('nav-users').hidden = session.role !== 'owner';
   }
 
   function backToLogin(message) {
@@ -156,46 +268,54 @@
     passwordInput.value = '';
     if (message) { loginError.textContent = message; loginError.hidden = false; }
   }
-  const syncBtn = document.getElementById('sync-btn');
-  const syncNote = document.getElementById('sync-note');
-  const tableContainer = document.getElementById('table-container');
-  const searchInput = document.getElementById('search-input');
-  const dateFromInput = document.getElementById('date-from');
-  const dateToInput = document.getElementById('date-to');
-  const clearFiltersBtn = document.getElementById('clear-filters-btn');
-  const resultCount = document.getElementById('result-count');
 
-  let orders = [];
-  let sortKey = 'order_date';
-  let sortDir = 'desc';
-  const expanded = new Set();
+  async function api(path, body) {
+    const session = getSession();
+    const response = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token: session ? session.token : '' }, body || {}))
+    });
+    const data = await response.json();
+    if (response.status === 401) { backToLogin(data.error); throw new Error(data.error || 'Signed out'); }
+    if (!response.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
 
+  /* ---------- helpers ---------- */
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
   }
-
   function formatDate(value) {
     if (!value) return '—';
-    return new Date(value).toLocaleString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-    });
+    return new Date(value).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
-
   function formatMoney(value) {
     if (value === null || value === undefined) return '—';
     return '$' + Number(value).toFixed(2);
   }
-
   function itemsSummary(items) {
     if (!Array.isArray(items) || items.length === 0) return '—';
     return items.map((it) => it.quantity + '× ' + it.description).join('; ');
   }
 
-  // Every column stored in the Supabase orders table, in order.
-  // "truncate" caps the cell width; the full value is always in the
-  // expandable detail row.
+  /* ---------- section switching ---------- */
+  document.querySelectorAll('.nav-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['orders', 'sales', 'products', 'users'].forEach((name) => {
+        document.getElementById('section-' + name).hidden = name !== btn.dataset.section;
+      });
+      if (btn.dataset.section === 'sales') renderStats();
+      if (btn.dataset.section === 'products' && !productsLoaded) loadProducts();
+      if (btn.dataset.section === 'users' && !usersLoaded) loadUsers();
+    });
+  });
+
+  /* ---------- ORDERS ---------- */
   const columns = [
     { key: 'order_date', label: 'Date', render: (o) => esc(formatDate(o.order_date)) },
     { key: 'order_id', label: 'Order #', render: (o) => esc(o.order_id || '—') },
@@ -203,32 +323,24 @@
     { key: 'email', label: 'Email', render: (o) => esc(o.email || '—') },
     { key: 'phone', label: 'Phone', render: (o) => esc(o.phone || '—') },
     { key: 'address', label: 'Address', truncate: true, render: (o) => esc((o.address || '—').replace(/\n/g, ', ')) },
-    { key: 'zip', label: 'Zip', render: (o) => esc(o.zip || '—') },
-    { key: 'shipping_tier', label: 'Tier', render: (o) => esc(o.shipping_tier || '—') },
-    { key: 'notes', label: 'Notes', truncate: true, render: (o) => esc(o.notes || '—') },
     { key: 'items', label: 'Items', truncate: true, render: (o) => esc(itemsSummary(o.items)) },
-    { key: 'subtotal', label: 'Subtotal', money: true, render: (o) => esc(formatMoney(o.subtotal)) },
-    { key: 'shipping', label: 'Shipping', money: true, render: (o) => esc(formatMoney(o.shipping)) },
     { key: 'coupon_code', label: 'Coupon', render: (o) => esc(o.coupon_code || '—') },
-    { key: 'discount', label: 'Discount', money: true, render: (o) => esc(o.discount ? '−' + formatMoney(o.discount) : '—') },
-    { key: 'tip', label: 'Tip', money: true, render: (o) => esc(formatMoney(o.tip)) },
-    { key: 'total', label: 'Total', money: true, render: (o) => '<strong>' + esc(formatMoney(o.total)) + '</strong>' },
-    { key: 'terms_agreed_at', label: 'Terms Agreed', render: (o) => esc(o.terms_agreed_at ? formatDate(o.terms_agreed_at) : '—') },
-    { key: 'created_at', label: 'Recorded', render: (o) => esc(o.created_at ? formatDate(o.created_at) : '—') },
-    { key: 'status', label: 'Status', render: (o) => {
+    { key: 'total', label: 'Total', render: (o) => '<strong>' + esc(formatMoney(o.total)) + '</strong>' },
+    { key: 'payment', label: 'Payment', render: () => '<span class="pill pill-green">Paid</span>' },
+    { key: 'status', label: 'Delivery', render: (o) => {
       const status = o.order_status || 'pending';
-      return '<select class="status-select ' + (status === 'delivered' ? 'is-delivered' : 'is-pending') + '" data-order="' + esc(o.order_id) + '">' +
-        '<option value="pending"' + (status === 'pending' ? ' selected' : '') + '>Pending</option>' +
-        '<option value="delivered"' + (status === 'delivered' ? ' selected' : '') + '>Delivered</option>' +
-        '</select>';
+      const options = ['pending', 'fulfilled', 'delivered'].map((s) =>
+        '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'
+      ).join('');
+      return '<select class="status-select is-' + esc(status) + '" data-order="' + esc(o.order_id) + '">' + options + '</select>';
     } }
   ];
 
   function sortValue(order, key) {
+    if (key === 'payment') return 'Paid';
     if (key === 'status') return order.order_status || 'pending';
     if (key === 'items') return itemsSummary(order.items);
-    const moneyKeys = ['subtotal', 'shipping', 'discount', 'tip', 'total'];
-    if (moneyKeys.includes(key)) return Number(order[key]) || 0;
+    if (key === 'total') return Number(order.total) || 0;
     return order[key] ?? '';
   }
 
@@ -236,22 +348,21 @@
     const query = searchInput.value.trim().toLowerCase();
     const from = dateFromInput.value ? new Date(dateFromInput.value + 'T00:00:00') : null;
     const to = dateToInput.value ? new Date(dateToInput.value + 'T23:59:59.999') : null;
+    const status = statusFilter.value;
 
     return orders.filter((o) => {
+      if (status && (o.order_status || 'pending') !== status) return false;
       if (from || to) {
-        const orderDate = o.order_date ? new Date(o.order_date) : null;
-        if (!orderDate) return false;
-        if (from && orderDate < from) return false;
-        if (to && orderDate > to) return false;
+        const d = o.order_date ? new Date(o.order_date) : null;
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
       }
-
       if (query) {
         const haystack = [o.customer_name, o.phone, o.email, o.address, o.order_id]
-          .map((v) => String(v ?? '').toLowerCase())
-          .join(' ');
+          .map((v) => String(v ?? '').toLowerCase()).join(' ');
         if (!haystack.includes(query)) return false;
       }
-
       return true;
     });
   }
@@ -275,11 +386,10 @@
 
   function renderDetail(o) {
     const fields =
-      detailField('Phone', o.phone) +
-      detailField('Delivery Address', o.address) +
       detailField('Zip', o.zip) +
       detailField('Shipping Tier', o.shipping_tier) +
       detailField('Order Notes', o.notes) +
+      detailField('Customer ID', o.customer_id) +
       detailField('Terms Agreed At', o.terms_agreed_at ? formatDate(o.terms_agreed_at) : '') +
       detailField('Recorded At', o.created_at ? formatDate(o.created_at) : '');
 
@@ -300,7 +410,7 @@
       ' &nbsp;·&nbsp; Shipping: ' + formatMoney(o.shipping) +
       discountPart +
       ' &nbsp;·&nbsp; Tip: ' + formatMoney(o.tip) +
-      ' &nbsp;·&nbsp; <strong>Total: ' + formatMoney(o.total) + '</strong></div>';
+      ' &nbsp;·&nbsp; <strong>Total: ' + formatMoney(o.total) + '</strong> &nbsp;·&nbsp; Paid via Stripe</div>';
 
     return '<div class="detail-grid">' + fields + '</div>' + itemsBlock + money;
   }
@@ -330,9 +440,7 @@
       ).join('');
       const summary =
         '<tr class="summary-row" data-order="' + esc(o.order_id) + '">' +
-        '<td><span class="expand-caret">' + (isOpen ? '▼' : '►') + '</span></td>' +
-        cells +
-        '</tr>';
+        '<td><span class="expand-caret">' + (isOpen ? '▼' : '►') + '</span></td>' + cells + '</tr>';
       const detail = isOpen
         ? '<tr><td class="detail-cell" colspan="' + colCount + '">' + renderDetail(o) + '</td></tr>'
         : '';
@@ -341,24 +449,17 @@
 
     const headerCells = '<th></th>' + columns.map((col) => {
       const arrow = sortKey === col.key ? (sortDir === 'asc' ? '▲' : '▼') : '';
-      return '<th data-key="' + col.key + '">' + esc(col.label) + '<span class="sort-arrow">' + arrow + '</span></th>';
+      return '<th class="sortable" data-key="' + col.key + '">' + esc(col.label) + '<span class="sort-arrow">' + arrow + '</span></th>';
     }).join('');
 
     tableContainer.innerHTML =
-      '<div class="table-scroll"><table>' +
-      '<thead><tr>' + headerCells + '</tr></thead>' +
-      '<tbody>' + rows + '</tbody>' +
-      '</table></div>';
+      '<div class="table-scroll"><table><thead><tr>' + headerCells + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 
     tableContainer.querySelectorAll('th[data-key]').forEach((th) => {
       th.addEventListener('click', () => {
         const key = th.dataset.key;
-        if (sortKey === key) {
-          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortKey = key;
-          sortDir = 'asc';
-        }
+        if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortKey = key; sortDir = 'asc'; }
         renderTable();
       });
     });
@@ -379,18 +480,8 @@
         const orderId = select.dataset.order;
         const status = select.value;
         select.disabled = true;
-
         try {
-          const session = getSession();
-          const response = await fetch('/api/update-order-status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: session ? session.token : '', orderId, status })
-          });
-          const data = await response.json();
-          if (response.status === 401) { backToLogin(data.error); return; }
-          if (!response.ok) throw new Error(data.error || 'Update failed');
-
+          await api('/api/update-order-status', { orderId, status });
           const order = orders.find((o) => o.order_id === orderId);
           if (order) order.order_status = status;
         } catch (err) {
@@ -402,22 +493,289 @@
     });
   }
 
-  async function fetchOrders(token) {
-    const response = await fetch('/api/admin-orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    });
-    const data = await response.json();
-    if (response.status === 401) { backToLogin(data.error); throw new Error(data.error); }
-    if (!response.ok) throw new Error(data.error || 'Failed to load orders');
-    return data.orders;
+  searchInput.addEventListener('input', renderTable);
+  dateFromInput.addEventListener('change', renderTable);
+  dateToInput.addEventListener('change', renderTable);
+  statusFilter.addEventListener('change', renderTable);
+  clearFiltersBtn.addEventListener('click', () => {
+    searchInput.value = ''; dateFromInput.value = ''; dateToInput.value = ''; statusFilter.value = '';
+    renderTable();
+  });
+
+  syncBtn.addEventListener('click', async () => {
+    syncBtn.disabled = true;
+    syncBtn.textContent = 'Syncing…';
+    syncNote.textContent = '';
+    try {
+      const data = await api('/api/reconcile-orders', {});
+      const n = data.backfilled.length;
+      syncNote.textContent = 'Checked ' + data.checked + ' paid Stripe session(s) — ' +
+        (n ? 'recovered ' + n + ' missing order(s).' : 'no missing orders found.') +
+        (data.failed.length ? ' ' + data.failed.length + ' failed — see logs.' : '');
+      const res = await api('/api/admin-orders', {});
+      orders = res.orders;
+      renderTable();
+    } catch (err) {
+      syncNote.textContent = 'Sync error: ' + err.message;
+    } finally {
+      syncBtn.disabled = false;
+      syncBtn.textContent = 'Sync from Stripe';
+    }
+  });
+
+  /* ---------- SALES ---------- */
+  function splitItemDescription(description) {
+    const i = String(description || '').lastIndexOf(' — ');
+    if (i === -1) return { product: description, variant: '' };
+    return { product: description.slice(0, i), variant: description.slice(i + 3) };
   }
 
+  function periodStats(since) {
+    const subset = since ? orders.filter((o) => o.order_date && new Date(o.order_date) >= since) : orders;
+    const revenue = subset.reduce((s, o) => s + (Number(o.total) || 0), 0);
+    return { revenue, count: subset.length, aov: subset.length ? revenue / subset.length : 0 };
+  }
+
+  function barChart(container, totals) {
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) { container.innerHTML = '<div class="empty" style="padding:20px 0">No data yet.</div>'; return; }
+    const max = entries[0][1] || 1;
+    container.innerHTML = entries.map(([label, value]) =>
+      '<div class="bar-row"><div class="bar-label" title="' + esc(label) + '">' + esc(label) + '</div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(2, Math.round(value / max * 100)) + '%"></div></div>' +
+      '<div class="bar-val">' + formatMoney(value) + '</div></div>'
+    ).join('');
+  }
+
+  function renderStats() {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfWeek.getDate() - startOfDay.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const periods = [
+      ['Today', periodStats(startOfDay)],
+      ['This Week', periodStats(startOfWeek)],
+      ['This Month', periodStats(startOfMonth)],
+      ['All-Time', periodStats(null)]
+    ];
+
+    document.getElementById('kpi-grid').innerHTML = periods.map(([label, s]) =>
+      '<div class="kpi-card"><div class="period">' + label + '</div>' +
+      '<div class="rev">' + formatMoney(s.revenue) + '</div>' +
+      '<div class="sub">' + s.count + ' order' + (s.count === 1 ? '' : 's') + ' · AOV ' + formatMoney(s.aov) + '</div></div>'
+    ).join('');
+
+    const byProduct = {};
+    const byVariant = {};
+    for (const o of orders) {
+      for (const it of (Array.isArray(o.items) ? o.items : [])) {
+        if (it.description === 'Delivery' || it.description === 'Tip') continue;
+        const { product, variant } = splitItemDescription(it.description);
+        const amount = Number(it.amount) || 0;
+        byProduct[product] = (byProduct[product] || 0) + amount;
+        if (variant) byVariant[variant] = (byVariant[variant] || 0) + amount;
+      }
+    }
+    barChart(document.getElementById('by-product'), byProduct);
+    barChart(document.getElementById('by-variant'), byVariant);
+
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(startOfDay); d.setDate(d.getDate() - i);
+      days.push({ key: d.toDateString(), label: (d.getMonth() + 1) + '/' + d.getDate(), total: 0 });
+    }
+    const dayMap = new Map(days.map((d) => [d.key, d]));
+    for (const o of orders) {
+      if (!o.order_date) continue;
+      const entry = dayMap.get(new Date(o.order_date).toDateString());
+      if (entry) entry.total += Number(o.total) || 0;
+    }
+    const maxDay = Math.max(1, ...days.map((d) => d.total));
+    document.getElementById('trend').innerHTML = days.map((d) =>
+      '<div class="day" title="' + esc(d.label + ': ' + formatMoney(d.total)) + '">' +
+      '<div class="col" style="height:' + Math.max(2, Math.round(d.total / maxDay * 120)) + 'px"></div>' +
+      '<div class="dlbl">' + esc(d.label) + '</div></div>'
+    ).join('');
+  }
+
+  /* ---------- PRODUCTS ---------- */
+  async function loadProducts() {
+    try {
+      const data = await api('/api/admin-products', { action: 'list' });
+      products = data.products;
+      productsLoaded = true;
+      renderProducts();
+    } catch (err) {
+      document.getElementById('products-container').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  function renderProducts() {
+    const container = document.getElementById('products-container');
+    if (!products.length) { container.innerHTML = '<div class="empty">No products yet.</div>'; return; }
+
+    const rows = products.map((p) =>
+      '<tr>' +
+      '<td>' + esc(p.name) + '</td>' +
+      '<td>' + esc(p.variant) + '</td>' +
+      '<td><input type="number" step="0.01" min="0.01" class="price-input" value="' + esc(Number(p.price).toFixed(2)) + '" data-id="' + esc(p.id) + '"/></td>' +
+      '<td><button type="button" class="btn btn-sm save-price" data-id="' + esc(p.id) + '">Save</button></td>' +
+      '<td>' + (p.active ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Inactive</span>') + '</td>' +
+      '<td><button type="button" class="btn btn-outline btn-sm toggle-active" data-id="' + esc(p.id) + '" data-active="' + (p.active ? '1' : '0') + '">' + (p.active ? 'Deactivate' : 'Activate') + '</button></td>' +
+      '</tr>'
+    ).join('');
+
+    container.innerHTML =
+      '<div class="table-scroll"><table><thead><tr>' +
+      '<th>Product</th><th>Variant</th><th>Price</th><th></th><th>Status</th><th></th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+    container.querySelectorAll('.save-price').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const input = container.querySelector('.price-input[data-id="' + id + '"]');
+        btn.disabled = true;
+        prodNote.textContent = '';
+        try {
+          const data = await api('/api/admin-products', { action: 'update-price', id, price: Number(input.value) });
+          const idx = products.findIndex((p) => p.id === id);
+          if (idx !== -1) products[idx] = data.product;
+          prodNote.textContent = 'Price updated: ' + data.product.name + ' — ' + data.product.variant + ' is now ' + formatMoney(data.product.price) + '. Live on the store within a minute.';
+          renderProducts();
+        } catch (err) {
+          prodNote.textContent = 'Error: ' + err.message;
+          btn.disabled = false;
+        }
+      });
+    });
+
+    container.querySelectorAll('.toggle-active').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const makeActive = btn.dataset.active !== '1';
+        btn.disabled = true;
+        prodNote.textContent = '';
+        try {
+          const data = await api('/api/admin-products', { action: 'set-active', id, active: makeActive });
+          const idx = products.findIndex((p) => p.id === id);
+          if (idx !== -1) products[idx] = data.product;
+          renderProducts();
+        } catch (err) {
+          prodNote.textContent = 'Error: ' + err.message;
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  document.getElementById('prod-add-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('prod-add-btn');
+    btn.disabled = true;
+    prodNote.textContent = '';
+    try {
+      const data = await api('/api/admin-products', {
+        action: 'create',
+        name: document.getElementById('prod-name').value,
+        variant: document.getElementById('prod-variant').value,
+        price: Number(document.getElementById('prod-price').value)
+      });
+      products.push(data.product);
+      renderProducts();
+      prodNote.textContent = 'Added ' + data.product.name + ' — ' + data.product.variant + ' at ' + formatMoney(data.product.price) + '.';
+      document.getElementById('prod-name').value = '';
+      document.getElementById('prod-variant').value = '';
+      document.getElementById('prod-price').value = '';
+    } catch (err) {
+      prodNote.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  /* ---------- USERS ---------- */
+  async function loadUsers() {
+    try {
+      const data = await api('/api/admin-users', { action: 'list' });
+      users = data.users;
+      usersLoaded = true;
+      renderUsers();
+    } catch (err) {
+      document.getElementById('users-container').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  function renderUsers() {
+    const container = document.getElementById('users-container');
+    const rows = users.map((u) =>
+      '<tr>' +
+      '<td>' + esc(u.name) + '</td>' +
+      '<td>' + esc(u.email) + '</td>' +
+      '<td>' + esc(u.role) + '</td>' +
+      '<td>' + (u.last_login_at ? esc(formatDate(u.last_login_at)) : 'Never') + '</td>' +
+      '<td>' + (u.active !== false ? '<span class="pill pill-green">Active</span>' : '<span class="pill pill-gray">Deactivated</span>') + '</td>' +
+      // Self-deactivation is rejected server-side with a clear error.
+      '<td><button type="button" class="btn btn-outline btn-sm user-toggle" data-id="' + esc(u.id) + '" data-active="' + (u.active !== false ? '1' : '0') + '">' + (u.active !== false ? 'Deactivate' : 'Reactivate') + '</button></td>' +
+      '</tr>'
+    ).join('');
+
+    container.innerHTML =
+      '<div class="table-scroll"><table><thead><tr>' +
+      '<th>Name</th><th>Email</th><th>Role</th><th>Last Login</th><th>Status</th><th></th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+    container.querySelectorAll('.user-toggle').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        teamNote.textContent = '';
+        try {
+          const data = await api('/api/admin-users', {
+            action: 'set-active',
+            userId: btn.dataset.id,
+            active: btn.dataset.active !== '1'
+          });
+          const idx = users.findIndex((u) => u.id === data.user.id);
+          if (idx !== -1) users[idx] = Object.assign({}, users[idx], data.user);
+          renderUsers();
+        } catch (err) {
+          teamNote.textContent = 'Error: ' + err.message;
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  document.getElementById('team-add-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('team-add-btn');
+    btn.disabled = true;
+    teamNote.textContent = '';
+    try {
+      const data = await api('/api/admin-users', {
+        action: 'create',
+        name: document.getElementById('team-name').value,
+        email: document.getElementById('team-email').value,
+        password: document.getElementById('team-password').value,
+        role: document.getElementById('team-role').value
+      });
+      teamNote.textContent = 'Account created for ' + data.user.name + ' (' + data.user.role + '). Share their password with them securely.';
+      document.getElementById('team-name').value = '';
+      document.getElementById('team-email').value = '';
+      document.getElementById('team-password').value = '';
+      usersLoaded = false;
+      loadUsers();
+    } catch (err) {
+      teamNote.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  /* ---------- auth flows ---------- */
   async function showAdminView(session) {
     enterAdminUI(session);
     try {
-      orders = await fetchOrders(session.token);
+      const data = await api('/api/admin-orders', {});
+      orders = data.orders;
       renderTable();
     } catch (err) {
       if (!adminView.hidden) backToLogin(err.message);
@@ -428,10 +786,8 @@
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     if (!email || !password) return;
-
     loginBtn.disabled = true;
     loginError.hidden = true;
-
     try {
       const response = await fetch('/api/admin-login', {
         method: 'POST',
@@ -445,7 +801,6 @@
         return;
       }
       if (!response.ok) throw new Error(data.error || 'Login failed');
-
       const session = { token: data.token, name: data.name, role: data.role };
       setSession(session);
       passwordInput.value = '';
@@ -461,7 +816,6 @@
   setupBtn.addEventListener('click', async () => {
     setupBtn.disabled = true;
     setupError.hidden = true;
-
     try {
       const response = await fetch('/api/admin-setup', {
         method: 'POST',
@@ -475,7 +829,6 @@
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Setup failed');
-
       const session = { token: data.token, name: data.name, role: data.role };
       setSession(session);
       await showAdminView(session);
@@ -500,93 +853,13 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: session.token })
         });
-      } catch (e) { /* session is cleared locally regardless */ }
+      } catch (e) { /* cleared locally regardless */ }
     }
     backToLogin();
   });
 
-  document.getElementById('team-add-btn').addEventListener('click', async () => {
-    const session = getSession();
-    if (!session) return;
-    const btn = document.getElementById('team-add-btn');
-    btn.disabled = true;
-    teamNote.textContent = '';
-
-    try {
-      const response = await fetch('/api/admin-create-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: session.token,
-          name: document.getElementById('team-name').value,
-          email: document.getElementById('team-email').value,
-          password: document.getElementById('team-password').value,
-          role: document.getElementById('team-role').value
-        })
-      });
-      const data = await response.json();
-      if (response.status === 401) { backToLogin(data.error); return; }
-      if (!response.ok) throw new Error(data.error || 'Could not create the account');
-
-      teamNote.textContent = 'Account created for ' + data.user.name + ' (' + data.user.role + '). Share their password with them securely.';
-      document.getElementById('team-name').value = '';
-      document.getElementById('team-email').value = '';
-      document.getElementById('team-password').value = '';
-    } catch (err) {
-      teamNote.textContent = 'Error: ' + err.message;
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
-  searchInput.addEventListener('input', renderTable);
-  dateFromInput.addEventListener('change', renderTable);
-  dateToInput.addEventListener('change', renderTable);
-
-  clearFiltersBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    dateFromInput.value = '';
-    dateToInput.value = '';
-    renderTable();
-  });
-
-  syncBtn.addEventListener('click', async () => {
-    const session = getSession();
-    if (!session) return;
-
-    syncBtn.disabled = true;
-    syncBtn.textContent = 'Syncing…';
-    syncNote.textContent = '';
-
-    try {
-      const response = await fetch('/api/reconcile-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: session.token })
-      });
-      const data = await response.json();
-      if (response.status === 401) { backToLogin(data.error); return; }
-      if (!response.ok) throw new Error(data.error || 'Sync failed');
-
-      const n = data.backfilled.length;
-      syncNote.textContent = 'Checked ' + data.checked + ' paid Stripe session(s) from the last 30 days — ' +
-        (n ? 'recovered ' + n + ' missing order(s).' : 'no missing orders found.') +
-        (data.failed.length ? ' ' + data.failed.length + ' failed — see logs.' : '');
-
-      orders = await fetchOrders(session.token);
-      renderTable();
-    } catch (err) {
-      syncNote.textContent = 'Sync error: ' + err.message;
-    } finally {
-      syncBtn.disabled = false;
-      syncBtn.textContent = 'Sync from Stripe';
-    }
-  });
-
   const savedSession = getSession();
-  if (savedSession) {
-    showAdminView(savedSession);
-  }
+  if (savedSession) showAdminView(savedSession);
 </script>
 </body>
 </html>

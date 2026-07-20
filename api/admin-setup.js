@@ -13,7 +13,7 @@ function timingSafeEq(candidate, expected) {
 // admin_users table is empty, and requires the legacy shared ADMIN_PASSWORD
 // as proof of ownership. After the first account exists this endpoint is
 // permanently inert — additional admins are created by an owner via
-// api/admin-create-user.
+// api/admin-users (action: create).
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
