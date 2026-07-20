@@ -106,6 +106,18 @@
 
   .form-stack { max-width: 420px; }
   .price-input { width: 90px; padding: 7px 10px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 8px; font-size: 13.5px; font-family: inherit; }
+
+  /* ---------- Email composer ---------- */
+  .compose-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .compose-grid input[type="text"], .compose-grid input[type="email"], .compose-grid select, .compose-grid textarea { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14px; font-family: inherit; background: #fff; }
+  .editor-toolbar { display: flex; gap: 6px; margin-bottom: 6px; }
+  .editor-toolbar button { border: 1.5px solid rgba(34,30,26,.18); background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; }
+  .editor-toolbar button:hover { border-color: oklch(45% 0.17 20); color: oklch(45% 0.17 20); }
+  .editor-body { min-height: 180px; background: #fff; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; padding: 14px 16px; font-size: 14.5px; line-height: 1.6; overflow-y: auto; }
+  .editor-body:focus { outline: 2px solid oklch(45% 0.17 20 / .35); }
+  .editor-body img { max-width: 100%; }
+  .preview-frame { width: 100%; height: 420px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; background: #fff; }
+  .warn { background: oklch(95% 0.03 20); color: oklch(45% 0.17 20); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -135,6 +147,7 @@
     <button type="button" class="nav-item active" data-section="orders">Orders</button>
     <button type="button" class="nav-item" data-section="sales">Sales</button>
     <button type="button" class="nav-item" data-section="products">Products</button>
+    <button type="button" class="nav-item" data-section="emails">Emails</button>
     <button type="button" class="nav-item" data-section="users" id="nav-users" hidden>Users</button>
     <div class="spacer"></div>
     <div class="whoami" id="logged-in-as"></div>
@@ -184,6 +197,53 @@
           <button type="button" class="btn" id="prod-add-btn">Add Product</button>
           <p class="note" id="prod-note"></p>
         </div>
+      </div>
+    </section>
+
+    <section id="section-emails" hidden>
+      <h1>Promotional Emails</h1>
+
+      <div class="panel">
+        <h2>Compose</h2>
+        <div class="compose-grid">
+          <select id="em-source">
+            <option value="individual">Send to one individual email</option>
+            <option value="subscribers">All Subscribers</option>
+            <option value="customers">All Customers (from orders)</option>
+            <option value="both">Both — Subscribers + Customers</option>
+            <option value="manual">Manual list (paste emails)</option>
+          </select>
+          <p class="note" id="em-counts">Loading recipient counts…</p>
+          <input type="email" id="em-individual" placeholder="Recipient email" />
+          <textarea id="em-manual" rows="3" placeholder="Paste emails separated by commas, spaces, or new lines (max 500)" hidden></textarea>
+          <div class="warn" id="em-manual-warn" hidden>Manual lists bypass historical unsubscribe records — only paste people who have consented to hear from Ruby FoodHub. Each email sent still contains a working unsubscribe link.</div>
+          <input type="text" id="em-subject" placeholder="Subject line" />
+          <div>
+            <div class="editor-toolbar">
+              <button type="button" data-cmd="bold"><b>B</b></button>
+              <button type="button" data-cmd="italic"><i>I</i></button>
+              <button type="button" data-cmd="link">Link</button>
+              <button type="button" data-cmd="image">Image</button>
+            </div>
+            <div class="editor-body" id="em-body" contenteditable="true"></div>
+          </div>
+          <p class="note">An unsubscribe link and the Ruby FoodHub footer are added to every email automatically — you don't need to include them.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button type="button" class="btn btn-sm" id="em-send-btn">Send</button>
+            <button type="button" class="btn btn-outline btn-sm" id="em-preview-btn">Preview</button>
+            <select id="em-template-select" style="width:auto;padding:8px 12px"><option value="">Load template…</option></select>
+            <input type="text" id="em-template-name" placeholder="Template name" style="width:160px" />
+            <button type="button" class="btn btn-outline btn-sm" id="em-template-save">Save as Template</button>
+          </div>
+          <p class="note" id="em-note"></p>
+          <iframe class="preview-frame" id="em-preview" hidden></iframe>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Sending History</h2>
+        <p class="note">Open/click stats live in the Resend dashboard (resend.com → Broadcasts) — each campaign below records its broadcast ID(s).</p>
+        <div id="em-history"><div class="loading">Loading history…</div></div>
       </div>
     </section>
 
@@ -306,11 +366,12 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      ['orders', 'sales', 'products', 'users'].forEach((name) => {
+      ['orders', 'sales', 'products', 'emails', 'users'].forEach((name) => {
         document.getElementById('section-' + name).hidden = name !== btn.dataset.section;
       });
       if (btn.dataset.section === 'sales') renderStats();
       if (btn.dataset.section === 'products' && !productsLoaded) loadProducts();
+      if (btn.dataset.section === 'emails' && !emailsLoaded) loadEmails();
       if (btn.dataset.section === 'users' && !usersLoaded) loadUsers();
     });
   });
@@ -693,6 +754,158 @@
     } finally {
       btn.disabled = false;
     }
+  });
+
+  /* ---------- EMAILS ---------- */
+  let emailsLoaded = false;
+  let emailTemplates = [];
+  const emNote = document.getElementById('em-note');
+  const emSource = document.getElementById('em-source');
+  const emBody = document.getElementById('em-body');
+
+  function emUpdateVisibility() {
+    const source = emSource.value;
+    document.getElementById('em-individual').hidden = source !== 'individual';
+    document.getElementById('em-manual').hidden = source !== 'manual';
+    document.getElementById('em-manual-warn').hidden = source !== 'manual';
+    document.getElementById('em-send-btn').textContent = source === 'individual' ? 'Send to Individual' : 'Send as Campaign';
+  }
+  emSource.addEventListener('change', emUpdateVisibility);
+
+  document.querySelectorAll('.editor-toolbar button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      emBody.focus();
+      const cmd = btn.dataset.cmd;
+      if (cmd === 'link') {
+        const url = prompt('Link URL (https://…):');
+        if (url) document.execCommand('createLink', false, url);
+      } else if (cmd === 'image') {
+        const url = prompt('Image URL (must be a public https:// image address):');
+        if (url) document.execCommand('insertImage', false, url);
+      } else {
+        document.execCommand(cmd, false, null);
+      }
+    });
+  });
+
+  document.getElementById('em-preview-btn').addEventListener('click', () => {
+    const frame = document.getElementById('em-preview');
+    const footer = '<hr style="border:none;border-top:1px solid #e5e0dc;margin:32px 0 16px">' +
+      '<p style="font-size:12px;color:#8a837d;font-family:sans-serif;line-height:1.6">Ruby FoodHub Inc. · Texas, USA<br>' +
+      'You\'re receiving this because you subscribed to Ruby FoodHub updates or shopped with us.<br>' +
+      '<a href="#">Unsubscribe</a> <em>(link is generated per-recipient at send time)</em></p>';
+    frame.srcdoc = '<body style="font-family:sans-serif;padding:20px;max-width:600px;margin:0 auto">' + emBody.innerHTML + footer + '</body>';
+    frame.hidden = false;
+  });
+
+  async function loadEmails() {
+    emailsLoaded = true;
+    emUpdateVisibility();
+
+    api('/api/admin-campaigns', { action: 'sources' })
+      .then((d) => {
+        document.getElementById('em-counts').textContent =
+          d.subscribers + ' subscriber(s) · ' + d.customers + ' customer email(s) on file';
+      })
+      .catch((err) => { document.getElementById('em-counts').textContent = 'Could not load counts: ' + err.message; });
+
+    loadEmailHistory();
+    loadEmailTemplates();
+  }
+
+  async function loadEmailHistory() {
+    try {
+      const data = await api('/api/admin-campaigns', { action: 'history' });
+      const container = document.getElementById('em-history');
+      if (!data.campaigns.length) { container.innerHTML = '<div class="empty">No campaigns sent yet.</div>'; return; }
+      const rows = data.campaigns.map((c) =>
+        '<tr>' +
+        '<td>' + esc(formatDate(c.created_at)) + '</td>' +
+        '<td class="truncate">' + esc(c.subject) + '</td>' +
+        '<td>' + esc((c.admin_users && c.admin_users.name) || '—') + '</td>' +
+        '<td>' + esc(c.source) + '</td>' +
+        '<td>' + esc(c.recipient_count ?? '—') + '</td>' +
+        '<td class="truncate">' + esc(Array.isArray(c.resend_broadcast_ids) ? c.resend_broadcast_ids.join(', ') : '—') + '</td>' +
+        '</tr>'
+      ).join('');
+      container.innerHTML =
+        '<div class="table-scroll"><table><thead><tr>' +
+        '<th>Date</th><th>Subject</th><th>Sent By</th><th>Audience</th><th>Recipients</th><th>Broadcast ID</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    } catch (err) {
+      document.getElementById('em-history').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  async function loadEmailTemplates() {
+    try {
+      const data = await api('/api/admin-campaigns', { action: 'template-list' });
+      emailTemplates = data.templates;
+      const select = document.getElementById('em-template-select');
+      select.innerHTML = '<option value="">Load template…</option>' +
+        emailTemplates.map((t) => '<option value="' + esc(t.id) + '">' + esc(t.name) + '</option>').join('');
+    } catch (err) { /* templates are optional; compose still works */ }
+  }
+
+  document.getElementById('em-template-select').addEventListener('change', (e) => {
+    const t = emailTemplates.find((x) => x.id === e.target.value);
+    if (!t) return;
+    document.getElementById('em-subject').value = t.subject || '';
+    emBody.innerHTML = t.html || '';
+    emNote.textContent = 'Loaded template "' + t.name + '".';
+  });
+
+  document.getElementById('em-template-save').addEventListener('click', async () => {
+    const name = document.getElementById('em-template-name').value.trim();
+    if (!name) { emNote.textContent = 'Give the template a name first.'; return; }
+    try {
+      await api('/api/admin-campaigns', {
+        action: 'template-save', name,
+        subject: document.getElementById('em-subject').value,
+        html: emBody.innerHTML
+      });
+      emNote.textContent = 'Template "' + name + '" saved.';
+      document.getElementById('em-template-name').value = '';
+      loadEmailTemplates();
+    } catch (err) { emNote.textContent = 'Error: ' + err.message; }
+  });
+
+  document.getElementById('em-send-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('em-send-btn');
+    const source = emSource.value;
+    const subject = document.getElementById('em-subject').value.trim();
+    const html = emBody.innerHTML.trim();
+    emNote.textContent = '';
+
+    if (!subject || !html || html === '<br>') { emNote.textContent = 'Subject and body are both required.'; return; }
+
+    if (source === 'individual') {
+      const email = document.getElementById('em-individual').value.trim();
+      if (!email) { emNote.textContent = 'Enter the recipient email.'; return; }
+      btn.disabled = true;
+      try {
+        await api('/api/admin-campaigns', { action: 'send-individual', email, subject, html });
+        emNote.textContent = 'Sent to ' + email + '.';
+        loadEmailHistory();
+      } catch (err) { emNote.textContent = 'Error: ' + err.message; }
+      finally { btn.disabled = false; }
+      return;
+    }
+
+    const sourceLabels = { subscribers: 'ALL subscribers', customers: 'ALL customers', both: 'subscribers AND customers', manual: 'the pasted manual list' };
+    if (!window.confirm('Send "' + subject + '" as a campaign to ' + sourceLabels[source] + '? This cannot be undone.')) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      const data = await api('/api/admin-campaigns', {
+        action: 'send-campaign', source, subject, html,
+        manualEmails: document.getElementById('em-manual').value
+      });
+      emNote.textContent = 'Campaign sent to ' + data.recipients + ' recipient(s) via ' + data.broadcasts + ' broadcast(s).';
+      loadEmailHistory();
+    } catch (err) { emNote.textContent = 'Error: ' + err.message; }
+    finally { btn.disabled = false; emUpdateVisibility(); }
   });
 
   /* ---------- USERS ---------- */
