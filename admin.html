@@ -386,6 +386,8 @@
 
   function renderDetail(o) {
     const fields =
+      detailField('Delivery Address', o.address) +
+      detailField('Phone', o.phone) +
       detailField('Zip', o.zip) +
       detailField('Shipping Tier', o.shipping_tier) +
       detailField('Order Notes', o.notes) +
