@@ -11,7 +11,10 @@
   .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
   .login-card { max-width: 360px; margin: 120px auto; background: #fff; border-radius: 16px; box-shadow: 0 6px 18px rgba(34,30,26,.08); padding: 36px; text-align: center; }
   .login-card h1 { font-size: 20px; margin: 0 0 20px; }
-  input[type="password"] { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14.5px; margin-bottom: 14px; }
+  .login-card input, .team-card input, .team-card select { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14.5px; margin-bottom: 14px; font-family: inherit; background: #fff; }
+  .team-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(34,30,26,.06); padding: 24px; margin-top: 28px; max-width: 420px; }
+  .team-card h2 { font-size: 16px; margin: 0 0 14px; }
+  .team-note { font-size: 12.5px; color: rgba(34,30,26,.55); margin: 10px 0 0; min-height: 16px; }
   button { background: oklch(45% 0.17 20); color: #fff; border: none; border-radius: 100px; padding: 12px 0; width: 100%; font-size: 14.5px; font-weight: 700; cursor: pointer; }
   button:hover { background: oklch(52% 0.19 20); }
   button:disabled { background: #ccc; cursor: not-allowed; }
@@ -61,15 +64,28 @@
 
 <div id="login-view" class="login-card">
   <h1>Ruby FoodHub — Orders</h1>
+  <input type="email" id="email-input" placeholder="Email" autocomplete="username" />
   <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
   <button type="button" id="login-btn">Log In</button>
   <p class="error" id="login-error" hidden></p>
+</div>
+
+<div id="setup-view" class="login-card" hidden>
+  <h1>First-Time Setup</h1>
+  <p style="font-size:13px;color:rgba(34,30,26,.6);margin:0 0 16px;line-height:1.5">No admin accounts exist yet. Enter the shared admin password one last time to create the first owner account.</p>
+  <input type="password" id="setup-bootstrap" placeholder="Current shared admin password" />
+  <input type="text" id="setup-name" placeholder="Your full name" />
+  <input type="email" id="setup-email" placeholder="Your email" autocomplete="username" />
+  <input type="password" id="setup-password" placeholder="New personal password (10+ chars)" autocomplete="new-password" />
+  <button type="button" id="setup-btn">Create Owner Account</button>
+  <p class="error" id="setup-error" hidden></p>
 </div>
 
 <div id="admin-view" class="wrap" hidden>
   <div class="top-bar">
     <h1>Orders</h1>
     <div class="top-actions">
+      <span id="logged-in-as" style="align-self:center;font-size:13px;color:rgba(34,30,26,.6)"></span>
       <button type="button" class="small-btn" id="sync-btn">Sync from Stripe</button>
       <button type="button" class="small-btn" id="logout-btn">Log Out</button>
     </div>
@@ -85,17 +101,61 @@
   </div>
   <p class="result-count" id="result-count"></p>
   <div id="table-container"><div class="loading">Loading orders…</div></div>
+
+  <div class="team-card" id="team-card" hidden>
+    <h2>Add Team Member</h2>
+    <input type="text" id="team-name" placeholder="Full name" />
+    <input type="email" id="team-email" placeholder="Email" />
+    <input type="password" id="team-password" placeholder="Temporary password (10+ chars)" autocomplete="new-password" />
+    <select id="team-role">
+      <option value="manager" selected>Manager</option>
+      <option value="owner">Owner</option>
+    </select>
+    <button type="button" class="small-btn" id="team-add-btn">Add Team Member</button>
+    <p class="team-note" id="team-note"></p>
+  </div>
 </div>
 
 <script>
-  const STORAGE_KEY = 'rfh_admin_password';
+  const STORAGE_KEY = 'rfh_admin_session';
 
   const loginView = document.getElementById('login-view');
+  const setupView = document.getElementById('setup-view');
   const adminView = document.getElementById('admin-view');
+  const emailInput = document.getElementById('email-input');
   const passwordInput = document.getElementById('password-input');
   const loginBtn = document.getElementById('login-btn');
   const loginError = document.getElementById('login-error');
+  const setupBtn = document.getElementById('setup-btn');
+  const setupError = document.getElementById('setup-error');
+  const loggedInAs = document.getElementById('logged-in-as');
+  const teamCard = document.getElementById('team-card');
+  const teamNote = document.getElementById('team-note');
   const logoutBtn = document.getElementById('logout-btn');
+
+  function getSession() {
+    try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || null; }
+    catch (e) { return null; }
+  }
+  function setSession(session) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session)); }
+  function clearSession() { sessionStorage.removeItem(STORAGE_KEY); }
+
+  function enterAdminUI(session) {
+    loginView.hidden = true;
+    setupView.hidden = true;
+    adminView.hidden = false;
+    loggedInAs.textContent = 'Logged in as ' + session.name + ' (' + session.role + ')';
+    teamCard.hidden = session.role !== 'owner';
+  }
+
+  function backToLogin(message) {
+    clearSession();
+    adminView.hidden = true;
+    setupView.hidden = true;
+    loginView.hidden = false;
+    passwordInput.value = '';
+    if (message) { loginError.textContent = message; loginError.hidden = false; }
+  }
   const syncBtn = document.getElementById('sync-btn');
   const syncNote = document.getElementById('sync-note');
   const tableContainer = document.getElementById('table-container');
@@ -321,12 +381,14 @@
         select.disabled = true;
 
         try {
+          const session = getSession();
           const response = await fetch('/api/update-order-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: sessionStorage.getItem(STORAGE_KEY), orderId, status })
+            body: JSON.stringify({ token: session ? session.token : '', orderId, status })
           });
           const data = await response.json();
+          if (response.status === 401) { backToLogin(data.error); return; }
           if (!response.ok) throw new Error(data.error || 'Update failed');
 
           const order = orders.find((o) => o.order_id === orderId);
@@ -340,46 +402,54 @@
     });
   }
 
-  async function fetchOrders(password) {
+  async function fetchOrders(token) {
     const response = await fetch('/api/admin-orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ token })
     });
     const data = await response.json();
+    if (response.status === 401) { backToLogin(data.error); throw new Error(data.error); }
     if (!response.ok) throw new Error(data.error || 'Failed to load orders');
     return data.orders;
   }
 
-  async function showAdminView(password) {
-    loginView.hidden = true;
-    adminView.hidden = false;
+  async function showAdminView(session) {
+    enterAdminUI(session);
     try {
-      orders = await fetchOrders(password);
+      orders = await fetchOrders(session.token);
       renderTable();
     } catch (err) {
-      sessionStorage.removeItem(STORAGE_KEY);
-      adminView.hidden = true;
-      loginView.hidden = false;
-      loginError.textContent = err.message;
-      loginError.hidden = false;
+      if (!adminView.hidden) backToLogin(err.message);
     }
   }
 
   loginBtn.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
     const password = passwordInput.value;
-    if (!password) return;
+    if (!email || !password) return;
 
     loginBtn.disabled = true;
     loginError.hidden = true;
 
     try {
-      const result = await fetchOrders(password);
-      orders = result;
-      sessionStorage.setItem(STORAGE_KEY, password);
-      loginView.hidden = true;
-      adminView.hidden = false;
-      renderTable();
+      const response = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      if (data.needsSetup) {
+        loginView.hidden = true;
+        setupView.hidden = false;
+        return;
+      }
+      if (!response.ok) throw new Error(data.error || 'Login failed');
+
+      const session = { token: data.token, name: data.name, role: data.role };
+      setSession(session);
+      passwordInput.value = '';
+      await showAdminView(session);
     } catch (err) {
       loginError.textContent = err.message;
       loginError.hidden = false;
@@ -388,15 +458,85 @@
     }
   });
 
+  setupBtn.addEventListener('click', async () => {
+    setupBtn.disabled = true;
+    setupError.hidden = true;
+
+    try {
+      const response = await fetch('/api/admin-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bootstrapPassword: document.getElementById('setup-bootstrap').value,
+          name: document.getElementById('setup-name').value,
+          email: document.getElementById('setup-email').value,
+          password: document.getElementById('setup-password').value
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Setup failed');
+
+      const session = { token: data.token, name: data.name, role: data.role };
+      setSession(session);
+      await showAdminView(session);
+    } catch (err) {
+      setupError.textContent = err.message;
+      setupError.hidden = false;
+    } finally {
+      setupBtn.disabled = false;
+    }
+  });
+
   passwordInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') loginBtn.click();
   });
 
-  logoutBtn.addEventListener('click', () => {
-    sessionStorage.removeItem(STORAGE_KEY);
-    adminView.hidden = true;
-    loginView.hidden = false;
-    passwordInput.value = '';
+  logoutBtn.addEventListener('click', async () => {
+    const session = getSession();
+    if (session) {
+      try {
+        await fetch('/api/admin-logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: session.token })
+        });
+      } catch (e) { /* session is cleared locally regardless */ }
+    }
+    backToLogin();
+  });
+
+  document.getElementById('team-add-btn').addEventListener('click', async () => {
+    const session = getSession();
+    if (!session) return;
+    const btn = document.getElementById('team-add-btn');
+    btn.disabled = true;
+    teamNote.textContent = '';
+
+    try {
+      const response = await fetch('/api/admin-create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: session.token,
+          name: document.getElementById('team-name').value,
+          email: document.getElementById('team-email').value,
+          password: document.getElementById('team-password').value,
+          role: document.getElementById('team-role').value
+        })
+      });
+      const data = await response.json();
+      if (response.status === 401) { backToLogin(data.error); return; }
+      if (!response.ok) throw new Error(data.error || 'Could not create the account');
+
+      teamNote.textContent = 'Account created for ' + data.user.name + ' (' + data.user.role + '). Share their password with them securely.';
+      document.getElementById('team-name').value = '';
+      document.getElementById('team-email').value = '';
+      document.getElementById('team-password').value = '';
+    } catch (err) {
+      teamNote.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   searchInput.addEventListener('input', renderTable);
@@ -411,8 +551,8 @@
   });
 
   syncBtn.addEventListener('click', async () => {
-    const password = sessionStorage.getItem(STORAGE_KEY);
-    if (!password) return;
+    const session = getSession();
+    if (!session) return;
 
     syncBtn.disabled = true;
     syncBtn.textContent = 'Syncing…';
@@ -422,9 +562,10 @@
       const response = await fetch('/api/reconcile-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ token: session.token })
       });
       const data = await response.json();
+      if (response.status === 401) { backToLogin(data.error); return; }
       if (!response.ok) throw new Error(data.error || 'Sync failed');
 
       const n = data.backfilled.length;
@@ -432,7 +573,7 @@
         (n ? 'recovered ' + n + ' missing order(s).' : 'no missing orders found.') +
         (data.failed.length ? ' ' + data.failed.length + ' failed — see logs.' : '');
 
-      orders = await fetchOrders(password);
+      orders = await fetchOrders(session.token);
       renderTable();
     } catch (err) {
       syncNote.textContent = 'Sync error: ' + err.message;
@@ -442,9 +583,9 @@
     }
   });
 
-  const savedPassword = sessionStorage.getItem(STORAGE_KEY);
-  if (savedPassword) {
-    showAdminView(savedPassword);
+  const savedSession = getSession();
+  if (savedSession) {
+    showAdminView(savedSession);
   }
 </script>
 </body>

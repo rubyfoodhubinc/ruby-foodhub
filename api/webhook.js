@@ -2,6 +2,7 @@ const Stripe = require('stripe');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { supabase } = require('./_lib/supabase');
 const { NON_PRODUCT_LINE_NAMES, loadLineItems, buildOrderRow } = require('./_lib/orders');
+const { logAudit } = require('./_lib/admin-auth');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -61,6 +62,7 @@ async function sendOrderEmails(session, items) {
   const customerEmail = (session.customer_details && session.customer_details.email) || '';
   const total = ((session.amount_total || 0) / 100).toFixed(2);
   const summaryText = buildOrderSummaryText(session, items);
+  const sent = { internal: false, customer: false };
 
   try {
     const { error } = await resend.emails.send({
@@ -70,6 +72,7 @@ async function sendOrderEmails(session, items) {
       text: summaryText,
     });
     if (error) throw new Error(error.message || 'Failed to send internal order notification');
+    sent.internal = true;
   } catch (err) {
     console.error(`Internal order notification failed for order ${orderNumber}:`, err.message);
   }
@@ -83,12 +86,22 @@ async function sendOrderEmails(session, items) {
         text: `Thanks for your order!\n\n${summaryText}\n\nWe'll be in touch if we need anything else to get your order to you.`,
       });
       if (error) throw new Error(error.message || 'Failed to send customer confirmation');
+      sent.customer = true;
     } catch (err) {
       console.error(`Customer confirmation email failed for order ${orderNumber}:`, err.message);
     }
   } else {
     console.error(`No customer email available for order ${orderNumber} — skipped customer confirmation`);
   }
+
+  // System action (no admin user): recorded so the audit trail shows what
+  // was emailed for every order.
+  await logAudit(null, 'order_emails_sent', {
+    order_id: orderNumber,
+    internal_sent: sent.internal,
+    customer_sent: sent.customer,
+    customer_email: customerEmail || null,
+  });
 }
 
 async function saveOrder(session, items) {
@@ -148,6 +161,7 @@ async function handler(req, res) {
     try {
       await saveOrder(session, items);
       console.error(`[webhook] order ${session.client_reference_id} saved to Supabase OK`);
+      await logAudit(null, 'order_saved', { order_id: session.client_reference_id || session.id, total: (session.amount_total || 0) / 100 });
     } catch (err) {
       console.error(`[webhook] FAILED to save order ${session.client_reference_id} to Supabase:`, err.message);
     }

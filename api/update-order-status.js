@@ -1,14 +1,7 @@
-const crypto = require('crypto');
 const { supabase } = require('./_lib/supabase');
+const { requireSession, logAudit } = require('./_lib/admin-auth');
 
 const ALLOWED_STATUSES = ['pending', 'delivered'];
-
-function timingSafeEq(candidate, expected) {
-  const a = Buffer.from(String(candidate || ''));
-  const b = Buffer.from(String(expected || ''));
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
-}
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -16,10 +9,11 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { password, orderId, status } = req.body || {};
+  const { token, orderId, status } = req.body || {};
 
-  if (!process.env.ADMIN_PASSWORD || !timingSafeEq(password, process.env.ADMIN_PASSWORD)) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const user = await requireSession(token);
+  if (!user) {
+    return res.status(401).json({ error: 'Session expired — please sign in again.' });
   }
 
   if (!orderId || !ALLOWED_STATUSES.includes(status)) {
@@ -37,6 +31,8 @@ module.exports = async (req, res) => {
     if (!data || data.length === 0) {
       return res.status(404).json({ error: `Order ${orderId} not found.` });
     }
+
+    await logAudit(user.id, 'order_status_change', { order_id: orderId, status });
 
     res.status(200).json({ success: true, order: data[0] });
   } catch (err) {

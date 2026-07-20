@@ -3,6 +3,7 @@ const Stripe = require('stripe');
 const { supabase } = require('./_lib/supabase');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { loadLineItems, buildOrderRow } = require('./_lib/orders');
+const { requireSession, logAudit } = require('./_lib/admin-auth');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -16,29 +17,24 @@ function timingSafeEq(candidate, expected) {
   return crypto.timingSafeEqual(a, b);
 }
 
-function isAuthorized(req) {
-  // Manual trigger from the admin page: POST with the shared admin password.
-  if (req.method === 'POST') {
-    const { password } = req.body || {};
-    return !!process.env.ADMIN_PASSWORD && timingSafeEq(password, process.env.ADMIN_PASSWORD);
-  }
-  // Scheduled trigger: Vercel Cron sends GET with "Authorization: Bearer <CRON_SECRET>"
-  // when the CRON_SECRET env var is set on the project.
-  if (req.method === 'GET') {
-    const auth = req.headers['authorization'] || '';
-    return !!process.env.CRON_SECRET && timingSafeEq(auth, `Bearer ${process.env.CRON_SECRET}`);
-  }
-  return false;
-}
-
 module.exports = async (req, res) => {
   if (req.method !== 'POST' && req.method !== 'GET') {
     res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  // Manual trigger from the admin page: POST with an admin session token.
+  // Scheduled trigger: Vercel Cron sends GET with "Authorization: Bearer
+  // <CRON_SECRET>" when the CRON_SECRET env var is set on the project.
+  let actor = null;
+  if (req.method === 'POST') {
+    actor = await requireSession((req.body || {}).token);
+    if (!actor) return res.status(401).json({ error: 'Session expired — please sign in again.' });
+  } else {
+    const auth = req.headers['authorization'] || '';
+    if (!process.env.CRON_SECRET || !timingSafeEq(auth, `Bearer ${process.env.CRON_SECRET}`)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   }
 
   try {
@@ -115,6 +111,13 @@ module.exports = async (req, res) => {
         console.error('[reconcile] failed to send summary email:', err.message);
       }
     }
+
+    await logAudit(actor ? actor.id : null, 'reconcile_run', {
+      source: actor ? 'manual' : 'cron',
+      checked: paidSessions.length,
+      backfilled: backfilled.map((b) => b.order_id),
+      failed: failed.map((f) => f.order_id),
+    });
 
     res.status(200).json({
       checked: paidSessions.length,
