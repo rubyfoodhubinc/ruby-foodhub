@@ -237,6 +237,17 @@ async function handler(req, res) {
       return res.status(200).json({ success: true, sent, failed });
     }
 
+    if (action === 'email-history') {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('id, details, created_at, admin_users(name)')
+        .eq('action', 'retailer_email_sent')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw new Error(JSON.stringify(error));
+      return res.status(200).json({ history: data });
+    }
+
     if (action === 'wholesale-prices') {
       const { data, error } = await supabase
         .from('wholesale_prices')

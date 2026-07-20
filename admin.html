@@ -150,6 +150,7 @@
     <button type="button" class="nav-item" data-section="emails">Emails</button>
     <button type="button" class="nav-item" data-section="wholesale">Wholesale</button>
     <button type="button" class="nav-item" data-section="wsstats">Wholesale Sales</button>
+    <button type="button" class="nav-item" data-section="wsemail">Retailer Emails</button>
     <button type="button" class="nav-item" data-section="users" id="nav-users" hidden>Users</button>
     <div class="spacer"></div>
     <div class="whoami" id="logged-in-as"></div>
@@ -251,24 +252,45 @@
 
     <section id="section-wholesale" hidden>
       <h1>Wholesale</h1>
-      <p class="note">Retailer accounts, their wholesale orders, and pay-on-delivery confirmations. Wholesale prices are edited in the Products tab.</p>
+      <p class="note">Retailer accounts, their wholesale orders, and pay-on-delivery confirmations. Wholesale prices are edited in the Products tab; retailer emails have their own tab.</p>
       <div id="ws-container"><div class="loading">Loading retailers…</div></div>
+    </section>
+
+    <section id="section-wsemail" hidden>
+      <h1>Retailer Emails</h1>
+      <div class="toolbar">
+        <select id="we-status-filter">
+          <option value="active" selected>Active retailers</option>
+          <option value="pending">Pending retailers</option>
+          <option value="suspended">Suspended retailers</option>
+          <option value="">All statuses</option>
+        </select>
+        <label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="we-outstanding-only" style="width:auto;margin:0"/>Only retailers with an outstanding balance</label>
+        <button type="button" class="btn btn-outline btn-sm" id="we-select-all">Select All Shown</button>
+        <button type="button" class="btn btn-outline btn-sm" id="we-clear-sel">Clear</button>
+        <span class="note" id="we-sel-note" style="margin:0"></span>
+      </div>
+      <div id="we-retailers"><div class="loading">Loading retailers…</div></div>
 
       <div class="panel" style="margin-top:22px">
-        <h2>Email Selected Retailer(s)</h2>
-        <p class="note" id="ws-selected-note">Tick retailers in the table above, pick a reason, edit the message, send.</p>
+        <h2>Compose</h2>
         <div class="compose-grid">
-          <select id="ws-reason">
+          <select id="we-reason">
             <option value="custom">Custom / News message</option>
             <option value="low_stock">Low Stock Alert</option>
             <option value="delivery_update">Delivery Date Update</option>
             <option value="payment_reminder">Pending Payment Reminder</option>
           </select>
-          <input type="text" id="ws-subject" placeholder="Subject" />
-          <textarea id="ws-body" rows="5" placeholder="Message to the selected retailers…"></textarea>
-          <div><button type="button" class="btn btn-sm" id="ws-email-btn">Send to Selected Retailers</button></div>
-          <p class="note" id="ws-email-note"></p>
+          <input type="text" id="we-subject" placeholder="Subject" />
+          <textarea id="we-body" rows="5" placeholder="Message to the selected retailers…"></textarea>
+          <div><button type="button" class="btn btn-sm" id="we-send-btn">Send to Selected Retailer(s)</button></div>
+          <p class="note" id="we-note"></p>
         </div>
+      </div>
+
+      <div class="panel">
+        <h2>Sending History</h2>
+        <div id="we-history"><div class="loading">Loading history…</div></div>
       </div>
     </section>
 
@@ -409,7 +431,7 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      ['orders', 'sales', 'products', 'emails', 'wholesale', 'wsstats', 'users'].forEach((name) => {
+      ['orders', 'sales', 'products', 'emails', 'wholesale', 'wsstats', 'wsemail', 'users'].forEach((name) => {
         document.getElementById('section-' + name).hidden = name !== btn.dataset.section;
       });
       if (btn.dataset.section === 'sales') renderStats();
@@ -417,6 +439,7 @@
       if (btn.dataset.section === 'emails' && !emailsLoaded) loadEmails();
       if (btn.dataset.section === 'wholesale' && !wholesaleLoaded) loadWholesale();
       if (btn.dataset.section === 'wsstats') loadWsStats();
+      if (btn.dataset.section === 'wsemail' && !weLoaded) loadWsEmail();
       if (btn.dataset.section === 'users' && !usersLoaded) loadUsers();
     });
   });
@@ -985,7 +1008,6 @@
   let wholesaleLoaded = false;
   let retailers = [];
   const wsExpanded = new Set();
-  const wsSelected = new Set();
   const wsOrdersCache = new Map();
 
   const WS_REASON_TEMPLATES = {
@@ -1004,10 +1026,10 @@
     }
   };
 
-  document.getElementById('ws-reason').addEventListener('change', (e) => {
+  document.getElementById('we-reason').addEventListener('change', (e) => {
     const t = WS_REASON_TEMPLATES[e.target.value] || WS_REASON_TEMPLATES.custom;
-    document.getElementById('ws-subject').value = t.subject;
-    document.getElementById('ws-body').value = t.body;
+    document.getElementById('we-subject').value = t.subject;
+    document.getElementById('we-body').value = t.body;
   });
 
   function wsAccountPill(status) {
@@ -1047,7 +1069,6 @@
       ).join('');
       const summary =
         '<tr class="summary-row" data-retailer="' + esc(r.id) + '">' +
-        '<td><input type="checkbox" class="ws-check" data-id="' + esc(r.id) + '"' + (wsSelected.has(r.id) ? ' checked' : '') + '/></td>' +
         '<td><span class="expand-caret">' + (isOpen ? '▼' : '►') + '</span></td>' +
         '<td>' + esc(r.business_name) + '</td>' +
         '<td>' + esc(r.contact_name || '—') + '</td>' +
@@ -1060,14 +1081,14 @@
         '<td>' + formatMoney(r.stats.pendingTotal) + '</td>' +
         '</tr>';
       const detail = isOpen
-        ? '<tr><td class="detail-cell" colspan="11"><div id="ws-orders-' + esc(r.id) + '"><div class="loading">Loading orders…</div></div></td></tr>'
+        ? '<tr><td class="detail-cell" colspan="10"><div id="ws-orders-' + esc(r.id) + '"><div class="loading">Loading orders…</div></div></td></tr>'
         : '';
       return summary + detail;
     }).join('');
 
     container.innerHTML =
       '<div class="table-scroll"><table><thead><tr>' +
-      '<th></th><th></th><th>Business</th><th>Contact</th><th>Email</th><th>Status</th><th>Set Status</th><th>Orders</th><th>Qty by Product</th><th>Paid $</th><th>Pending $</th>' +
+      '<th></th><th>Business</th><th>Contact</th><th>Email</th><th>Status</th><th>Set Status</th><th>Orders</th><th>Qty by Product</th><th>Paid $</th><th>Pending $</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 
     container.querySelectorAll('tr.summary-row').forEach((tr) => {
@@ -1076,15 +1097,6 @@
         if (wsExpanded.has(id)) wsExpanded.delete(id);
         else wsExpanded.add(id);
         renderWholesale();
-      });
-    });
-
-    container.querySelectorAll('.ws-check').forEach((cb) => {
-      cb.addEventListener('click', (e) => e.stopPropagation());
-      cb.addEventListener('change', () => {
-        if (cb.checked) wsSelected.add(cb.dataset.id);
-        else wsSelected.delete(cb.dataset.id);
-        document.getElementById('ws-selected-note').textContent = wsSelected.size + ' retailer(s) selected.';
       });
     });
 
@@ -1197,26 +1209,130 @@
     }
   }
 
-  document.getElementById('ws-email-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('ws-email-btn');
-    const note = document.getElementById('ws-email-note');
+  /* ---------- RETAILER EMAILS (standalone tab) ---------- */
+  let weLoaded = false;
+  let weRetailers = [];
+  const weSelected = new Set();
+
+  function weUpdateSelNote() {
+    document.getElementById('we-sel-note').textContent = weSelected.size + ' retailer(s) selected.';
+  }
+
+  function weVisibleRetailers() {
+    const status = document.getElementById('we-status-filter').value;
+    const outstandingOnly = document.getElementById('we-outstanding-only').checked;
+    return weRetailers.filter((r) => {
+      if (status && r.account_status !== status) return false;
+      if (outstandingOnly && !(r.stats && r.stats.pendingTotal > 0)) return false;
+      return true;
+    });
+  }
+
+  function renderWeRetailers() {
+    const container = document.getElementById('we-retailers');
+    const visible = weVisibleRetailers();
+    if (!visible.length) {
+      container.innerHTML = '<div class="empty">No retailers match these filters.</div>';
+      weUpdateSelNote();
+      return;
+    }
+
+    const rows = visible.map((r) =>
+      '<tr>' +
+      '<td><input type="checkbox" class="we-check" data-id="' + esc(r.id) + '"' + (weSelected.has(r.id) ? ' checked' : '') + '/></td>' +
+      '<td>' + esc(r.business_name) + '</td>' +
+      '<td>' + esc(r.contact_name || '—') + '</td>' +
+      '<td>' + esc(r.email) + '</td>' +
+      '<td>' + wsAccountPill(r.account_status) + '</td>' +
+      '<td>' + (r.stats && r.stats.pendingTotal > 0 ? '<span class="pill pill-amber">' + formatMoney(r.stats.pendingTotal) + ' outstanding</span>' : '—') + '</td>' +
+      '</tr>'
+    ).join('');
+
+    container.innerHTML =
+      '<div class="table-scroll"><table><thead><tr>' +
+      '<th></th><th>Business</th><th>Contact</th><th>Email</th><th>Status</th><th>Outstanding</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+    container.querySelectorAll('.we-check').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) weSelected.add(cb.dataset.id);
+        else weSelected.delete(cb.dataset.id);
+        weUpdateSelNote();
+      });
+    });
+    weUpdateSelNote();
+  }
+
+  async function loadWsEmail() {
+    weLoaded = true;
+    try {
+      const data = await api('/api/admin-wholesale', { action: 'retailers' });
+      weRetailers = data.retailers;
+      renderWeRetailers();
+    } catch (err) {
+      document.getElementById('we-retailers').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+    loadWeHistory();
+  }
+
+  document.getElementById('we-status-filter').addEventListener('change', renderWeRetailers);
+  document.getElementById('we-outstanding-only').addEventListener('change', renderWeRetailers);
+
+  document.getElementById('we-select-all').addEventListener('click', () => {
+    for (const r of weVisibleRetailers()) weSelected.add(r.id);
+    renderWeRetailers();
+  });
+  document.getElementById('we-clear-sel').addEventListener('click', () => {
+    weSelected.clear();
+    renderWeRetailers();
+  });
+
+  async function loadWeHistory() {
+    try {
+      const data = await api('/api/admin-wholesale', { action: 'email-history' });
+      const container = document.getElementById('we-history');
+      if (!data.history.length) { container.innerHTML = '<div class="empty">No retailer emails sent yet.</div>'; return; }
+      const reasonLabels = { low_stock: 'Low Stock Alert', delivery_update: 'Delivery Date Update', payment_reminder: 'Payment Reminder', custom: 'Custom / News' };
+      const rows = data.history.map((h) => {
+        const d = h.details || {};
+        return '<tr>' +
+          '<td style="white-space:nowrap">' + esc(formatDate(h.created_at)) + '</td>' +
+          '<td>' + esc((h.admin_users && h.admin_users.name) || '—') + '</td>' +
+          '<td>' + esc(reasonLabels[d.reason] || d.reason || '—') + '</td>' +
+          '<td class="truncate">' + esc(d.subject || '—') + '</td>' +
+          '<td>' + esc(d.recipient_count ?? '—') + '</td>' +
+          '<td>' + (Array.isArray(d.failed) && d.failed.length ? '<span class="pill pill-amber">' + d.failed.length + ' failed</span>' : '<span class="pill pill-green">OK</span>') + '</td>' +
+          '</tr>';
+      }).join('');
+      container.innerHTML = '<div class="table-scroll"><table><thead><tr>' +
+        '<th>Date</th><th>Sent By</th><th>Reason</th><th>Subject</th><th>Recipients</th><th>Result</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    } catch (err) {
+      document.getElementById('we-history').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  document.getElementById('we-send-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('we-send-btn');
+    const note = document.getElementById('we-note');
     note.textContent = '';
-    if (!wsSelected.size) { note.textContent = 'Select at least one retailer in the table first.'; return; }
-    const subject = document.getElementById('ws-subject').value.trim();
-    const bodyText = document.getElementById('ws-body').value.trim();
+    if (!weSelected.size) { note.textContent = 'Select at least one retailer in the list above first.'; return; }
+    const subject = document.getElementById('we-subject').value.trim();
+    const bodyText = document.getElementById('we-body').value.trim();
     if (!subject || !bodyText) { note.textContent = 'Subject and message are required.'; return; }
-    if (!window.confirm('Send "' + subject + '" to ' + wsSelected.size + ' retailer(s)?')) return;
+    if (!window.confirm('Send "' + subject + '" to ' + weSelected.size + ' retailer(s)?')) return;
 
     btn.disabled = true;
     try {
       const html = '<p style="font-family:sans-serif;line-height:1.6">' + esc(bodyText).replace(/\n/g, '<br>') + '</p>';
       const data = await api('/api/admin-wholesale', {
         action: 'email-retailers',
-        retailerIds: [...wsSelected],
-        reason: document.getElementById('ws-reason').value,
+        retailerIds: [...weSelected],
+        reason: document.getElementById('we-reason').value,
         subject, html
       });
       note.textContent = 'Sent to ' + data.sent + ' retailer(s).' + (data.failed.length ? ' Failed: ' + data.failed.join(', ') : '');
+      loadWeHistory();
     } catch (err) {
       note.textContent = 'Error: ' + err.message;
     } finally {
