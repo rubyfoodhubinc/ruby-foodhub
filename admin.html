@@ -144,7 +144,8 @@
 <div id="admin-view" class="shell" hidden>
   <div class="sidebar">
     <div class="brand"><img src="logo-mark-small.png" alt=""/> Ruby FoodHub</div>
-    <button type="button" class="nav-item active" data-section="orders">Orders</button>
+    <button type="button" class="nav-item active" data-section="home">Home</button>
+    <button type="button" class="nav-item" data-section="orders">Orders</button>
     <button type="button" class="nav-item" data-section="sales">Sales</button>
     <button type="button" class="nav-item" data-section="products">Products</button>
     <button type="button" class="nav-item" data-section="emails">Emails</button>
@@ -159,7 +160,18 @@
 
   <div class="content">
 
-    <section id="section-orders">
+    <section id="section-home">
+      <h1>Home</h1>
+      <p class="note" id="home-updated"></p>
+      <div class="kpi-grid" id="home-revenue"></div>
+      <div class="kpi-grid" id="home-periods"></div>
+      <div class="panel"><h2>Needs Attention</h2><div class="kpi-grid" id="home-actions"></div></div>
+      <div class="panel"><h2>Latest Transactions — Retail + Wholesale</h2><div id="home-transactions"><div class="loading">Loading…</div></div></div>
+      <div class="panel"><h2>Business Snapshot</h2><div class="kpi-grid" id="home-snapshot"></div></div>
+      <div class="panel"><h2>Combined Daily Revenue — Last 14 Days</h2><div class="trend" id="home-trend"></div></div>
+    </section>
+
+    <section id="section-orders" hidden>
       <h1>Orders</h1>
       <div class="toolbar">
         <input type="search" id="search-input" placeholder="Search name, phone, email, address, order #…" />
@@ -431,9 +443,10 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      ['orders', 'sales', 'products', 'emails', 'wholesale', 'wsstats', 'wsemail', 'users'].forEach((name) => {
+      ['home', 'orders', 'sales', 'products', 'emails', 'wholesale', 'wsstats', 'wsemail', 'users'].forEach((name) => {
         document.getElementById('section-' + name).hidden = name !== btn.dataset.section;
       });
+      if (btn.dataset.section === 'home') loadHome();
       if (btn.dataset.section === 'sales') renderStats();
       if (btn.dataset.section === 'products' && !productsLoaded) loadProducts();
       if (btn.dataset.section === 'emails' && !emailsLoaded) loadEmails();
@@ -1209,6 +1222,140 @@
     }
   }
 
+  /* ---------- HOME (overview dashboard) ---------- */
+  function gotoSection(name) {
+    const btn = document.querySelector('.nav-item[data-section="' + name + '"]');
+    if (btn) btn.click();
+  }
+
+  async function loadHome() {
+    document.getElementById('home-updated').textContent = 'Refreshing…';
+    try {
+      // Retail orders may not be loaded yet on a fresh login.
+      if (!orders.length) {
+        try { orders = (await api('/api/admin-orders', {})).orders; renderTable(); } catch (e) { /* shown on Orders tab */ }
+      }
+      const [wsRes, retailersRes, productsRes, campaignsRes] = await Promise.all([
+        api('/api/admin-wholesale', { action: 'all-orders' }).catch(() => ({ orders: [] })),
+        api('/api/admin-wholesale', { action: 'retailers' }).catch(() => ({ retailers: [] })),
+        api('/api/admin-products', { action: 'list' }).catch(() => ({ products: [] })),
+        api('/api/admin-campaigns', { action: 'history' }).catch(() => ({ campaigns: [] })),
+      ]);
+      renderHome(wsRes.orders, retailersRes.retailers, productsRes.products, campaignsRes.campaigns);
+      document.getElementById('home-updated').textContent = 'Live totals across retail and wholesale · updated ' + new Date().toLocaleTimeString('en-US');
+    } catch (err) {
+      document.getElementById('home-updated').textContent = 'Could not load overview: ' + err.message;
+    }
+  }
+
+  function renderHome(wsOrders, homeRetailers, homeProducts, homeCampaigns) {
+    const wsLive = wsOrders.filter((o) => o.order_status !== 'canceled');
+    const sumOf = (list, key) => list.reduce((s, o) => s + (Number(o[key || 'total']) || 0), 0);
+
+    const retailRevenue = sumOf(orders);
+    const wsRevenue = sumOf(wsLive);
+    const wsCollected = sumOf(wsLive.filter((o) => o.payment_status === 'paid' || o.payment_status === 'confirmed_by_admin'));
+    const wsOutstanding = sumOf(wsLive.filter((o) => o.payment_status === 'pending'));
+
+    document.getElementById('home-revenue').innerHTML =
+      '<div class="kpi-card"><div class="period">Combined Revenue (All-Time)</div><div class="rev">' + formatMoney(retailRevenue + wsRevenue) + '</div><div class="sub">' + (orders.length + wsLive.length) + ' total transactions</div></div>' +
+      '<div class="kpi-card"><div class="period">Retail Revenue</div><div class="rev">' + formatMoney(retailRevenue) + '</div><div class="sub">' + orders.length + ' order(s)</div></div>' +
+      '<div class="kpi-card"><div class="period">Wholesale Revenue</div><div class="rev">' + formatMoney(wsRevenue) + '</div><div class="sub">' + formatMoney(wsCollected) + ' collected</div></div>' +
+      '<div class="kpi-card"><div class="period">Wholesale Outstanding</div><div class="rev">' + formatMoney(wsOutstanding) + '</div><div class="sub">pay-on-delivery not yet confirmed</div></div>';
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfWeek.getDate() - startOfDay.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const sumSince = (list, dateKey, since) => sumOf(list.filter((o) => o[dateKey] && new Date(o[dateKey]) >= since));
+
+    document.getElementById('home-periods').innerHTML = [
+      ['Today', startOfDay], ['This Week', startOfWeek], ['This Month', startOfMonth]
+    ].map(([label, since]) => {
+      const r = sumSince(orders, 'order_date', since);
+      const w = sumSince(wsLive, 'created_at', since);
+      return '<div class="kpi-card"><div class="period">' + label + '</div><div class="rev">' + formatMoney(r + w) + '</div>' +
+        '<div class="sub">Retail ' + formatMoney(r) + ' · Wholesale ' + formatMoney(w) + '</div></div>';
+    }).join('');
+
+    const retailPending = orders.filter((o) => (o.order_status || 'pending') === 'pending').length;
+    const wsToFulfill = wsLive.filter((o) => o.order_status !== 'fulfilled').length;
+    const podAwaiting = wsLive.filter((o) => o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending');
+    const pendingApps = homeRetailers.filter((r) => r.account_status === 'pending').length;
+
+    const actionCard = (label, big, sub, section) =>
+      '<div class="kpi-card"><div class="period">' + label + '</div><div class="rev">' + big + '</div><div class="sub">' + sub + '</div>' +
+      '<button type="button" class="btn btn-outline btn-sm" data-goto="' + section + '" style="margin-top:10px">Open</button></div>';
+
+    document.getElementById('home-actions').innerHTML =
+      actionCard('Retail Orders Pending Delivery', retailPending, 'awaiting fulfillment', 'orders') +
+      actionCard('Wholesale Orders To Fulfill', wsToFulfill, 'pending or confirmed', 'wholesale') +
+      actionCard('Pay-on-Delivery To Confirm', podAwaiting.length, formatMoney(sumOf(podAwaiting)) + ' to collect', 'wholesale') +
+      actionCard('Retailer Applications', pendingApps, 'awaiting approval', 'wholesale');
+
+    document.getElementById('home-actions').querySelectorAll('[data-goto]').forEach((btn) => {
+      btn.addEventListener('click', () => gotoSection(btn.dataset.goto));
+    });
+
+    const txns = [
+      ...orders.map((o) => ({
+        date: o.order_date, type: 'Retail', number: o.order_id,
+        name: o.customer_name || o.email || '—', total: o.total,
+        status: (o.order_status || 'pending')
+      })),
+      ...wsOrders.map((o) => ({
+        date: o.created_at, type: 'Wholesale', number: o.order_number,
+        name: (o.retailer_accounts && o.retailer_accounts.business_name) || '—', total: o.total,
+        status: o.order_status + (o.payment_status === 'pending' && o.order_status !== 'canceled' ? ' · unpaid' : '')
+      }))
+    ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 12);
+
+    document.getElementById('home-transactions').innerHTML = txns.length
+      ? '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Order #</th><th>Customer / Retailer</th><th>Total</th><th>Status</th></tr></thead><tbody>' +
+        txns.map((t) =>
+          '<tr><td style="white-space:nowrap">' + esc(formatDate(t.date)) + '</td>' +
+          '<td>' + (t.type === 'Retail' ? '<span class="pill pill-blue">Retail</span>' : '<span class="pill pill-amber">Wholesale</span>') + '</td>' +
+          '<td style="white-space:nowrap">' + esc(t.number) + '</td>' +
+          '<td>' + esc(t.name) + '</td>' +
+          '<td style="font-weight:700;white-space:nowrap">' + formatMoney(t.total) + '</td>' +
+          '<td>' + esc(t.status) + '</td></tr>'
+        ).join('') + '</tbody></table></div>'
+      : '<div class="empty">No transactions yet.</div>';
+
+    const retailCustomers = new Set(orders.map((o) => (o.email || '').toLowerCase()).filter(Boolean)).size;
+    const activeRetailers = homeRetailers.filter((r) => r.account_status === 'active').length;
+    const activeProducts = homeProducts.filter((p) => p.active).length;
+
+    document.getElementById('home-snapshot').innerHTML =
+      '<div class="kpi-card"><div class="period">Retail Customers</div><div class="rev">' + retailCustomers + '</div><div class="sub">distinct order emails</div></div>' +
+      '<div class="kpi-card"><div class="period">Active Retailers</div><div class="rev">' + activeRetailers + '</div><div class="sub">of ' + homeRetailers.length + ' account(s)</div></div>' +
+      '<div class="kpi-card"><div class="period">Products Live</div><div class="rev">' + activeProducts + '</div><div class="sub">of ' + homeProducts.length + ' variant(s)</div></div>' +
+      '<div class="kpi-card"><div class="period">Email Campaigns</div><div class="rev">' + homeCampaigns.length + '</div><div class="sub">promotional sends recorded</div></div>';
+
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(startOfDay); d.setDate(d.getDate() - i);
+      days.push({ key: d.toDateString(), label: (d.getMonth() + 1) + '/' + d.getDate(), total: 0 });
+    }
+    const dayMap = new Map(days.map((d) => [d.key, d]));
+    for (const o of orders) {
+      if (!o.order_date) continue;
+      const e = dayMap.get(new Date(o.order_date).toDateString());
+      if (e) e.total += Number(o.total) || 0;
+    }
+    for (const o of wsLive) {
+      if (!o.created_at) continue;
+      const e = dayMap.get(new Date(o.created_at).toDateString());
+      if (e) e.total += Number(o.total) || 0;
+    }
+    const maxDay = Math.max(1, ...days.map((d) => d.total));
+    document.getElementById('home-trend').innerHTML = days.map((d) =>
+      '<div class="day" title="' + esc(d.label + ': ' + formatMoney(d.total)) + '">' +
+      '<div class="col" style="height:' + Math.max(2, Math.round(d.total / maxDay * 120)) + 'px"></div>' +
+      '<div class="dlbl">' + esc(d.label) + '</div></div>'
+    ).join('');
+  }
+
   /* ---------- RETAILER EMAILS (standalone tab) ---------- */
   let weLoaded = false;
   let weRetailers = [];
@@ -1616,6 +1763,9 @@
       const data = await api('/api/admin-orders', {});
       orders = data.orders;
       renderTable();
+      // Land on the Home overview (also resets the visible section after
+      // a re-login) — the nav click triggers loadHome().
+      gotoSection('home');
     } catch (err) {
       if (!adminView.hidden) backToLogin(err.message);
     }
