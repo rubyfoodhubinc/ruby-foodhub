@@ -4,6 +4,38 @@ const { resend, isValidEmail, FROM_ADDRESS } = require('./_lib/resend');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Applies one stock change atomically-enough for this scale: read current,
+// clamp at zero, upsert, and append the ledger row. Returns the new quantity.
+async function applyStockChange(retailerId, productId, change, note, adminUserId) {
+  const { data: current, error: getErr } = await supabase
+    .from('retailer_stock')
+    .select('quantity')
+    .eq('retailer_id', retailerId)
+    .eq('product_id', productId)
+    .maybeSingle();
+  if (getErr) throw new Error(JSON.stringify(getErr));
+
+  const newQty = (current ? current.quantity : 0) + change;
+  if (newQty < 0) {
+    throw new Error(`Stock cannot go below zero (current: ${current ? current.quantity : 0}, change: ${change}).`);
+  }
+
+  const { error: upErr } = await supabase
+    .from('retailer_stock')
+    .upsert(
+      { retailer_id: retailerId, product_id: productId, quantity: newQty, updated_at: new Date().toISOString() },
+      { onConflict: 'retailer_id,product_id' }
+    );
+  if (upErr) throw new Error(JSON.stringify(upErr));
+
+  const { error: mvErr } = await supabase
+    .from('stock_movements')
+    .insert({ retailer_id: retailerId, product_id: productId, change, note: note || null, created_by: adminUserId || null });
+  if (mvErr) throw new Error(JSON.stringify(mvErr));
+
+  return newQty;
+}
+
 const RETAILER_EMAIL_FOOTER = `
 <hr style="border:none;border-top:1px solid #e5e0dc;margin:32px 0 16px">
 <p style="font-size:12px;color:#8a837d;font-family:sans-serif;line-height:1.6">
@@ -98,17 +130,48 @@ async function handler(req, res) {
       if (!orderId || !['pending', 'confirmed', 'fulfilled'].includes(status)) {
         return res.status(400).json({ error: 'orderId and status pending/confirmed/fulfilled required.' });
       }
-      const { data, error } = await supabase
+
+      const { data: before, error: beforeErr } = await supabase
+        .from('wholesale_orders')
+        .select('order_number, order_status, retailer_id, items')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (beforeErr) throw new Error(JSON.stringify(beforeErr));
+      if (!before) return res.status(404).json({ error: 'Order not found.' });
+      if (before.order_status === 'canceled') return res.status(400).json({ error: 'Order has been canceled.' });
+
+      const { error } = await supabase
         .from('wholesale_orders')
         .update({ order_status: status })
-        .eq('id', orderId)
-        .neq('order_status', 'canceled')
-        .select('order_number');
+        .eq('id', orderId);
       if (error) throw new Error(JSON.stringify(error));
-      if (!data || !data.length) return res.status(404).json({ error: 'Order not found (or it has been canceled).' });
 
-      await logAudit(actor.id, 'wholesale_order_status_change', { order_id: orderId, order_number: data[0].order_number, status });
-      return res.status(200).json({ success: true });
+      await logAudit(actor.id, 'wholesale_order_status_change', { order_id: orderId, order_number: before.order_number, status });
+
+      // Fulfilling an order stocks the retailer's location automatically —
+      // one movement per line item, attributed to the acting admin. Only on
+      // the first transition into 'fulfilled' so re-saves can't double-add.
+      let stocked = 0;
+      if (status === 'fulfilled' && before.order_status !== 'fulfilled') {
+        const { data: catalog } = await supabase.from('products').select('id, name, variant');
+        const byNameVariant = new Map((catalog || []).map((p) => [`${p.name}::${p.variant}`, p.id]));
+        for (const item of (Array.isArray(before.items) ? before.items : [])) {
+          const productId = byNameVariant.get(`${item.product}::${item.variant}`);
+          if (!productId) {
+            console.error(`[stock] no product match for "${item.product} — ${item.variant}" on ${before.order_number}; skipped`);
+            continue;
+          }
+          try {
+            await applyStockChange(before.retailer_id, productId, Number(item.quantity) || 0,
+              `Received via ${before.order_number} fulfillment`, actor.id);
+            stocked += 1;
+          } catch (e) {
+            console.error(`[stock] failed to stock-in ${item.product} for ${before.order_number}:`, e.message);
+          }
+        }
+      }
+
+      return res.status(200).json({ success: true, stockedItems: stocked });
     }
 
     if (action === 'cancel-order') {
@@ -235,6 +298,48 @@ async function handler(req, res) {
         recipient_count: sent, retailer_ids: retailerIds, failed,
       });
       return res.status(200).json({ success: true, sent, failed });
+    }
+
+    if (action === 'stock-get') {
+      const { retailerId } = req.body;
+      if (!retailerId) return res.status(400).json({ error: 'retailerId required.' });
+      const [{ data: stock, error: sErr }, { data: movements, error: mErr }] = await Promise.all([
+        supabase.from('retailer_stock')
+          .select('product_id, quantity, updated_at, products(name, variant)')
+          .eq('retailer_id', retailerId),
+        supabase.from('stock_movements')
+          .select('change, note, created_at, products(name, variant), admin_users(name)')
+          .eq('retailer_id', retailerId)
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ]);
+      if (sErr) throw new Error(JSON.stringify(sErr));
+      if (mErr) throw new Error(JSON.stringify(mErr));
+      return res.status(200).json({ stock: stock || [], movements: movements || [] });
+    }
+
+    if (action === 'stock-adjust') {
+      const { retailerId, productId, change, note } = req.body;
+      const cleanChange = Math.trunc(Number(change));
+      if (!retailerId || !productId || !Number.isFinite(cleanChange) || cleanChange === 0) {
+        return res.status(400).json({ error: 'retailerId, productId, and a non-zero whole-number change are required.' });
+      }
+
+      const newQty = await applyStockChange(retailerId, productId, cleanChange, note, actor.id);
+      await logAudit(actor.id, 'retailer_stock_adjusted', {
+        retailer_id: retailerId, product_id: productId, change: cleanChange, new_quantity: newQty, note: note || null,
+      });
+      return res.status(200).json({ success: true, quantity: newQty });
+    }
+
+    if (action === 'stock-low') {
+      // Low-stock overview for the Home dashboard: anything at 5 or fewer.
+      const { data, error } = await supabase
+        .from('retailer_stock')
+        .select('quantity, retailer_accounts(business_name), products(name, variant)')
+        .lte('quantity', 5);
+      if (error) throw new Error(JSON.stringify(error));
+      return res.status(200).json({ low: data || [] });
     }
 
     if (action === 'email-history') {

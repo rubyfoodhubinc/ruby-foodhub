@@ -164,6 +164,23 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, orderNumber: order.order_number, paymentMethod, checkoutUrl: session.url });
     }
 
+    if (action === 'stock') {
+      if (restricted) return res.status(403).json({ error: 'Your account must be approved to view stock.' });
+      const [{ data: stock, error: sErr }, { data: movements, error: mErr }] = await Promise.all([
+        supabase.from('retailer_stock')
+          .select('quantity, updated_at, products(name, variant)')
+          .eq('retailer_id', account.id),
+        supabase.from('stock_movements')
+          .select('change, note, created_at, products(name, variant)')
+          .eq('retailer_id', account.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ]);
+      if (sErr) throw new Error(JSON.stringify(sErr));
+      if (mErr) throw new Error(JSON.stringify(mErr));
+      return res.status(200).json({ stock: stock || [], movements: movements || [] });
+    }
+
     if (action === 'verify-stripe') {
       const { sessionId } = req.body;
       if (!sessionId) return res.status(400).json({ error: 'Missing session id.' });
