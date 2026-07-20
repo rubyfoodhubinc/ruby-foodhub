@@ -27,8 +27,12 @@ function buildOrderSummaryText(session, items) {
   const customerEmail = (session.customer_details && session.customer_details.email) || '';
   const total = ((session.amount_total || 0) / 100).toFixed(2);
 
+  const placedAt = new Date((session.created || Date.now() / 1000) * 1000)
+    .toLocaleString('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
   const lines = [
     `Order #${orderNumber}`,
+    `Placed: ${placedAt} (Central Time)`,
     '',
     'Items:',
     itemsToText(items),

@@ -470,7 +470,7 @@ class Component extends DCLogic {
         };
         const s = statusStyles[status] || statusStyles.pending;
         return {
-          date: o.order_date ? new Date(o.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—',
+          date: o.order_date ? new Date(o.order_date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—',
           orderId: o.order_id,
           items,
           address: o.address || '—',

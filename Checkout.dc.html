@@ -91,9 +91,23 @@
           <div style="display:flex;justify-content:space-between"><span>Tip</span><span>${{ tipDisplay }}</span></div>
           <div style="display:flex;justify-content:space-between;font-weight:800;font-size:17px;padding-top:10px;border-top:1px solid rgba(34,30,26,.1)"><span>Total</span><span>${{ totalDisplay }}</span></div>
         </div>
-        <sc-if value="{{ showCouponApplied }}" hint-placeholder-val="{{ false }}">
-          <div style="font-size:12px;color:rgba(34,30,26,.5);margin-top:8px">Coupon applied — <a href="Cart.dc.html" style="font-weight:700">change in cart</a></div>
-        </sc-if>
+        <div style="margin-top:14px">
+          <sc-if value="{{ showCouponInput }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:8px">
+              <input type="text" value="{{ couponInput }}" onChange="{{ onCouponInputChange }}" placeholder="Coupon code" style="flex:1;min-width:0;padding:10px 12px;border:1.5px solid rgba(34,30,26,.18);border-radius:10px;font-size:13.5px;text-transform:uppercase"/>
+              <button type="button" onClick="{{ applyCoupon }}" style="flex:none;padding:10px 16px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;background:oklch(45% 0.17 20);color:#fff;border:none" style-hover="background:oklch(52% 0.19 20)">Apply</button>
+            </div>
+            <sc-if value="{{ showCouponError }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:12.5px;color:oklch(45% 0.17 20);margin-top:6px">{{ couponError }}</div>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{ showCouponApplied }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;justify-content:space-between;background:oklch(94% 0.05 150);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;color:oklch(35% 0.1 150)">
+              <span>{{ appliedCoupon }} applied</span>
+              <button type="button" onClick="{{ removeCoupon }}" style="border:none;background:transparent;color:oklch(35% 0.1 150);font-weight:700;cursor:pointer;text-decoration:underline">Remove</button>
+            </div>
+          </sc-if>
+        </div>
         <div style="display:flex;align-items:flex-start;gap:10px;margin-top:20px">
           <input type="checkbox" id="terms-checkbox" checked="{{ termsAgreed }}" onChange="{{ onTermsAgreedChange }}" style="margin-top:3px;flex:none;width:16px;height:16px"/>
           <label for="terms-checkbox" style="font-size:13px;line-height:1.5;color:rgba(34,30,26,.7)">I agree to the <a href="Terms%20of%20Service.dc.html" target="_blank" rel="noopener noreferrer" style="font-weight:700">Terms of Service</a>, including the no-returns policy on perishable orders.</label>
@@ -116,6 +130,13 @@
       <h1 style="font-family:'Domine',serif;font-weight:700;font-size:36px;margin:0 0 12px">Thank You!</h1>
       <div style="font-family:ui-monospace,monospace;font-size:15px;color:rgba(34,30,26,.55);margin:0 0 24px">Order #{{ orderNumber }}</div>
       <p style="font-size:16px;line-height:1.6;color:rgba(34,30,26,.75);margin:0 0 32px">Your payment of <strong>${{ finalTotalDisplay }}</strong> was successful. A confirmation has been sent to {{ finalEmail }}.</p>
+      <sc-if value="{{ showAccountPrompt }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(34,30,26,.07);padding:24px 28px;margin:0 0 32px;text-align:left">
+          <div style="font-weight:800;font-size:15px;margin-bottom:6px">Want to track your orders?</div>
+          <p style="font-size:14px;line-height:1.6;color:rgba(34,30,26,.7);margin:0 0 14px">Create a free Ruby FoodHub account to see your order history and delivery status, save up to 3 delivery addresses, and check out faster next time.</p>
+          <a href="Account.dc.html" style="display:inline-block;background:oklch(45% 0.17 20);color:#fff;padding:11px 22px;border-radius:100px;font-size:13.5px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Create an Account or Sign In</a>
+        </div>
+      </sc-if>
       <a href="Products.dc.html" style="display:inline-block;background:oklch(45% 0.17 20);color:#fff;padding:14px 28px;border-radius:100px;font-size:15px;font-weight:700" style-hover="background:oklch(52% 0.19 20)">Continue Shopping</a>
     </section>
   </sc-if>
@@ -127,7 +148,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1200}}">
 class Component extends DCLogic {
-  state = { cart: null, zip: '', appliedCoupon: '', tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', companyName: '', addressLine1: '', addressLine2: '', city: '', addressState: '', country: 'United States', email: '', phone: '', termsAgreed: false, placed: false, finalTotal: 0, orderNumber: '', finalEmail: '', submitting: false, errorMessage: '' };
+  state = { cart: null, zip: '', appliedCoupon: '', couponInput: '', couponError: '', isSignedIn: false, tipMode: null, tipPercent: 0, customTip: '', notes: '', fullName: '', companyName: '', addressLine1: '', addressLine2: '', city: '', addressState: '', country: 'United States', email: '', phone: '', termsAgreed: false, placed: false, finalTotal: 0, orderNumber: '', finalEmail: '', submitting: false, errorMessage: '' };
 
   async componentDidMount() {
     const lib = await import('./cart-lib.js');
@@ -172,6 +193,7 @@ class Component extends DCLogic {
       const { data: { session } } = await this._sb.auth.getSession();
       if (!session || !session.user) return;
       this._accessToken = session.access_token;
+      this.setState({ isSignedIn: true });
 
       const { data: profile } = await this._sb
         .from('profiles').select('*').eq('id', session.user.id).maybeSingle();
@@ -199,6 +221,33 @@ class Component extends DCLogic {
 
   selectTipPercent(pct) { this.setState({ tipMode: 'percent', tipPercent: pct, customTip: '' }); }
   selectNoTip() { this.setState({ tipMode: 'none', tipPercent: 0, customTip: '' }); }
+
+  applyCoupon() {
+    const code = this.state.couponInput.trim();
+    if (!code || !this._lib) return;
+
+    const cart = this.state.cart || [];
+    const subtotal = this.computeSubtotal(cart);
+    const tier = this._lib.getTierForZip(this.state.zip);
+    const shippingFee = this.state.zip ? this._lib.computeShippingFee(tier, subtotal) : 0;
+    const tip = this.computeTip(subtotal);
+    const result = this._lib.evaluateCoupon(code, subtotal + shippingFee + tip);
+
+    if (!result.valid) {
+      this.setState({ couponError: "That coupon code isn't valid." });
+      return;
+    }
+
+    // Persisted via cart-lib, so it stays applied if the customer goes
+    // back to the cart — one coupon at a time either way.
+    this._lib.setCoupon(result.code);
+    this.setState({ appliedCoupon: result.code, couponInput: '', couponError: '' });
+  }
+
+  removeCoupon() {
+    if (this._lib) this._lib.clearCoupon();
+    this.setState({ appliedCoupon: '', couponError: '' });
+  }
 
   computeSubtotal(cart) { return cart.reduce((s, i) => s + i.unitPrice * i.qty, 0); }
 
@@ -353,7 +402,15 @@ class Component extends DCLogic {
       subtotalDisplay: subtotal.toFixed(2),
       shippingDisplay: this.state.zip ? '$' + shippingFee.toFixed(2) : 'Enter zip',
       showCouponApplied: !!this.state.appliedCoupon,
+      showCouponInput: !this.state.appliedCoupon,
       appliedCoupon: this.state.appliedCoupon,
+      couponInput: this.state.couponInput,
+      onCouponInputChange: (e) => this.setState({ couponInput: e.target.value }),
+      applyCoupon: () => this.applyCoupon(),
+      removeCoupon: () => this.removeCoupon(),
+      showCouponError: !!this.state.couponError,
+      couponError: this.state.couponError,
+      showAccountPrompt: this.state.placed && !this.state.isSignedIn,
       discountDisplay: discount.toFixed(2),
       tipDisplay: tip.toFixed(2),
       totalDisplay: total.toFixed(2),
