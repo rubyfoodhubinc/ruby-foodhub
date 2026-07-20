@@ -149,6 +149,7 @@
     <button type="button" class="nav-item" data-section="products">Products</button>
     <button type="button" class="nav-item" data-section="emails">Emails</button>
     <button type="button" class="nav-item" data-section="wholesale">Wholesale</button>
+    <button type="button" class="nav-item" data-section="wsstats">Wholesale Sales</button>
     <button type="button" class="nav-item" data-section="users" id="nav-users" hidden>Users</button>
     <div class="spacer"></div>
     <div class="whoami" id="logged-in-as"></div>
@@ -271,6 +272,19 @@
       </div>
     </section>
 
+    <section id="section-wsstats" hidden>
+      <h1>Wholesale Sales</h1>
+      <p class="note">Canceled orders are excluded from revenue. "Collected" = paid via Stripe or confirmed by admin; "Outstanding" = pay-on-delivery not yet confirmed.</p>
+      <div class="kpi-grid" id="ws-kpi-grid"></div>
+      <div class="kpi-grid" id="ws-money-grid"></div>
+      <div class="panel"><h2>Fulfillment Pipeline</h2><div class="kpi-grid" id="ws-pipeline"></div></div>
+      <div class="panel"><h2>Wholesale Revenue by Product</h2><div id="ws-by-product"></div></div>
+      <div class="panel"><h2>Wholesale Revenue by Size / Variant</h2><div id="ws-by-variant"></div></div>
+      <div class="panel"><h2>Units Sold by Product</h2><div id="ws-units"></div></div>
+      <div class="panel"><h2>Top Retailers by Revenue</h2><div id="ws-top-retailers"></div></div>
+      <div class="panel"><h2>Daily Wholesale Revenue — Last 14 Days</h2><div class="trend" id="ws-trend"></div></div>
+    </section>
+
     <section id="section-users" hidden>
       <h1>Users</h1>
       <div id="users-container"><div class="loading">Loading users…</div></div>
@@ -390,13 +404,14 @@
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      ['orders', 'sales', 'products', 'emails', 'wholesale', 'users'].forEach((name) => {
+      ['orders', 'sales', 'products', 'emails', 'wholesale', 'wsstats', 'users'].forEach((name) => {
         document.getElementById('section-' + name).hidden = name !== btn.dataset.section;
       });
       if (btn.dataset.section === 'sales') renderStats();
       if (btn.dataset.section === 'products' && !productsLoaded) loadProducts();
       if (btn.dataset.section === 'emails' && !emailsLoaded) loadEmails();
       if (btn.dataset.section === 'wholesale' && !wholesaleLoaded) loadWholesale();
+      if (btn.dataset.section === 'wsstats') loadWsStats();
       if (btn.dataset.section === 'users' && !usersLoaded) loadUsers();
     });
   });
@@ -624,14 +639,15 @@
     return { revenue, count: subset.length, aov: subset.length ? revenue / subset.length : 0 };
   }
 
-  function barChart(container, totals) {
+  function barChart(container, totals, fmt) {
+    const format = fmt || formatMoney;
     const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
     if (!entries.length) { container.innerHTML = '<div class="empty" style="padding:20px 0">No data yet.</div>'; return; }
     const max = entries[0][1] || 1;
     container.innerHTML = entries.map(([label, value]) =>
       '<div class="bar-row"><div class="bar-label" title="' + esc(label) + '">' + esc(label) + '</div>' +
       '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(2, Math.round(value / max * 100)) + '%"></div></div>' +
-      '<div class="bar-val">' + formatMoney(value) + '</div></div>'
+      '<div class="bar-val">' + format(value) + '</div></div>'
     ).join('');
   }
 
@@ -1202,6 +1218,107 @@
       btn.disabled = false;
     }
   });
+
+  /* ---------- WHOLESALE SALES (KPIs) ---------- */
+  let wsAllOrders = null;
+
+  async function loadWsStats() {
+    try {
+      // Always refetch: payments confirmed or orders canceled in the
+      // Wholesale tab should show here immediately.
+      const data = await api('/api/admin-wholesale', { action: 'all-orders' });
+      wsAllOrders = data.orders;
+      renderWsStats();
+    } catch (err) {
+      document.getElementById('ws-kpi-grid').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  function renderWsStats() {
+    const all = wsAllOrders || [];
+    const live = all.filter((o) => o.order_status !== 'canceled');
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfWeek.getDate() - startOfDay.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    function periodOf(since) {
+      const subset = since ? live.filter((o) => o.created_at && new Date(o.created_at) >= since) : live;
+      const revenue = subset.reduce((s, o) => s + (Number(o.total) || 0), 0);
+      return { revenue, count: subset.length, aov: subset.length ? revenue / subset.length : 0 };
+    }
+
+    const periods = [
+      ['Today', periodOf(startOfDay)],
+      ['This Week', periodOf(startOfWeek)],
+      ['This Month', periodOf(startOfMonth)],
+      ['All-Time', periodOf(null)]
+    ];
+    document.getElementById('ws-kpi-grid').innerHTML = periods.map(([label, s]) =>
+      '<div class="kpi-card"><div class="period">' + label + '</div>' +
+      '<div class="rev">' + formatMoney(s.revenue) + '</div>' +
+      '<div class="sub">' + s.count + ' order' + (s.count === 1 ? '' : 's') + ' · AOV ' + formatMoney(s.aov) + '</div></div>'
+    ).join('');
+
+    const collected = live.filter((o) => o.payment_status === 'paid' || o.payment_status === 'confirmed_by_admin');
+    const outstanding = live.filter((o) => o.payment_status === 'pending');
+    const canceled = all.filter((o) => o.order_status === 'canceled');
+    const sum = (list) => list.reduce((s, o) => s + (Number(o.total) || 0), 0);
+
+    document.getElementById('ws-money-grid').innerHTML =
+      '<div class="kpi-card"><div class="period">Collected</div><div class="rev">' + formatMoney(sum(collected)) + '</div><div class="sub">' + collected.length + ' order(s) paid or confirmed</div></div>' +
+      '<div class="kpi-card"><div class="period">Outstanding (Pay on Delivery)</div><div class="rev">' + formatMoney(sum(outstanding)) + '</div><div class="sub">' + outstanding.length + ' order(s) awaiting payment</div></div>' +
+      '<div class="kpi-card"><div class="period">Canceled</div><div class="rev">' + formatMoney(sum(canceled)) + '</div><div class="sub">' + canceled.length + ' order(s) canceled</div></div>';
+
+    const byStatus = { pending: 0, confirmed: 0, fulfilled: 0 };
+    for (const o of live) byStatus[o.order_status] = (byStatus[o.order_status] || 0) + 1;
+    document.getElementById('ws-pipeline').innerHTML =
+      ['pending', 'confirmed', 'fulfilled'].map((s) =>
+        '<div class="kpi-card"><div class="period">' + s.charAt(0).toUpperCase() + s.slice(1) + '</div>' +
+        '<div class="rev">' + (byStatus[s] || 0) + '</div><div class="sub">order(s)</div></div>'
+      ).join('');
+
+    const byProduct = {};
+    const byVariant = {};
+    const unitsByProduct = {};
+    for (const o of live) {
+      for (const it of (Array.isArray(o.items) ? o.items : [])) {
+        const amount = (Number(it.wholesale_price) || 0) * (Number(it.quantity) || 0);
+        byProduct[it.product] = (byProduct[it.product] || 0) + amount;
+        if (it.variant) byVariant[it.variant] = (byVariant[it.variant] || 0) + amount;
+        unitsByProduct[it.product] = (unitsByProduct[it.product] || 0) + (Number(it.quantity) || 0);
+      }
+    }
+    barChart(document.getElementById('ws-by-product'), byProduct);
+    barChart(document.getElementById('ws-by-variant'), byVariant);
+    barChart(document.getElementById('ws-units'), unitsByProduct, (v) => v + ' unit' + (v === 1 ? '' : 's'));
+
+    const byRetailer = {};
+    for (const o of live) {
+      const name = (o.retailer_accounts && o.retailer_accounts.business_name) || 'Unknown';
+      byRetailer[name] = (byRetailer[name] || 0) + (Number(o.total) || 0);
+    }
+    barChart(document.getElementById('ws-top-retailers'), byRetailer);
+
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(startOfDay); d.setDate(d.getDate() - i);
+      days.push({ key: d.toDateString(), label: (d.getMonth() + 1) + '/' + d.getDate(), total: 0 });
+    }
+    const dayMap = new Map(days.map((d) => [d.key, d]));
+    for (const o of live) {
+      if (!o.created_at) continue;
+      const entry = dayMap.get(new Date(o.created_at).toDateString());
+      if (entry) entry.total += Number(o.total) || 0;
+    }
+    const maxDay = Math.max(1, ...days.map((d) => d.total));
+    document.getElementById('ws-trend').innerHTML = days.map((d) =>
+      '<div class="day" title="' + esc(d.label + ': ' + formatMoney(d.total)) + '">' +
+      '<div class="col" style="height:' + Math.max(2, Math.round(d.total / maxDay * 120)) + 'px"></div>' +
+      '<div class="dlbl">' + esc(d.label) + '</div></div>'
+    ).join('');
+  }
 
   /* ---------- USERS ---------- */
   async function loadUsers() {

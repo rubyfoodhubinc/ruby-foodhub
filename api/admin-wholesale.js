@@ -52,6 +52,24 @@ async function handler(req, res) {
       });
     }
 
+    if (action === 'all-orders') {
+      const { data, error } = await supabase
+        .from('wholesale_orders')
+        .select('id, order_number, items, total, payment_method, payment_status, order_status, created_at, retailer_accounts(business_name)')
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(JSON.stringify(error));
+      return res.status(200).json({ orders: data });
+    }
+
+    if (action === 'all-orders') {
+      const { data, error } = await supabase
+        .from('wholesale_orders')
+        .select('id, order_number, items, total, payment_method, payment_status, order_status, created_at, retailer_accounts(business_name)')
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(JSON.stringify(error));
+      return res.status(200).json({ orders: data });
+    }
+
     if (action === 'retailer-orders') {
       const { retailerId } = req.body;
       if (!retailerId) return res.status(400).json({ error: 'retailerId required.' });
