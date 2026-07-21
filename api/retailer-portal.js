@@ -6,6 +6,16 @@ const { logAudit } = require('./_lib/admin-auth');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Support topics a retailer can raise, mapped to a readable label.
+const SUPPORT_TOPICS = {
+  order_issue: 'Order Issue',
+  delivery: 'Delivery / Scheduling',
+  payment: 'Payment / Billing',
+  product: 'Product Question',
+  account: 'Account / Access',
+  other: 'General / Other',
+};
+
 // Only active products that HAVE a wholesale price are orderable wholesale.
 async function wholesaleCatalog() {
   const { data, error } = await supabase
@@ -179,6 +189,81 @@ module.exports = async (req, res) => {
       if (sErr) throw new Error(JSON.stringify(sErr));
       if (mErr) throw new Error(JSON.stringify(mErr));
       return res.status(200).json({ stock: stock || [], movements: movements || [] });
+    }
+
+    if (action === 'contact-support') {
+      const { topic, subject, message, orderNumber } = req.body;
+      const cleanSubject = String(subject || '').trim();
+      const cleanMessage = String(message || '').trim();
+      const topicLabel = SUPPORT_TOPICS[topic] || SUPPORT_TOPICS.other;
+
+      if (!cleanSubject || !cleanMessage) {
+        return res.status(400).json({ error: 'A subject and message are required.' });
+      }
+      if (cleanMessage.length > 5000) {
+        return res.status(400).json({ error: 'Message is too long (max 5000 characters).' });
+      }
+
+      const orderLine = String(orderNumber || '').trim()
+        ? `Regarding order: ${String(orderNumber).trim()}\n`
+        : '';
+
+      // Sent to the sales team; reply-to is the retailer so the team can
+      // respond to them directly. Account context is attached automatically.
+      const { error } = await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: 'sales@rubyfoodhub.com',
+        replyTo: account.email,
+        subject: `[Retailer Support · ${topicLabel}] ${cleanSubject}`,
+        text:
+`Support request from a wholesale retailer.
+
+Topic: ${topicLabel}
+${orderLine}
+Business: ${account.business_name}
+Contact: ${account.contact_name || '(not set)'}
+Email: ${account.email}
+Phone: ${account.phone || '(not set)'}
+Account status: ${account.account_status}
+
+Subject: ${cleanSubject}
+
+Message:
+${cleanMessage}
+
+— Reply to this email to respond directly to the retailer.`,
+      });
+      if (error) throw new Error(error.message || 'Could not send your message');
+
+      // Acknowledgement copy to the retailer so they have a record.
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: account.email,
+          subject: `We received your message: ${cleanSubject}`,
+          text:
+`Hi ${account.contact_name || account.business_name},
+
+Thanks for reaching out to the Ruby FoodHub wholesale team. We've received your message and will get back to you as soon as possible.
+
+Topic: ${topicLabel}
+${orderLine}Your message:
+${cleanMessage}
+
+If you need to add anything, just reply to this email.
+
+— Ruby FoodHub Wholesale Team`,
+        });
+      } catch (e) {
+        console.error('support acknowledgement email failed:', e.message);
+      }
+
+      await logAudit(null, 'retailer_support_request', {
+        retailer_id: account.id, business_name: account.business_name,
+        topic, subject: cleanSubject, order_number: orderNumber || null,
+      });
+
+      return res.status(200).json({ success: true });
     }
 
     if (action === 'upload-logo') {

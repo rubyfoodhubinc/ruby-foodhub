@@ -125,6 +125,7 @@
       <button type="button" data-view="order">Place New Order</button>
       <button type="button" data-view="stock">My Stock</button>
       <button type="button" data-view="profile">Profile</button>
+      <button type="button" data-view="help">Help &amp; Support</button>
     </div>
 
     <div id="view-home" hidden>
@@ -197,6 +198,34 @@
       <textarea id="pr-address" rows="2" placeholder="Business address"></textarea>
       <button type="button" class="btn" id="pr-save-btn">Save Profile</button>
       <p class="note" id="pr-note"></p>
+    </div>
+
+    <div class="card" id="view-help" hidden>
+      <h2>Help &amp; Support</h2>
+      <p class="note">Have a question, an issue with an order, or need a hand? Send the Ruby FoodHub wholesale team a message and we'll reply to your account email. For anything urgent you can also reach us directly.</p>
+
+      <div class="kpi-grid" style="margin:14px 0 20px">
+        <div class="kpi-card"><div class="k-label">Email</div><div class="k-val" style="font-size:16px"><a href="mailto:sales@rubyfoodhub.com">sales@rubyfoodhub.com</a></div><div class="k-sub">Wholesale team inbox</div></div>
+        <div class="kpi-card"><div class="k-label">Phone</div><div class="k-val" style="font-size:16px"><a href="tel:+16604607261">+1 (660) 460-7261</a></div><div class="k-sub">Mon–Fri, business hours</div></div>
+      </div>
+
+      <label class="form-label" for="hp-topic">What do you need help with?</label>
+      <select id="hp-topic">
+        <option value="order_issue">Order Issue</option>
+        <option value="delivery">Delivery / Scheduling</option>
+        <option value="payment">Payment / Billing</option>
+        <option value="product">Product Question</option>
+        <option value="account">Account / Access</option>
+        <option value="other" selected>General / Other</option>
+      </select>
+      <label class="form-label" for="hp-order">Related Order Number (optional)</label>
+      <input type="text" id="hp-order" placeholder="e.g. WHS-000004" />
+      <label class="form-label" for="hp-subject">Subject</label>
+      <input type="text" id="hp-subject" placeholder="Brief summary" />
+      <label class="form-label" for="hp-message">Message</label>
+      <textarea id="hp-message" rows="6" placeholder="Tell us what's going on and how we can help…"></textarea>
+      <button type="button" class="btn" id="hp-send-btn">Send Message</button>
+      <p class="note" id="hp-note"></p>
     </div>
   </div>
 
@@ -359,7 +388,7 @@
   }
 
   function showView(name) {
-    ['home', 'dashboard', 'order', 'stock', 'profile'].forEach((v) => {
+    ['home', 'dashboard', 'order', 'stock', 'profile', 'help'].forEach((v) => {
       document.getElementById('view-' + v).hidden = v !== name;
     });
     portalNav.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
@@ -720,6 +749,36 @@
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  });
+
+  /* ---------- help & support ---------- */
+  document.getElementById('hp-send-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('hp-send-btn');
+    const note = document.getElementById('hp-note');
+    const subject = document.getElementById('hp-subject').value.trim();
+    const message = document.getElementById('hp-message').value.trim();
+    note.textContent = '';
+    if (!subject || !message) { note.textContent = 'Please add a subject and a message.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      await api('/api/retailer-portal', {
+        action: 'contact-support',
+        topic: document.getElementById('hp-topic').value,
+        orderNumber: document.getElementById('hp-order').value,
+        subject, message
+      });
+      note.textContent = 'Message sent — we\'ve emailed you a copy and will reply soon.';
+      document.getElementById('hp-subject').value = '';
+      document.getElementById('hp-message').value = '';
+      document.getElementById('hp-order').value = '';
+    } catch (err) {
+      note.textContent = 'Could not send: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send Message';
+    }
   });
 
   /* ---------- profile ---------- */
