@@ -1,7 +1,9 @@
 # Ruby FoodHub — Engineering Handoff Note
 **Prepared by:** outgoing session (acting as Chief Engineer for this stretch of work)
 **Date:** July 2026 (session ending 2026-07-21)
-**Last updated:** 2026-07-21 (afternoon session — payment-push changes, layout fix, app icons; commits `d194889`, `8910150`, `ae3c83b`; see §10)
+**Last updated:** 2026-07-21 (afternoon/evening session — payment-push changes, layout fix, app icons, retailer-scoped order numbers, production batch tracking; commits `d194889`, `8910150`, `ae3c83b`, `340745f`, `a79512a`; see §10 and §11)
+
+> ⚠️ **ACTION REQUIRED BEFORE SHIPPING ORDERS:** migration `014_production_batch.sql` must be run in the Supabase SQL Editor. Batch entry fails until it is. See §4.
 **Purpose:** Full record of what was built, current state, and exactly what the next analyst/engineer needs to pick up.
 
 Repo: `github.com/rubyfoodhubinc/ruby-foodhub` (branch `main`)
@@ -60,6 +62,8 @@ This is the complete build sequence, oldest to newest, for context on *why* thin
 29. **Billable stock-ins + Add Order defaults** (`d194889`): admin "Stock at This Location" positive additions now create a delivered, payable order; "Add Order to This Account" defaults to "Mark as delivered now" — see §10
 30. **Portal layout fix** (`d194889`): expanded admin detail rows no longer force sideways page scrolling; page-level horizontal overflow disabled on both portals — see §10
 31. **App icons & splash screens** (`8910150`): real Ruby FoodHub logo artwork generated via `@capacitor/assets` for both apps, Android + iOS — the former store-submission blocker is cleared — see §6
+32. **Retailer-scoped order numbers** (2026-07-21, `a79512a`): `WHS-######` replaced by `XXXX` + `MMDDYYYY` + per-retailer serial (e.g. `MONE12242026-05`) — see §11
+33. **Production batch tracking** (`a79512a`, migration **014**): 8-character batch key required whenever goods ship to a retailer, shown to admin and retailer and carried into emails and the stock ledger — see §11
 
 ---
 
@@ -75,6 +79,8 @@ This is the complete build sequence, oldest to newest, for context on *why* thin
 - **Stock ledger**: `retailer_stock` (current qty) + `stock_movements` (full history) via `applyStockChange()` in `api/_lib/stock.js` (shared by admin adjustments, order fulfillment, and retailer sold-reports).
 - **Wholesale order payment states**: `pending` → (`awaiting_confirmation` if a cash/Zelle claim is filed) → `confirmed_by_admin`, or `paid` directly via Stripe. Canceled orders are excluded from all financial rollups. `payment_method` may now be `stripe`, `zelle`, `cash`, or legacy `pay_on_delivery` **at placement time** (constraint from migration 012 already allows all four); admins can confirm payment received on any unpaid non-Stripe order.
 - **Billing rule (owner decision, 2026-07-21)**: anything that puts product at a retailer's location must bill them. Positive "Stock at This Location" adjustments route through the billable `create-order` path (`markFulfilled: true`); only negative adjustments are inventory-only corrections. Do not reintroduce unbilled stock-in paths.
+- **Order numbering (owner decision, 2026-07-21)**: wholesale order numbers are generated **in application code**, not by the DB trigger — `orderNumberFor()` / `insertWholesaleOrder()` in `api/_lib/wholesale.js`, shared by retailer `place-order` and admin `create-order`. Format: first 4 alphanumerics of the business name (padded with `X`) + order date `MMDDYYYY` in **US Eastern** + `-` + zero-padded per-retailer serial (lifetime order count + 1). The serial is *not* zero-padded beyond 2 digits, so a retailer's 105th order reads `-105`. `order_number` is `unique`; the insert retries with the next serial up to 5 times on a `23505` collision. The old `WHS-######` sequence trigger is intentionally left in place as a fallback for any insert that supplies no number, and historical `WHS-` numbers remain valid.
+- **Production batch**: `wholesale_orders.production_batch` (migration 014), 8 chars `[A-Z0-9]`, uppercased server-side. **Required** on admin `create-order` when `markFulfilled` is true, and on the first transition to `fulfilled` in `set-order-status` (existing batch on the row satisfies it). Validated on both client and server. Surfaced on admin + retailer order rows, the delivery email, `stock_movements` notes, and the audit log.
 - **Verification discipline used all session**: every backend change `node --check`'d; every inline `<script>` block extracted and `node --check`'d; HTML tag/div balance grep-counted; a cross-check that every frontend API action call has a matching backend handler. No code pushed without this pass. *(No live browser click-through was possible from the sandbox — no outbound network for `vercel dev` in most sessions. This is a known gap; see §8.)*
 
 ---
@@ -97,8 +103,15 @@ All files live in `supabase/`, are safe to re-run, and are also appended to the 
 | 011 | `011_retailer_logo.sql` | logo_url column | ✅ confirmed run |
 | 012 | `012_payment_claims.sql` | awaiting_confirmation state, cash/zelle method, claimed_* columns | ✅ confirmed run |
 | **013** | **`013_account_deletion.sql`** | **`account_status` gains `'closed'`; `deleted_at` column** | ⚠️ **NEEDS VERIFICATION — confirm this has been run in Supabase before relying on account deletion in production** |
+| **014** | **`014_production_batch.sql`** | **`wholesale_orders.production_batch` column (8-char batch key)** | 🔴 **NOT RUN — written 2026-07-21, handed to the owner to run. Required before any order can be marked delivered/fulfilled.** |
 
-**→ First task for next analyst: confirm migration 013 has been run.** If account deletion is tested/used before this runs, it will hard-fail on the status constraint.
+**→ First task for next analyst: run migration 014, then confirm 013 has been run.**
+
+- **014 is blocking day-to-day operations**: admin "Add Order → mark delivered", billable stock-ins, and marking any order fulfilled all now send a `production_batch` value. Until the column exists those inserts/updates fail (PostgREST `PGRST204`, unknown column). The whole migration is one line:
+  ```sql
+  alter table wholesale_orders add column if not exists production_batch text;
+  ```
+- **013** affects account deletion only — if deletion is used before it runs, it hard-fails on the status constraint.
 
 ---
 
@@ -136,7 +149,7 @@ Full day-to-day workflow (rebuilding `www/`, opening in Android Studio/Xcode) is
 
 ---
 
-## 7. App Store compliance work (added this session, LATEST commit `3800fa1`)
+## 7. App Store compliance work (commit `3800fa1`)
 
 Two blockers were identified and closed:
 
@@ -155,23 +168,27 @@ App bundles (`apps/*/www/`) were re-synced so the native projects ship this flow
 
 ## 8. Known gaps / things to watch
 
-1. **Migration 013 run-status unconfirmed** — see §4. Verify before relying on account deletion.
-2. **Partial live verification** — the 2026-07-21 afternoon session click-tested the new retailer UI (payment options, due banner, pay modal, layout containment) in a real browser against a local static server and confirmed the new markup deployed to production. Still **not** exercised end-to-end with real money/data: retailer account deletion, the cash/Zelle claim → confirm/reject cycle, the billable stock-in path (order insert + stock movement + email), and Stripe checkout for a placed order. Recommend a logged-in click-through of those before leaning on them hard.
-3. ~~App icons~~ **cleared 2026-07-21** — see §6; remaining store blockers are signed builds, listings, and Mac access for iOS.
-4. **iOS build requires a Mac** — cannot be done from this Windows machine at all. Needs a borrowed Mac, MacinCloud, or a CI service like Codemagic.
-5. **Admin app should likely not be a public store listing** — Apple tends to reject internal/staff-only tools from the public App Store. Recommended path: Apple's "Unlisted App Distribution" or TestFlight-only; Google Play closed testing track. This was flagged to the user but no submission-track decision has been made yet.
-6. **Google Play new personal accounts** require a 14-day/12-tester closed test before going to production; enrolling as an *organization* (recommended, already advised) skips this.
-7. The Wholesale app being a wrapped web view carries some risk of Apple's "minimum functionality" (guideline 4.2) pushback on first submission — if it happens, the standard fix is adding one native capability (push notifications for order status was the suggested candidate, not yet built).
+1. **Migration 014 NOT RUN** — see §4. This blocks marking orders delivered/fulfilled. Run it first.
+2. **Migration 013 run-status unconfirmed** — see §4. Verify before relying on account deletion.
+3. **Partial live verification** — the 2026-07-21 sessions click-tested the new retailer UI (payment options, due banner, pay modal, layout containment) in a real browser against a local static server and confirmed the new markup deployed to production; the order-number generator was unit-tested directly. Still **not** exercised end-to-end with real money/data: retailer account deletion, the cash/Zelle claim → confirm/reject cycle, the billable stock-in path (order insert + stock movement + email), Stripe checkout for a placed order, and **a real order insert under the new numbering + batch flow** (needs migration 014 first). Recommend a logged-in click-through of those before leaning on them hard.
+4. **Order-number serial is a live COUNT, not a stored counter** — `insertWholesaleOrder()` counts the retailer's existing orders (including canceled ones) and adds 1. That is deliberate (numbers stay meaningful and gap-free per retailer), but it means: hard-deleting an order row would let a future order reuse a number, and two simultaneous orders rely on the `unique` constraint + retry. Don't hard-delete wholesale orders; cancel them.
+5. ~~App icons~~ **cleared 2026-07-21** — see §6; remaining store blockers are signed builds, listings, and Mac access for iOS.
+6. **iOS build requires a Mac** — cannot be done from this Windows machine at all. Needs a borrowed Mac, MacinCloud, or a CI service like Codemagic.
+7. **Admin app should likely not be a public store listing** — Apple tends to reject internal/staff-only tools from the public App Store. Recommended path: Apple's "Unlisted App Distribution" or TestFlight-only; Google Play closed testing track. This was flagged to the user but no submission-track decision has been made yet.
+8. **Google Play new personal accounts** require a 14-day/12-tester closed test before going to production; enrolling as an *organization* (recommended, already advised) skips this.
+9. The Wholesale app being a wrapped web view carries some risk of Apple's "minimum functionality" (guideline 4.2) pushback on first submission — if it happens, the standard fix is adding one native capability (push notifications for order status was the suggested candidate, not yet built).
+10. **The sandboxed shell on this machine cannot make outbound TLS connections** — `curl` fails even against github.com, though `git push` works. Use the in-app browser (Claude Browser tools) for any live-site verification; don't conclude the site is down from a failed `curl`.
 
 ---
 
 ## 9. Immediate next steps, in priority order
 
-1. **Verify migration 013 ran in Supabase.** (5 minutes, do this first — still unconfirmed as of 2026-07-21.)
-2. ~~Icon artwork~~ **DONE** (commit `8910150` — see §6).
-3. **Live-verify with a real login** the flows called out in §8.2: cash/Zelle claim → confirm/reject, billable stock-in, Zelle order placement, account deletion.
-4. Pick up the still-open App Store submission checklist: developer account enrollment (org, not personal), signed Android build + keystore, Mac access for iOS, store listing content + screenshots (icons are now real, so screenshots can be taken), demo reviewer credentials, Data Safety/App Privacy form answers, and a distribution-track decision for the Admin app (unlisted/TestFlight vs. public).
-5. No other feature work is currently requested or pending. Confirm with the user before starting anything not on this list.
+1. **Run migration 014 in Supabase** (one line, see §4). **Blocking** — until it's run, admins cannot mark orders delivered or fulfilled.
+2. **Verify migration 013 ran in Supabase.** (5 minutes — still unconfirmed as of 2026-07-21.)
+3. **Place one real test order** after 014 is run, and confirm: the number comes out as `XXXX MMDDYYYY-NN` for that retailer, the batch field accepts 8 characters and rejects anything else, and the batch shows on both the admin and retailer views plus the delivery email.
+4. **Live-verify with a real login** the remaining flows in §8.3: cash/Zelle claim → confirm/reject, billable stock-in, Zelle order placement, account deletion.
+5. Pick up the still-open App Store submission checklist: developer account enrollment (org, not personal), signed Android build + keystore, Mac access for iOS, store listing content + screenshots (icons are now real, so screenshots can be taken), demo reviewer credentials, Data Safety/App Privacy form answers, and a distribution-track decision for the Admin app (unlisted/TestFlight vs. public).
+6. No other feature work is currently requested or pending. Confirm with the user before starting anything not on this list.
 
 ---
 
@@ -213,4 +230,47 @@ Icon/splash artwork for both apps was found generated-but-uncommitted in the wor
 
 ---
 
-*End of handoff note. All commits referenced above are on `main` and already pushed to `github.com/rubyfoodhubinc/ruby-foodhub`. Nothing is stashed or uncommitted as of the 2026-07-21 update.*
+---
+
+## 11. Session record — 2026-07-21 evening (order numbers + production batch)
+
+User request, verbatim intent: (1) change the `WHS` invoice/order number to the first four letters of the retailer's name + the order date + a serial — *"a retailer named MoneyMart who ordered on the 24th december 2026 … and has four previous orders … will be MONE12242026-05"*; (2) add an 8-character production batch number that the admin includes when an order is sent to a retailer, visible to both admin and retailer.
+
+Both shipped in commit **`a79512a`**. **Migration 014 still needs to be run by the owner** — see §4.
+
+### 11.1 Retailer-scoped order numbers
+New shared helpers in `api/_lib/wholesale.js`:
+- `orderNumberFor(businessName, priorOrderCount, when)` — pure function, easy to test. Uppercases the business name, strips everything non-alphanumeric, takes the first 4 characters padded with `X`, appends `MMDDYYYY` formatted in **America/New_York** (so an order placed late evening Eastern doesn't jump a day via UTC), then `-` and the serial (`priorOrderCount + 1`, zero-padded to 2).
+- `insertWholesaleOrder(row, businessName)` — counts the retailer's existing orders, generates the number, inserts, and retries with the next serial on a `23505` unique violation (up to 5 attempts).
+
+Wired into **both** creation paths so numbering can never drift: `place-order` in `api/retailer-portal.js` and `create-order` in `api/admin-wholesale.js`.
+
+Tested directly against the helper:
+
+| Business name | Prior orders | Date | Result |
+|---|---|---|---|
+| MoneyMart | 4 | 2026-12-24 | `MONE12242026-05` ← matches the spec example |
+| BJ's | 0 | 2026-07-21 | `BJSX07212026-01` (padded to 4) |
+| A & B Grocery #7 | 104 | 2026-01-02 | `ABGR01022026-105` (serial grows past 99) |
+| *(empty)* | 0 | 2026-07-21 23:30 ET | `XXXX07212026-01` (no day-rollover bug) |
+
+Backwards compatibility: existing `WHS-######` numbers are untouched and still display/pay/confirm normally; the DB trigger that generated them is intentionally left in place as a fallback for any insert that supplies no `order_number`.
+
+### 11.2 Production batch number
+Migration **014** adds `wholesale_orders.production_batch` (text). Format enforced as exactly 8 characters `[A-Z0-9]`, uppercased and validated **server-side** as well as in the browser.
+
+Required at every point where goods actually reach a retailer:
+- **Admin → Wholesale → Add Order to This Account**: batch field beside the note; required whenever "Mark as delivered now" is ticked (the default). Blocked client-side with a clear message and server-side with a 400.
+- **Admin → Stock at This Location**: required on positive (billable) additions; not required on negative inventory corrections.
+- **Admin → order status → Fulfilled**: if the order has no batch yet, the admin is prompted for one; cancelling the prompt or entering an invalid value reverts the dropdown and makes no change.
+
+Where the batch appears once set: admin order rows and retailer order rows (under the item list), the "delivery added / payment due" email to the retailer, the `stock_movements` note for each stocked line, and the audit-log entries for both `wholesale_order_created_by_admin` and `wholesale_order_status_change`.
+
+### 11.3 Verification performed
+- `node --check` clean on `api/_lib/wholesale.js`, `api/retailer-portal.js`, `api/admin-wholesale.js`, and both portals' extracted inline scripts; div balance 232/232 (admin) and 98/98 (retailer).
+- `orderNumberFor()` exercised directly for the four cases in the table above, including the spec's own example.
+- Production confirmed serving the new admin markup after deploy (batch inputs on both forms + the fulfil prompt present).
+- `sync-www.js` + `npx cap sync` re-run for both native apps.
+- **Not** verifiable from here: a real order insert, because migration 014 has not been run and the sandbox has no DB access.
+
+*End of handoff note. All commits referenced above are on `main` and already pushed to `github.com/rubyfoodhubinc/ruby-foodhub`. Nothing is stashed or uncommitted as of the 2026-07-21 evening update.*
