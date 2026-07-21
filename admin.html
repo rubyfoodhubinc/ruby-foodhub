@@ -1064,7 +1064,13 @@
   }
   function wsPaymentPill(o) {
     if (o.payment_status === 'paid') return '<span class="pill pill-green">Paid (Stripe)</span>';
-    if (o.payment_status === 'confirmed_by_admin') return '<span class="pill pill-green">Confirmed by Admin</span>';
+    if (o.payment_status === 'confirmed_by_admin') {
+      const how = o.payment_method === 'zelle' ? 'Zelle' : o.payment_method === 'cash' ? 'Cash' : 'by Admin';
+      return '<span class="pill pill-green">Confirmed (' + how + ')</span>';
+    }
+    if (o.payment_status === 'awaiting_confirmation') {
+      return '<span class="pill pill-amber">Claimed ' + (o.claimed_payment_method === 'zelle' ? 'Zelle' : 'Cash') + ' — Verify</span>';
+    }
     return '<span class="pill pill-amber">Pending</span>';
   }
 
@@ -1350,7 +1356,8 @@
       const rows = orders.map((o) => {
         const items = (Array.isArray(o.items) ? o.items : []).map((i) => i.quantity + '× ' + i.product + ' — ' + i.variant + ' @ ' + formatMoney(i.wholesale_price)).join('<br>');
         const isCanceled = o.order_status === 'canceled';
-        const canConfirm = !isCanceled && o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending';
+        const isClaim = o.payment_status === 'awaiting_confirmation';
+        const canConfirm = !isCanceled && (isClaim || (o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending'));
         const statusOptions = ['pending', 'confirmed', 'fulfilled'].map((s) =>
           '<option value="' + s + '"' + (s === o.order_status ? ' selected' : '') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'
         ).join('');
@@ -1366,7 +1373,10 @@
           '<td style="white-space:nowrap;font-weight:700">' + formatMoney(o.total) + '</td>' +
           '<td>' + esc(o.payment_method === 'stripe' ? 'Stripe' : 'Pay on delivery') + '</td>' +
           '<td>' + wsPaymentPill(o) +
-            (canConfirm ? ' <button type="button" class="btn btn-sm ws-confirm-pay" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">Confirm Payment Received</button>' : '') + '</td>' +
+            (isClaim && o.claimed_at ? '<div class="note">Reported ' + esc(formatDate(o.claimed_at)) + '</div>' : '') +
+            (isClaim && o.claimed_reference ? '<div class="note" style="max-width:220px;white-space:normal">Ref: ' + esc(o.claimed_reference) + '</div>' : '') +
+            (canConfirm ? ' <button type="button" class="btn btn-sm ws-confirm-pay" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">' + (isClaim ? 'Confirm Payment Verified' : 'Confirm Payment Received') + '</button>' : '') +
+            (isClaim ? ' <button type="button" class="btn btn-outline btn-sm ws-reject-claim" data-order="' + esc(o.id) + '" data-retailer="' + esc(retailerId) + '">Reject Claim</button>' : '') + '</td>' +
           '<td>' + statusCell + '</td>' +
           '</tr>';
       }).join('');
@@ -1378,7 +1388,7 @@
       target.querySelectorAll('.ws-confirm-pay').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (!window.confirm('Confirm that payment for this order has been received in person?')) return;
+          if (!window.confirm('Confirm that payment for this order has actually been received (cash in hand, Zelle in the account, or paid in person)? This clears the balance and emails the retailer a receipt.')) return;
           btn.disabled = true;
           try {
             await api('/api/admin-wholesale', { action: 'confirm-payment', orderId: btn.dataset.order });
@@ -1386,6 +1396,22 @@
             wholesaleLoaded = false;
             loadWholesale();
           } catch (err) { alert('Confirm failed: ' + err.message); btn.disabled = false; }
+        });
+      });
+
+      target.querySelectorAll('.ws-reject-claim').forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const reason = prompt('Optional note to the retailer about why the payment couldn\'t be verified (leave blank to skip):');
+          if (reason === null) return;
+          if (!window.confirm('Reject this payment claim? The order returns to UNPAID and the retailer is emailed that payment is still due.')) return;
+          btn.disabled = true;
+          try {
+            await api('/api/admin-wholesale', { action: 'reject-claim', orderId: btn.dataset.order, reason: reason.trim() });
+            wsOrdersCache.delete(btn.dataset.retailer);
+            wholesaleLoaded = false;
+            loadWholesale();
+          } catch (err) { alert('Reject failed: ' + err.message); btn.disabled = false; }
         });
       });
 
@@ -1461,7 +1487,9 @@
     const retailRevenue = sumOf(orders);
     const wsRevenue = sumOf(wsLive);
     const wsCollected = sumOf(wsLive.filter((o) => o.payment_status === 'paid' || o.payment_status === 'confirmed_by_admin'));
-    const wsOutstanding = sumOf(wsLive.filter((o) => o.payment_status === 'pending'));
+    // Claimed cash/Zelle payments count as outstanding until confirmed —
+    // money isn't collected just because a retailer says it was sent.
+    const wsOutstanding = sumOf(wsLive.filter((o) => o.payment_status === 'pending' || o.payment_status === 'awaiting_confirmation'));
 
     document.getElementById('home-revenue').innerHTML =
       '<div class="kpi-card"><div class="period">Combined Revenue (All-Time)</div><div class="rev">' + formatMoney(retailRevenue + wsRevenue) + '</div><div class="sub">' + (orders.length + wsLive.length) + ' total transactions</div></div>' +
@@ -1487,6 +1515,7 @@
     const retailPending = orders.filter((o) => (o.order_status || 'pending') === 'pending').length;
     const wsToFulfill = wsLive.filter((o) => o.order_status !== 'fulfilled').length;
     const podAwaiting = wsLive.filter((o) => o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending');
+    const claimsToVerify = wsLive.filter((o) => o.payment_status === 'awaiting_confirmation');
     const pendingApps = homeRetailers.filter((r) => r.account_status === 'pending').length;
 
     const actionCard = (label, big, sub, section) =>
@@ -1498,6 +1527,7 @@
       actionCard('Retail Orders Pending Delivery', retailPending, 'awaiting fulfillment', 'orders') +
       actionCard('Wholesale Orders To Fulfill', wsToFulfill, 'pending or confirmed', 'wholesale') +
       actionCard('Pay-on-Delivery To Confirm', podAwaiting.length, formatMoney(sumOf(podAwaiting)) + ' to collect', 'wholesale') +
+      actionCard('Cash/Zelle Claims To Verify', claimsToVerify.length, formatMoney(sumOf(claimsToVerify)) + ' reported paid', 'wholesale') +
       actionCard('Retailer Applications', pendingApps, 'awaiting approval', 'wholesale') +
       actionCard('Stock Low / Out at Retailers', (lowStock || []).length, outCount + ' fully out of stock', 'wholesale');
 
@@ -1514,7 +1544,9 @@
       ...wsOrders.map((o) => ({
         date: o.created_at, type: 'Wholesale', number: o.order_number,
         name: (o.retailer_accounts && o.retailer_accounts.business_name) || '—', total: o.total,
-        status: o.order_status + (o.payment_status === 'pending' && o.order_status !== 'canceled' ? ' · unpaid' : '')
+        status: o.order_status + (o.order_status !== 'canceled'
+          ? (o.payment_status === 'pending' ? ' · unpaid' : o.payment_status === 'awaiting_confirmation' ? ' · claim to verify' : '')
+          : '')
       }))
     ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 12);
 
@@ -1759,13 +1791,14 @@
     ).join('');
 
     const collected = live.filter((o) => o.payment_status === 'paid' || o.payment_status === 'confirmed_by_admin');
-    const outstanding = live.filter((o) => o.payment_status === 'pending');
+    const outstanding = live.filter((o) => o.payment_status === 'pending' || o.payment_status === 'awaiting_confirmation');
+    const claims = live.filter((o) => o.payment_status === 'awaiting_confirmation');
     const canceled = all.filter((o) => o.order_status === 'canceled');
     const sum = (list) => list.reduce((s, o) => s + (Number(o.total) || 0), 0);
 
     document.getElementById('ws-money-grid').innerHTML =
       '<div class="kpi-card"><div class="period">Collected</div><div class="rev">' + formatMoney(sum(collected)) + '</div><div class="sub">' + collected.length + ' order(s) paid or confirmed</div></div>' +
-      '<div class="kpi-card"><div class="period">Outstanding (Pay on Delivery)</div><div class="rev">' + formatMoney(sum(outstanding)) + '</div><div class="sub">' + outstanding.length + ' order(s) awaiting payment</div></div>' +
+      '<div class="kpi-card"><div class="period">Outstanding</div><div class="rev">' + formatMoney(sum(outstanding)) + '</div><div class="sub">' + outstanding.length + ' unpaid' + (claims.length ? ' · incl. ' + claims.length + ' cash/Zelle claim(s) to verify' : '') + '</div></div>' +
       '<div class="kpi-card"><div class="period">Canceled</div><div class="rev">' + formatMoney(sum(canceled)) + '</div><div class="sub">' + canceled.length + ' order(s) canceled</div></div>';
 
     const byStatus = { pending: 0, confirmed: 0, fulfilled: 0 };

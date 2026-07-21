@@ -4,6 +4,7 @@ const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { requireRetailerSession } = require('./_lib/retailer-auth');
 const { logAudit } = require('./_lib/admin-auth');
 const { wholesaleCatalog } = require('./_lib/wholesale');
+const { applyStockChange } = require('./_lib/stock');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -209,7 +210,7 @@ module.exports = async (req, res) => {
       if (restricted) return res.status(403).json({ error: 'Your account must be approved to view stock.' });
       const [{ data: stock, error: sErr }, { data: movements, error: mErr }] = await Promise.all([
         supabase.from('retailer_stock')
-          .select('quantity, updated_at, products(name, variant)')
+          .select('product_id, quantity, updated_at, products(name, variant)')
           .eq('retailer_id', account.id),
         supabase.from('stock_movements')
           .select('change, note, created_at, products(name, variant)')
@@ -220,6 +221,111 @@ module.exports = async (req, res) => {
       if (sErr) throw new Error(JSON.stringify(sErr));
       if (mErr) throw new Error(JSON.stringify(mErr));
       return res.status(200).json({ stock: stock || [], movements: movements || [] });
+    }
+
+    if (action === 'report-sold') {
+      // Retailer records quantities sold (or otherwise gone) at their
+      // location — daily, weekly, or whenever — so stock reflects reality
+      // instead of sitting at the delivered amount. Decrements only: stock
+      // can only ever INCREASE via deliveries recorded by our team.
+      if (restricted) return res.status(403).json({ error: 'Your account must be approved to update stock.' });
+
+      const { productId, quantity, note } = req.body;
+      const sold = Math.trunc(Number(quantity));
+      if (!productId || !Number.isFinite(sold) || sold <= 0) {
+        return res.status(400).json({ error: 'Enter how many units were sold (a positive whole number).' });
+      }
+
+      // Only products actually stocked at this location can be reported.
+      const { data: stockRow, error: stErr } = await supabase
+        .from('retailer_stock')
+        .select('quantity')
+        .eq('retailer_id', account.id)
+        .eq('product_id', productId)
+        .maybeSingle();
+      if (stErr) throw new Error(JSON.stringify(stErr));
+      if (!stockRow) return res.status(400).json({ error: 'That product is not tracked at your location yet.' });
+      if (sold > stockRow.quantity) {
+        return res.status(400).json({ error: `You only have ${stockRow.quantity} on hand — cannot report ${sold} sold.` });
+      }
+
+      const cleanNote = String(note || '').trim().slice(0, 300);
+      const newQty = await applyStockChange(
+        account.id, productId, -sold,
+        'Sold — reported by retailer' + (cleanNote ? `: ${cleanNote}` : ''),
+        null
+      );
+
+      await logAudit(null, 'retailer_stock_sold', {
+        retailer_id: account.id, business_name: account.business_name,
+        product_id: productId, quantity_sold: sold, new_quantity: newQty, note: cleanNote || null,
+      });
+
+      return res.status(200).json({ success: true, quantity: newQty });
+    }
+
+    if (action === 'claim-payment') {
+      // Retailer reports they've paid outside Stripe (cash handed to our
+      // team, or a Zelle transfer). The order does NOT clear — it enters
+      // 'awaiting_confirmation' and stays owed until an admin verifies the
+      // money and confirms, or rejects the claim back to unpaid.
+      if (restricted) return res.status(403).json({ error: 'Your account must be approved first.' });
+
+      const { orderId, method, reference } = req.body;
+      if (!['cash', 'zelle'].includes(method)) {
+        return res.status(400).json({ error: 'Payment method must be cash or zelle.' });
+      }
+      if (!orderId) return res.status(400).json({ error: 'orderId required.' });
+
+      const { data: order, error: getErr } = await supabase
+        .from('wholesale_orders')
+        .select('id, order_number, total, payment_status, order_status')
+        .eq('id', orderId)
+        .eq('retailer_id', account.id)
+        .maybeSingle();
+      if (getErr) throw new Error(JSON.stringify(getErr));
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+      if (order.order_status === 'canceled') return res.status(400).json({ error: 'This order has been canceled.' });
+      if (order.payment_status !== 'pending') {
+        return res.status(400).json({ error: 'This order is not awaiting payment.' });
+      }
+
+      const cleanRef = String(reference || '').trim().slice(0, 200);
+      const { error } = await supabase
+        .from('wholesale_orders')
+        .update({
+          payment_status: 'awaiting_confirmation',
+          claimed_payment_method: method,
+          claimed_at: new Date().toISOString(),
+          claimed_reference: cleanRef || null,
+        })
+        .eq('id', orderId)
+        .eq('payment_status', 'pending');
+      if (error) throw new Error(JSON.stringify(error));
+
+      await logAudit(null, 'wholesale_payment_claimed', {
+        order_id: orderId, order_number: order.order_number,
+        retailer_id: account.id, business_name: account.business_name,
+        method, reference: cleanRef || null, total: order.total,
+      });
+
+      // Tell the sales team there's money to verify.
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: 'sales@rubyfoodhub.com',
+          replyTo: account.email,
+          subject: `Payment claim (${method}) — order ${order.order_number} — ${account.business_name}`,
+          text:
+`${account.business_name} (${account.contact_name || ''}, ${account.email}) reports they PAID order ${order.order_number} ($${Number(order.total).toFixed(2)}) by ${method.toUpperCase()}.
+${cleanRef ? `\nReference: ${cleanRef}\n` : ''}
+Verify the money was received, then confirm (or reject) in Admin -> Wholesale. The order stays owed until confirmed.`,
+        });
+      } catch (e) {
+        console.error('payment claim notification failed:', e.message);
+      }
+
+      return res.status(200).json({ success: true, orderNumber: order.order_number });
     }
 
     if (action === 'contact-support') {

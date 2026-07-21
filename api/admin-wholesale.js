@@ -2,40 +2,9 @@ const { supabase } = require('./_lib/supabase');
 const { requireSession, logAudit } = require('./_lib/admin-auth');
 const { resend, isValidEmail, FROM_ADDRESS } = require('./_lib/resend');
 const { wholesaleCatalog } = require('./_lib/wholesale');
+const { applyStockChange } = require('./_lib/stock');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// Applies one stock change atomically-enough for this scale: read current,
-// clamp at zero, upsert, and append the ledger row. Returns the new quantity.
-async function applyStockChange(retailerId, productId, change, note, adminUserId) {
-  const { data: current, error: getErr } = await supabase
-    .from('retailer_stock')
-    .select('quantity')
-    .eq('retailer_id', retailerId)
-    .eq('product_id', productId)
-    .maybeSingle();
-  if (getErr) throw new Error(JSON.stringify(getErr));
-
-  const newQty = (current ? current.quantity : 0) + change;
-  if (newQty < 0) {
-    throw new Error(`Stock cannot go below zero (current: ${current ? current.quantity : 0}, change: ${change}).`);
-  }
-
-  const { error: upErr } = await supabase
-    .from('retailer_stock')
-    .upsert(
-      { retailer_id: retailerId, product_id: productId, quantity: newQty, updated_at: new Date().toISOString() },
-      { onConflict: 'retailer_id,product_id' }
-    );
-  if (upErr) throw new Error(JSON.stringify(upErr));
-
-  const { error: mvErr } = await supabase
-    .from('stock_movements')
-    .insert({ retailer_id: retailerId, product_id: productId, change, note: note || null, created_by: adminUserId || null });
-  if (mvErr) throw new Error(JSON.stringify(mvErr));
-
-  return newQty;
-}
 
 const RETAILER_EMAIL_FOOTER = `
 <hr style="border:none;border-top:1px solid #e5e0dc;margin:32px 0 16px">
@@ -92,7 +61,7 @@ async function handler(req, res) {
     if (action === 'all-orders') {
       const { data, error } = await supabase
         .from('wholesale_orders')
-        .select('id, order_number, items, total, payment_method, payment_status, order_status, cancel_reason, created_at, retailer_accounts(business_name)')
+        .select('id, order_number, items, total, payment_method, payment_status, claimed_payment_method, claimed_at, claimed_reference, order_status, cancel_reason, created_at, retailer_accounts(business_name)')
         .order('created_at', { ascending: false });
       if (error) throw new Error(JSON.stringify(error));
       return res.status(200).json({ orders: data });
@@ -217,23 +186,114 @@ async function handler(req, res) {
     }
 
     if (action === 'confirm-payment') {
+      // Confirms money actually received outside Stripe: an in-person
+      // pay-on-delivery payment, or a cash/Zelle claim the retailer
+      // submitted from their portal ('awaiting_confirmation'). Only this
+      // action clears the debt — a claim alone never does.
       const { orderId } = req.body;
       if (!orderId) return res.status(400).json({ error: 'orderId required.' });
 
-      const { data, error } = await supabase
+      const { data: order, error: getErr } = await supabase
         .from('wholesale_orders')
-        .update({ payment_status: 'confirmed_by_admin' })
+        .select('order_number, total, payment_status, payment_method, claimed_payment_method, order_status, retailer_accounts(business_name, email)')
         .eq('id', orderId)
-        .eq('payment_method', 'pay_on_delivery')
-        .eq('payment_status', 'pending')
-        .select('order_number, total');
-      if (error) throw new Error(JSON.stringify(error));
-      if (!data || !data.length) {
-        return res.status(400).json({ error: 'Order not found, not pay-on-delivery, or already confirmed.' });
+        .maybeSingle();
+      if (getErr) throw new Error(JSON.stringify(getErr));
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+      if (order.order_status === 'canceled') return res.status(400).json({ error: 'Order has been canceled.' });
+      if (!['pending', 'awaiting_confirmation'].includes(order.payment_status)) {
+        return res.status(400).json({ error: 'This order is already paid or confirmed.' });
       }
 
-      await logAudit(actor.id, 'wholesale_payment_confirmed', { order_id: orderId, order_number: data[0].order_number, total: data[0].total });
-      return res.status(200).json({ success: true, order: data[0] });
+      // If a claim exists, record how it was actually settled (cash/zelle).
+      const settledMethod = ['cash', 'zelle'].includes(order.claimed_payment_method)
+        ? order.claimed_payment_method
+        : order.payment_method;
+
+      const { error } = await supabase
+        .from('wholesale_orders')
+        .update({ payment_status: 'confirmed_by_admin', payment_method: settledMethod })
+        .eq('id', orderId)
+        .in('payment_status', ['pending', 'awaiting_confirmation']);
+      if (error) throw new Error(JSON.stringify(error));
+
+      await logAudit(actor.id, 'wholesale_payment_confirmed', {
+        order_id: orderId, order_number: order.order_number, total: order.total,
+        settled_method: settledMethod, was_claim: order.payment_status === 'awaiting_confirmation',
+      });
+
+      // Receipt to the retailer so they know it cleared.
+      const retailer = order.retailer_accounts;
+      if (retailer && isValidEmail(retailer.email)) {
+        try {
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: retailer.email,
+            subject: `Payment confirmed — order ${order.order_number}`,
+            html: `<p style="font-family:sans-serif;line-height:1.6">Hi ${retailer.business_name},<br><br>` +
+              `Your payment of <strong>$${Number(order.total).toFixed(2)}</strong> for order <strong>${order.order_number}</strong> ` +
+              `(${settledMethod === 'zelle' ? 'Zelle' : settledMethod === 'cash' ? 'cash' : 'on delivery'}) has been confirmed. ` +
+              `This order is now fully settled — thank you!</p>` + RETAILER_EMAIL_FOOTER,
+          });
+        } catch (e) {
+          console.error('payment confirmation receipt email failed:', e.message);
+        }
+      }
+
+      return res.status(200).json({ success: true, order: { order_number: order.order_number, total: order.total } });
+    }
+
+    if (action === 'reject-claim') {
+      // The claimed cash/Zelle payment couldn't be verified: the order goes
+      // back to unpaid ('pending'), the claim fields are cleared, and the
+      // retailer is told payment is still due.
+      const { orderId, reason } = req.body;
+      if (!orderId) return res.status(400).json({ error: 'orderId required.' });
+
+      const { data: order, error: getErr } = await supabase
+        .from('wholesale_orders')
+        .select('order_number, total, payment_status, claimed_payment_method, retailer_accounts(business_name, email)')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (getErr) throw new Error(JSON.stringify(getErr));
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+      if (order.payment_status !== 'awaiting_confirmation') {
+        return res.status(400).json({ error: 'This order has no payment claim awaiting confirmation.' });
+      }
+
+      const { error } = await supabase
+        .from('wholesale_orders')
+        .update({ payment_status: 'pending', claimed_payment_method: null, claimed_at: null, claimed_reference: null })
+        .eq('id', orderId)
+        .eq('payment_status', 'awaiting_confirmation');
+      if (error) throw new Error(JSON.stringify(error));
+
+      const cleanReason = String(reason || '').trim();
+      await logAudit(actor.id, 'wholesale_payment_claim_rejected', {
+        order_id: orderId, order_number: order.order_number,
+        claimed_method: order.claimed_payment_method, reason: cleanReason || null,
+      });
+
+      const retailer = order.retailer_accounts;
+      if (retailer && isValidEmail(retailer.email)) {
+        try {
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: retailer.email,
+            subject: `We couldn't verify your payment for order ${order.order_number}`,
+            html: `<p style="font-family:sans-serif;line-height:1.6">Hi ${retailer.business_name},<br><br>` +
+              `We couldn't verify the ${order.claimed_payment_method === 'zelle' ? 'Zelle' : 'cash'} payment you reported for order ` +
+              `<strong>${order.order_number}</strong> ($${Number(order.total).toFixed(2)}).` +
+              (cleanReason ? `<br><br><strong>Note from our team:</strong> ${cleanReason}` : '') +
+              `<br><br>The order remains unpaid — you can pay online from your <a href="https://www.rubyfoodhub.com/retailer">retailer portal</a>, ` +
+              `resubmit the payment details, or reply to this email if you believe this is a mistake.</p>` + RETAILER_EMAIL_FOOTER,
+          });
+        } catch (e) {
+          console.error('claim rejection email failed:', e.message);
+        }
+      }
+
+      return res.status(200).json({ success: true });
     }
 
     if (action === 'set-order-status') {
