@@ -554,12 +554,21 @@
     payModalEl = document.createElement('div');
     payModalEl.style.cssText = 'position:fixed;inset:0;background:rgba(20,16,12,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
     payModalEl.innerHTML =
-      '<div style="background:#fff;border-radius:14px;max-width:440px;width:100%;padding:24px;box-shadow:0 18px 50px rgba(0,0,0,.25)">' +
+      '<div style="background:#fff;border-radius:14px;max-width:460px;width:100%;padding:24px;box-shadow:0 18px 50px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto">' +
         '<h2 style="margin:0 0 4px">Pay order ' + esc(order.order_number) + '</h2>' +
         '<p class="note" style="margin:0 0 16px">Total due: <strong>' + money(order.total) + '</strong></p>' +
         '<button type="button" class="btn" id="pm-stripe" style="width:100%;margin-bottom:12px">Pay Online Now (Card via Stripe)</button>' +
         '<div style="border-top:1px solid rgba(34,30,26,.12);padding-top:12px;margin-bottom:12px">' +
-          '<p class="note" style="margin:0 0 8px">Already paid our team in cash, or sent a Zelle transfer? Report it below. The order will show as <strong>Awaiting Confirmation</strong> until our team verifies the payment — it clears only once confirmed.</p>' +
+          '<div style="display:flex;gap:14px;align-items:flex-start">' +
+            '<div style="flex:1;min-width:0">' +
+              '<p style="margin:0 0 6px;font-weight:700">Pay by Zelle</p>' +
+              '<p class="note" style="margin:0 0 6px">Send <strong>' + money(order.total) + '</strong> to our Zelle ID:<br>' +
+                '<strong style="word-break:break-all">bankpay@rubyfoodhub.com</strong><br>(Ruby Foodhub Inc)</p>' +
+              '<p class="note" style="margin:0">Or scan the Zelle tag with your banking app.</p>' +
+            '</div>' +
+            '<img src="/zelle-tag.png" alt="Zelle QR tag — Ruby Foodhub Inc" style="width:132px;flex:none;border:1px solid rgba(34,30,26,.12);border-radius:8px;padding:6px;background:#fff"/>' +
+          '</div>' +
+          '<p class="note" style="margin:10px 0 8px">Once you\'ve sent the Zelle payment (or paid our team in cash), report it below. The order will show as <strong>Awaiting Confirmation</strong> until our team verifies the payment — it clears only once confirmed.</p>' +
           '<input type="text" id="pm-ref" placeholder="Reference (optional — e.g. Zelle confirmation #)" style="width:100%;padding:9px 12px;border:1.5px solid rgba(34,30,26,.18);border-radius:8px;font-family:inherit;margin-bottom:10px;box-sizing:border-box"/>' +
           '<div style="display:flex;gap:8px">' +
             '<button type="button" class="btn btn-outline" id="pm-cash" style="flex:1">I Paid by Cash</button>' +

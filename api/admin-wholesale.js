@@ -175,7 +175,9 @@ async function handler(req, res) {
               `${intro}<br><br>` +
               `<strong>Order ${order.order_number}</strong><br>${itemsText.replace(/\n/g, '<br>')}<br><br>` +
               `${totalLine}<br><br>` +
-              `You can pay online anytime from your <a href="https://www.rubyfoodhub.com/retailer">Ruby FoodHub retailer portal</a>, or pay our team on delivery.</p>` + RETAILER_EMAIL_FOOTER,
+              `You can pay online anytime from your <a href="https://www.rubyfoodhub.com/retailer">Ruby FoodHub retailer portal</a>, ` +
+              `send a Zelle payment to <strong>bankpay@rubyfoodhub.com</strong> (Ruby Foodhub Inc), or pay our team on delivery. ` +
+              `If you pay by Zelle or cash, report it in the portal so our team can confirm it.</p>` + RETAILER_EMAIL_FOOTER,
           });
         } catch (e) {
           console.error('order-added notification failed:', e.message);
@@ -286,7 +288,8 @@ async function handler(req, res) {
               `<strong>${order.order_number}</strong> ($${Number(order.total).toFixed(2)}).` +
               (cleanReason ? `<br><br><strong>Note from our team:</strong> ${cleanReason}` : '') +
               `<br><br>The order remains unpaid — you can pay online from your <a href="https://www.rubyfoodhub.com/retailer">retailer portal</a>, ` +
-              `resubmit the payment details, or reply to this email if you believe this is a mistake.</p>` + RETAILER_EMAIL_FOOTER,
+              `send a Zelle payment to <strong>bankpay@rubyfoodhub.com</strong> (Ruby Foodhub Inc) and report it again, ` +
+              `or reply to this email if you believe this is a mistake.</p>` + RETAILER_EMAIL_FOOTER,
           });
         } catch (e) {
           console.error('claim rejection email failed:', e.message);
