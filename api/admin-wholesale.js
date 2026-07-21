@@ -1,6 +1,7 @@
 const { supabase } = require('./_lib/supabase');
 const { requireSession, logAudit } = require('./_lib/admin-auth');
 const { resend, isValidEmail, FROM_ADDRESS } = require('./_lib/resend');
+const { wholesaleCatalog } = require('./_lib/wholesale');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -103,6 +104,82 @@ async function handler(req, res) {
         .order('created_at', { ascending: false });
       if (error) throw new Error(JSON.stringify(error));
       return res.status(200).json({ orders: data });
+    }
+
+    if (action === 'catalog') {
+      return res.status(200).json({ catalog: await wholesaleCatalog() });
+    }
+
+    if (action === 'create-order') {
+      // Admin records an order directly onto a retailer's account (e.g. a
+      // phone-in or in-person order). Always created as pay-on-delivery —
+      // the retailer can pay online later via their portal's Pay Now
+      // button, or pay in person and have the admin confirm it.
+      const { retailerId, items, note } = req.body;
+      if (!retailerId || !Array.isArray(items) || !items.length) {
+        return res.status(400).json({ error: 'retailerId and at least one item are required.' });
+      }
+
+      const { data: retailer, error: rErr } = await supabase
+        .from('retailer_accounts')
+        .select('id, business_name, email')
+        .eq('id', retailerId)
+        .maybeSingle();
+      if (rErr) throw new Error(JSON.stringify(rErr));
+      if (!retailer) return res.status(404).json({ error: 'Retailer not found.' });
+
+      // Server-side pricing only — the client sends product ids + quantities.
+      const catalog = await wholesaleCatalog();
+      const byId = new Map(catalog.map((c) => [c.product_id, c]));
+
+      const orderItems = [];
+      let total = 0;
+      for (const item of items) {
+        const entry = byId.get(item.product_id);
+        const quantity = Math.max(1, Math.min(1000, Number(item.quantity) || 0));
+        if (!entry || !Number(item.quantity)) continue;
+        orderItems.push({ product: entry.name, variant: entry.variant, quantity, wholesale_price: entry.wholesale_price });
+        total += entry.wholesale_price * quantity;
+      }
+      if (!orderItems.length) return res.status(400).json({ error: 'No valid items selected.' });
+      total = Math.round(total * 100) / 100;
+
+      const { data: order, error } = await supabase
+        .from('wholesale_orders')
+        .insert({
+          retailer_id: retailerId,
+          items: orderItems,
+          total,
+          payment_method: 'pay_on_delivery',
+        })
+        .select('*')
+        .single();
+      if (error) throw new Error(JSON.stringify(error));
+
+      await logAudit(actor.id, 'wholesale_order_created_by_admin', {
+        order_id: order.id, order_number: order.order_number, retailer_id: retailerId,
+        business_name: retailer.business_name, total, note: note ? String(note).trim().slice(0, 500) : null,
+      });
+
+      if (isValidEmail(retailer.email)) {
+        try {
+          const itemsText = orderItems.map((i) => `- ${i.quantity} x ${i.product} — ${i.variant} @ $${i.wholesale_price.toFixed(2)}`).join('\n');
+          await resend.emails.send({
+            from: FROM_ADDRESS,
+            to: retailer.email,
+            subject: `A new order was added to your Ruby FoodHub account — ${order.order_number}`,
+            html: `<p style="font-family:sans-serif;line-height:1.6">Hi ${retailer.business_name},<br><br>` +
+              `Our team has added a new wholesale order to your account:<br><br>` +
+              `<strong>Order ${order.order_number}</strong><br>${itemsText.replace(/\n/g, '<br>')}<br><br>` +
+              `<strong>Total: $${total.toFixed(2)}</strong> — pay on delivery<br><br>` +
+              `You can view this order and pay online anytime from your <a href="https://www.rubyfoodhub.com/retailer">Ruby FoodHub retailer portal</a>.</p>` + RETAILER_EMAIL_FOOTER,
+          });
+        } catch (e) {
+          console.error('order-added notification failed:', e.message);
+        }
+      }
+
+      return res.status(200).json({ success: true, order });
     }
 
     if (action === 'confirm-payment') {

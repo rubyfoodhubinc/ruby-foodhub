@@ -1023,6 +1023,8 @@
   let retailers = [];
   const wsExpanded = new Set();
   const wsOrdersCache = new Map();
+  const wsAddOrderOpen = new Set();
+  let wsCatalogCache = null;
 
   const WS_REASON_TEMPLATES = {
     custom: { subject: '', body: '' },
@@ -1103,8 +1105,13 @@
         '<td>' + formatMoney(r.stats.paidTotal) + '</td>' +
         '<td>' + formatMoney(r.stats.pendingTotal) + '</td>' +
         '</tr>';
+      const addOrderOpen = wsAddOrderOpen.has(r.id);
       const detail = isOpen
         ? '<tr><td class="detail-cell" colspan="10">' +
+          '<div class="items-block" style="margin-bottom:16px">' +
+            '<button type="button" class="btn btn-sm ws-addorder-toggle" data-retailer="' + esc(r.id) + '">' + (addOrderOpen ? '− Hide Add Order' : '+ Add Order to This Account') + '</button>' +
+            (addOrderOpen ? '<div class="ws-addorder-form" data-retailer="' + esc(r.id) + '" style="margin-top:10px"><div class="loading">Loading catalog…</div></div>' : '') +
+          '</div>' +
           '<div id="ws-orders-' + esc(r.id) + '"><div class="loading">Loading orders…</div></div>' +
           '<div id="ws-stock-' + esc(r.id) + '" style="margin-top:18px"><div class="loading">Loading stock…</div></div>' +
           '</td></tr>'
@@ -1143,9 +1150,91 @@
       });
     });
 
+    container.querySelectorAll('.ws-addorder-toggle').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.retailer;
+        if (wsAddOrderOpen.has(id)) wsAddOrderOpen.delete(id);
+        else wsAddOrderOpen.add(id);
+        renderWholesale();
+      });
+    });
+
     for (const id of wsExpanded) {
       loadRetailerOrders(id);
       loadRetailerStock(id);
+    }
+    for (const id of wsAddOrderOpen) {
+      const formEl = container.querySelector('.ws-addorder-form[data-retailer="' + id + '"]');
+      if (formEl) renderAddOrderForm(formEl, id);
+    }
+  }
+
+  async function renderAddOrderForm(container, retailerId) {
+    try {
+      if (!wsCatalogCache) {
+        const data = await api('/api/admin-wholesale', { action: 'catalog' });
+        wsCatalogCache = data.catalog;
+      }
+      if (!wsCatalogCache.length) {
+        container.innerHTML = '<div class="note">No wholesale-priced products yet — set prices in the Wholesale Prices panel first.</div>';
+        return;
+      }
+
+      const rows = wsCatalogCache.map((c) =>
+        '<tr><td>' + esc(c.name) + '</td><td>' + esc(c.variant) + '</td><td>' + formatMoney(c.wholesale_price) + '</td>' +
+        '<td><input type="number" min="0" step="1" class="price-input ao-qty" style="width:80px" data-product="' + esc(c.product_id) + '" data-price="' + c.wholesale_price + '" placeholder="0"/></td></tr>'
+      ).join('');
+
+      container.innerHTML =
+        '<div class="table-scroll"><table><thead><tr><th>Product</th><th>Variant</th><th>Wholesale $</th><th>Qty</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">' +
+          '<input type="text" class="ao-note" placeholder="Note (optional, e.g. phone order taken by Jane)" style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid rgba(34,30,26,.18);border-radius:8px;font-family:inherit"/>' +
+          '<span class="ao-total note" style="font-weight:700">Total: ' + formatMoney(0) + '</span>' +
+          '<button type="button" class="btn btn-sm ao-submit" data-retailer="' + esc(retailerId) + '">Create Order (Pay on Delivery)</button>' +
+        '</div>' +
+        '<p class="note">This order will appear on the retailer\'s account as pay-on-delivery — they can pay online from their portal anytime, or you can confirm payment received once fulfilled.</p>' +
+        '<p class="note ao-msg"></p>';
+
+      const totalEl = container.querySelector('.ao-total');
+      const recalc = () => {
+        let total = 0;
+        container.querySelectorAll('.ao-qty').forEach((inp) => { total += (Number(inp.value) || 0) * Number(inp.dataset.price); });
+        totalEl.textContent = 'Total: ' + formatMoney(total);
+      };
+      container.querySelectorAll('.ao-qty').forEach((inp) => {
+        inp.addEventListener('click', (e) => e.stopPropagation());
+        inp.addEventListener('input', recalc);
+      });
+      const noteInput = container.querySelector('.ao-note');
+      noteInput.addEventListener('click', (e) => e.stopPropagation());
+
+      container.querySelector('.ao-submit').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const btn = e.target;
+        const msg = container.querySelector('.ao-msg');
+        const items = [];
+        container.querySelectorAll('.ao-qty').forEach((inp) => {
+          const qty = Math.trunc(Number(inp.value));
+          if (qty > 0) items.push({ product_id: inp.dataset.product, quantity: qty });
+        });
+        if (!items.length) { msg.textContent = 'Enter a quantity for at least one product.'; return; }
+        if (!window.confirm('Create this order on the retailer\'s account? They\'ll be emailed and can pay online or on delivery.')) return;
+        btn.disabled = true;
+        msg.textContent = '';
+        try {
+          await api('/api/admin-wholesale', { action: 'create-order', retailerId, items, note: noteInput.value.trim() });
+          wsOrdersCache.delete(retailerId);
+          wsAddOrderOpen.delete(retailerId);
+          wholesaleLoaded = false;
+          loadWholesale();
+        } catch (err) {
+          msg.textContent = 'Error: ' + err.message;
+          btn.disabled = false;
+        }
+      });
+    } catch (err) {
+      container.innerHTML = '<div class="note">Could not load catalog: ' + esc(err.message) + '</div>';
     }
   }
 

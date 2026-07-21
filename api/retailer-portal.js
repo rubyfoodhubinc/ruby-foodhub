@@ -3,6 +3,7 @@ const { supabase } = require('./_lib/supabase');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { requireRetailerSession } = require('./_lib/retailer-auth');
 const { logAudit } = require('./_lib/admin-auth');
+const { wholesaleCatalog } = require('./_lib/wholesale');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -15,24 +16,6 @@ const SUPPORT_TOPICS = {
   account: 'Account / Access',
   other: 'General / Other',
 };
-
-// Only active products that HAVE a wholesale price are orderable wholesale.
-async function wholesaleCatalog() {
-  const { data, error } = await supabase
-    .from('wholesale_prices')
-    .select('wholesale_price, products!inner(id, slug, name, variant, active)')
-    .eq('products.active', true);
-  if (error) throw new Error(JSON.stringify(error));
-
-  return (data || [])
-    .map((row) => ({
-      product_id: row.products.id,
-      name: row.products.name,
-      variant: row.products.variant,
-      wholesale_price: Number(row.wholesale_price),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name) || a.wholesale_price - b.wholesale_price);
-}
 
 async function markOrderPaid(orderId, stripeSessionId) {
   // Idempotent: webhook and the on-return verification can both call this.
@@ -172,6 +155,52 @@ module.exports = async (req, res) => {
       await supabase.from('wholesale_orders').update({ stripe_session_id: session.id }).eq('id', order.id);
 
       return res.status(200).json({ success: true, orderNumber: order.order_number, paymentMethod, checkoutUrl: session.url });
+    }
+
+    if (action === 'pay-order') {
+      // Lets a retailer pay online for ANY unpaid order still on their
+      // account — whether they placed it themselves as pay-on-delivery, or
+      // an admin added it for them. Reuses the same Stripe/webhook path as
+      // place-order, so payment_status flips to 'paid' the same way.
+      if (restricted) return res.status(403).json({ error: 'Your account must be approved before paying online.' });
+      const { orderId } = req.body;
+      if (!orderId) return res.status(400).json({ error: 'orderId required.' });
+
+      const { data: order, error } = await supabase
+        .from('wholesale_orders')
+        .select('*')
+        .eq('id', orderId)
+        .eq('retailer_id', account.id)
+        .maybeSingle();
+      if (error) throw new Error(JSON.stringify(error));
+      if (!order) return res.status(404).json({ error: 'Order not found.' });
+      if (order.order_status === 'canceled') return res.status(400).json({ error: 'This order has been canceled.' });
+      if (order.payment_status !== 'pending') return res.status(400).json({ error: 'This order is not awaiting payment.' });
+
+      const items = Array.isArray(order.items) ? order.items : [];
+      if (!items.length) return res.status(400).json({ error: 'Order has no items to charge.' });
+
+      const origin = req.headers.origin || `https://${req.headers.host}`;
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: items.map((i) => ({
+          price_data: {
+            currency: 'usd',
+            product_data: { name: `${i.product} — ${i.variant} (wholesale)` },
+            unit_amount: Math.round(Number(i.wholesale_price) * 100),
+          },
+          quantity: i.quantity,
+        })),
+        customer_email: account.email,
+        client_reference_id: order.order_number,
+        success_url: `${origin}/retailer?ws_session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/retailer?ws_canceled=1`,
+        metadata: { wholesaleOrderId: order.id, orderNumber: order.order_number },
+      });
+
+      await supabase.from('wholesale_orders').update({ stripe_session_id: session.id }).eq('id', order.id);
+
+      return res.status(200).json({ success: true, checkoutUrl: session.url });
     }
 
     if (action === 'stock') {
