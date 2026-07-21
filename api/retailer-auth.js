@@ -18,6 +18,8 @@ function publicAccount(account) {
     phone: account.phone,
     address: account.address,
     account_status: account.account_status,
+    logo_url: account.logo_url || null,
+    created_at: account.created_at,
   };
 }
 

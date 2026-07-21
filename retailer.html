@@ -47,6 +47,25 @@
   .pill-blue { background: oklch(92% 0.05 250); color: oklch(40% 0.1 250); }
   .pill-gray { background: rgba(34,30,26,.08); color: rgba(34,30,26,.6); }
   .cancel-reason { font-size: 12px; color: rgba(34,30,26,.55); margin-top: 4px; max-width: 240px; white-space: normal; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi-card { background: #fff; border-radius: 14px; box-shadow: 0 4px 14px rgba(34,30,26,.06); padding: 16px 18px; }
+  .kpi-card .k-label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: rgba(34,30,26,.5); margin-bottom: 6px; }
+  .kpi-card .k-val { font-size: 22px; font-weight: 800; }
+  .kpi-card .k-sub { font-size: 12px; color: rgba(34,30,26,.55); margin-top: 4px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .bar-row .bar-label { width: 70px; flex: none; }
+  .bar-row .bar-track { flex: 1; background: oklch(96% 0.01 60); border-radius: 6px; height: 18px; }
+  .bar-row .bar-fill { height: 100%; border-radius: 6px; background: oklch(45% 0.17 20); min-width: 2px; }
+  .bar-row .bar-val { width: 84px; flex: none; text-align: right; font-weight: 700; }
+  .avatar-sm { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1.5px solid rgba(34,30,26,.15); background: #fff; }
+  .avatar-lg { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 2.5px solid oklch(45% 0.17 20); background: #fff; flex: none; }
+  .avatar-placeholder { display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 28px; color: oklch(45% 0.17 20); background: oklch(96% 0.02 20); }
+  .qa-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .form-label { display: block; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: rgba(34,30,26,.5); margin-bottom: 6px; }
+  .hero-card { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .hero-card .hero-text { flex: 1; min-width: 220px; }
+  .hero-card h2 { margin: 0 0 4px; font-size: 20px; }
+  .hero-card .sub { font-size: 13px; color: rgba(34,30,26,.6); }
   .qty-input { width: 80px; padding: 8px 10px; margin: 0; }
   .order-total { font-size: 17px; font-weight: 800; margin: 16px 0; }
   .pay-choice { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
@@ -64,6 +83,7 @@
   <img src="logo-mark-small.png" alt=""/>
   <div><div class="t">Ruby FoodHub</div><div class="sub">Retailer Portal</div></div>
   <div class="spacer"></div>
+  <img id="who-avatar" class="avatar-sm" alt="" hidden/>
   <span class="sub" id="whoami"></span>
   <button type="button" class="btn btn-outline btn-sm" id="logout-btn" hidden>Sign Out</button>
 </div>
@@ -100,10 +120,32 @@
     <div id="status-banner"></div>
 
     <div class="portal-nav" id="portal-nav" hidden>
-      <button type="button" data-view="dashboard" class="active">Dashboard</button>
+      <button type="button" data-view="home" class="active">Home</button>
+      <button type="button" data-view="dashboard">My Orders</button>
       <button type="button" data-view="order">Place New Order</button>
       <button type="button" data-view="stock">My Stock</button>
       <button type="button" data-view="profile">Profile</button>
+    </div>
+
+    <div id="view-home" hidden>
+      <div class="card hero-card" style="margin-bottom:16px">
+        <img id="rh-avatar" class="avatar-lg" alt="" hidden/>
+        <div id="rh-avatar-ph" class="avatar-lg avatar-placeholder" hidden></div>
+        <div class="hero-text">
+          <h2 id="rh-welcome">Welcome</h2>
+          <div class="sub" id="rh-since"></div>
+        </div>
+        <div class="qa-row">
+          <button type="button" class="btn btn-sm" id="rh-qa-order">Place New Order</button>
+          <button type="button" class="btn btn-outline btn-sm" id="rh-qa-stock">Check My Stock</button>
+          <button type="button" class="btn btn-outline btn-sm" id="rh-qa-profile">Update Profile</button>
+        </div>
+      </div>
+      <div class="kpi-grid" id="rh-kpis"></div>
+      <div class="card" style="margin-bottom:16px"><h2>Order Pipeline</h2><div class="kpi-grid" id="rh-pipeline" style="margin-bottom:0"></div></div>
+      <div class="card" style="margin-bottom:16px"><h2>Stock Health</h2><div id="rh-stock"></div></div>
+      <div class="card" style="margin-bottom:16px"><h2>Monthly Spend — Last 6 Months</h2><div id="rh-monthly"></div></div>
+      <div class="card"><h2>Recent Orders</h2><div id="rh-recent"><div class="empty">Loading…</div></div></div>
     </div>
 
     <div class="card" id="view-dashboard" hidden>
@@ -133,10 +175,25 @@
 
     <div class="card" id="view-profile" hidden>
       <h2>Business Profile</h2>
+      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:20px">
+        <img id="pr-avatar" class="avatar-lg" alt="" hidden/>
+        <div id="pr-avatar-ph" class="avatar-lg avatar-placeholder" hidden></div>
+        <div>
+          <button type="button" class="btn btn-outline btn-sm" id="pr-upload-btn">Upload Company Logo</button>
+          <input type="file" id="pr-logo-file" accept="image/png,image/jpeg,image/webp" hidden/>
+          <p class="note" style="margin:8px 0 0">PNG, JPG, or WebP. It's resized automatically and appears across your portal.</p>
+          <p class="note" id="pr-status-line" style="margin:4px 0 0"></p>
+        </div>
+      </div>
+      <label class="form-label" for="pr-business">Business Name</label>
       <input type="text" id="pr-business" placeholder="Business name" />
+      <label class="form-label" for="pr-contact">Contact Person</label>
       <input type="text" id="pr-contact" placeholder="Contact person" />
+      <label class="form-label" for="pr-email">Account Email (contact us to change)</label>
       <input type="email" id="pr-email" disabled />
+      <label class="form-label" for="pr-phone">Phone</label>
       <input type="tel" id="pr-phone" placeholder="Phone" />
+      <label class="form-label" for="pr-address">Business Address</label>
       <textarea id="pr-address" rows="2" placeholder="Business address"></textarea>
       <button type="button" class="btn" id="pr-save-btn">Save Profile</button>
       <p class="note" id="pr-note"></p>
@@ -280,6 +337,7 @@
       portalNav.hidden = true;
       showView(null);
       fillProfile(account);
+      setAvatars(account);
       document.getElementById('view-profile').hidden = false;
       return;
     }
@@ -293,18 +351,45 @@
     statusBanner.innerHTML = '';
     portalNav.hidden = false;
     fillProfile(account);
-    showView('dashboard');
+    setAvatars(account);
+    showView('home');
     loadOrders();
     loadCatalog();
     handleStripeReturn();
   }
 
   function showView(name) {
-    ['dashboard', 'order', 'stock', 'profile'].forEach((v) => {
+    ['home', 'dashboard', 'order', 'stock', 'profile'].forEach((v) => {
       document.getElementById('view-' + v).hidden = v !== name;
     });
     portalNav.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
     if (name === 'stock') loadStock();
+    if (name === 'home') loadHomeView();
+  }
+
+  // Shows the logo everywhere it appears, or an initial-letter placeholder.
+  function setAvatars(account) {
+    const initial = (account.business_name || '?').trim().charAt(0).toUpperCase();
+    const pairs = [
+      ['rh-avatar', 'rh-avatar-ph'],
+      ['pr-avatar', 'pr-avatar-ph'],
+    ];
+    for (const [imgId, phId] of pairs) {
+      const img = document.getElementById(imgId);
+      const ph = document.getElementById(phId);
+      if (account.logo_url) {
+        img.src = account.logo_url;
+        img.hidden = false;
+        ph.hidden = true;
+      } else {
+        img.hidden = true;
+        ph.textContent = initial;
+        ph.hidden = false;
+      }
+    }
+    const topAvatar = document.getElementById('who-avatar');
+    if (account.logo_url) { topAvatar.src = account.logo_url; topAvatar.hidden = false; }
+    else topAvatar.hidden = true;
   }
 
   function stockBadge(qty) {
@@ -491,6 +576,152 @@
     }
   });
 
+  /* ---------- home (KPI dashboard) ---------- */
+  document.getElementById('rh-qa-order').addEventListener('click', () => showView('order'));
+  document.getElementById('rh-qa-stock').addEventListener('click', () => showView('stock'));
+  document.getElementById('rh-qa-profile').addEventListener('click', () => showView('profile'));
+
+  async function loadHomeView() {
+    const session = getSession();
+    if (session && session.account) {
+      document.getElementById('rh-welcome').textContent = 'Welcome, ' + session.account.business_name;
+      document.getElementById('rh-since').textContent = session.account.created_at
+        ? 'Ruby FoodHub wholesale partner since ' + new Date(session.account.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : 'Ruby FoodHub wholesale partner';
+    }
+
+    try {
+      const [ordersRes, stockRes] = await Promise.all([
+        api('/api/retailer-portal', { action: 'orders' }),
+        api('/api/retailer-portal', { action: 'stock' }).catch(() => ({ stock: [], movements: [] })),
+      ]);
+      renderHomeView(ordersRes.orders || [], stockRes.stock || []);
+    } catch (err) {
+      document.getElementById('rh-kpis').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    }
+  }
+
+  function renderHomeView(allOrders, stock) {
+    const live = allOrders.filter((o) => o.order_status !== 'canceled');
+    const sum = (list) => list.reduce((s, o) => s + (Number(o.total) || 0), 0);
+
+    const owedOrders = live.filter((o) => o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending');
+    const lastOrder = live.length ? live[0] : null;
+
+    const kpi = (label, val, sub) =>
+      '<div class="kpi-card"><div class="k-label">' + label + '</div><div class="k-val">' + val + '</div>' +
+      (sub ? '<div class="k-sub">' + sub + '</div>' : '') + '</div>';
+
+    document.getElementById('rh-kpis').innerHTML =
+      kpi('Total Ordered (All-Time)', money(sum(live)), live.length + ' order(s)') +
+      kpi('Amount Due on Delivery', money(sum(owedOrders)), owedOrders.length ? owedOrders.length + ' order(s) — have payment ready' : 'nothing outstanding') +
+      kpi('Last Order', lastOrder ? fdate(lastOrder.created_at) : '—', lastOrder ? lastOrder.order_number + ' · ' + money(lastOrder.total) : 'place your first order') +
+      kpi('Products Stocked', stock.filter((s) => s.quantity > 0).length, 'of ' + stock.length + ' tracked at your location');
+
+    const counts = { pending: 0, confirmed: 0, fulfilled: 0 };
+    for (const o of live) counts[o.order_status] = (counts[o.order_status] || 0) + 1;
+    document.getElementById('rh-pipeline').innerHTML =
+      kpi('Pending', counts.pending, 'awaiting confirmation') +
+      kpi('Confirmed', counts.confirmed, 'being prepared') +
+      kpi('Fulfilled', counts.fulfilled, 'delivered to you');
+
+    const low = stock.filter((s) => s.quantity > 0 && s.quantity <= 5);
+    const out = stock.filter((s) => s.quantity <= 0);
+    let stockHtml =
+      '<div class="kpi-grid" style="margin-bottom:12px">' +
+      kpi('In Stock', stock.filter((s) => s.quantity > 5).length, 'healthy') +
+      kpi('Running Low', low.length, '5 or fewer on hand') +
+      kpi('Out of Stock', out.length, 'reorder now') +
+      '</div>';
+    const needsAttention = [...out, ...low];
+    if (needsAttention.length) {
+      stockHtml += '<div class="note" style="margin-bottom:8px">Needs attention:</div>' +
+        needsAttention.slice(0, 6).map((s) =>
+          '<div style="display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:6px 0;border-bottom:1px solid rgba(34,30,26,.06)">' +
+          '<span>' + esc(s.products.name + ' — ' + s.products.variant) + '</span>' + stockBadge(s.quantity) + '</div>'
+        ).join('') +
+        '<button type="button" class="btn btn-sm" style="margin-top:12px" onclick="document.querySelector(\'[data-view=order]\').click()">Reorder Now</button>';
+    } else if (!stock.length) {
+      stockHtml += '<div class="note">Stock tracking starts after your first fulfilled order.</div>';
+    }
+    document.getElementById('rh-stock').innerHTML = stockHtml;
+
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const total = sum(live.filter((o) => {
+        const d = o.created_at ? new Date(o.created_at) : null;
+        return d && d >= start && d < end;
+      }));
+      months.push({ label: start.toLocaleString('en-US', { month: 'short' }), total });
+    }
+    const maxMonth = Math.max(1, ...months.map((m) => m.total));
+    document.getElementById('rh-monthly').innerHTML = months.map((m) =>
+      '<div class="bar-row"><div class="bar-label">' + esc(m.label) + '</div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(2, Math.round(m.total / maxMonth * 100)) + '%"></div></div>' +
+      '<div class="bar-val">' + money(m.total) + '</div></div>'
+    ).join('');
+
+    const recent = allOrders.slice(0, 5);
+    document.getElementById('rh-recent').innerHTML = recent.length
+      ? '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Order #</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead><tbody>' +
+        recent.map((o) =>
+          '<tr><td style="white-space:nowrap">' + esc(fdate(o.created_at)) + '</td>' +
+          '<td style="white-space:nowrap">' + esc(o.order_number) + '</td>' +
+          '<td style="font-weight:700;white-space:nowrap">' + money(o.total) + '</td>' +
+          '<td>' + paymentPill(o) + '</td><td>' + statusPill(o) + '</td></tr>'
+        ).join('') + '</tbody></table></div>'
+      : '<div class="empty">No orders yet — <a href="#" onclick="document.querySelector(\'[data-view=order]\').click();return false" style="font-weight:700">place your first wholesale order</a>.</div>';
+  }
+
+  /* ---------- logo upload ---------- */
+  document.getElementById('pr-upload-btn').addEventListener('click', () => {
+    document.getElementById('pr-logo-file').click();
+  });
+
+  document.getElementById('pr-logo-file').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const note = document.getElementById('pr-note');
+    note.textContent = 'Processing image…';
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = async () => {
+        // Resize client-side so uploads stay small and fast.
+        const MAX = 512;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const base64 = dataUrl.split(',')[1];
+
+        try {
+          note.textContent = 'Uploading…';
+          const data = await api('/api/retailer-portal', { action: 'upload-logo', imageBase64: base64, contentType: 'image/jpeg' });
+          const session = getSession();
+          if (session) {
+            session.account.logo_url = data.logoUrl;
+            setSession(session);
+            setAvatars(session.account);
+          }
+          note.textContent = 'Logo uploaded — looking sharp!';
+        } catch (err) {
+          note.textContent = 'Upload failed: ' + err.message;
+        }
+      };
+      img.onerror = () => { note.textContent = 'That file could not be read as an image.'; };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+
   /* ---------- profile ---------- */
   function fillProfile(account) {
     document.getElementById('pr-business').value = account.business_name || '';
@@ -498,6 +729,10 @@
     document.getElementById('pr-email').value = account.email || '';
     document.getElementById('pr-phone').value = account.phone || '';
     document.getElementById('pr-address').value = account.address || '';
+    const statusLabel = { active: 'Active', pending: 'Pending Approval', suspended: 'Suspended' }[account.account_status] || account.account_status;
+    document.getElementById('pr-status-line').textContent =
+      'Account: ' + statusLabel +
+      (account.created_at ? ' · Member since ' + new Date(account.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '');
   }
 
   document.getElementById('pr-save-btn').addEventListener('click', async () => {

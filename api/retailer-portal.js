@@ -181,6 +181,41 @@ module.exports = async (req, res) => {
       return res.status(200).json({ stock: stock || [], movements: movements || [] });
     }
 
+    if (action === 'upload-logo') {
+      const { imageBase64, contentType } = req.body;
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      const ct = allowed.includes(contentType) ? contentType : 'image/jpeg';
+
+      if (!imageBase64 || typeof imageBase64 !== 'string') {
+        return res.status(400).json({ error: 'No image received.' });
+      }
+      let buffer;
+      try { buffer = Buffer.from(imageBase64, 'base64'); } catch (e) { buffer = null; }
+      if (!buffer || buffer.length < 100) {
+        return res.status(400).json({ error: 'Invalid image data.' });
+      }
+      if (buffer.length > 1.5 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Image too large — please use an image under 1.5MB.' });
+      }
+
+      const bucket = 'retailer-logos';
+      // Idempotent: creating an existing bucket errors, which we ignore.
+      await supabase.storage.createBucket(bucket, { public: true }).catch(() => {});
+
+      const ext = ct === 'image/png' ? 'png' : ct === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${account.id}.${ext}`;
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, buffer, { contentType: ct, upsert: true });
+      if (upErr) throw new Error(upErr.message || 'Upload failed');
+
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+      // Cache-bust so a replaced logo shows immediately everywhere.
+      const logoUrl = pub.publicUrl + '?v=' + Date.now();
+      const { error: dbErr } = await supabase.from('retailer_accounts').update({ logo_url: logoUrl }).eq('id', account.id);
+      if (dbErr) throw new Error(JSON.stringify(dbErr));
+
+      return res.status(200).json({ success: true, logoUrl });
+    }
+
     if (action === 'verify-stripe') {
       const { sessionId } = req.body;
       if (!sessionId) return res.status(400).json({ error: 'Missing session id.' });

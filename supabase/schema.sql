@@ -244,3 +244,5 @@ create index if not exists stock_movements_retailer_idx on stock_movements (reta
 
 alter table retailer_stock enable row level security;
 alter table stock_movements enable row level security;
+-- Run in the Supabase SQL Editor. Safe to re-run.
+alter table retailer_accounts add column if not exists logo_url text;
