@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ruby FoodHub Admin</string>
+    <string name="title_activity_main">Ruby FoodHub Admin</string>
+    <string name="package_name">com.rubyfoodhub.admin</string>
+    <string name="custom_url_scheme">com.rubyfoodhub.admin</string>
+</resources>

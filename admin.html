@@ -407,9 +407,15 @@
     if (message) { loginError.textContent = message; loginError.hidden = false; }
   }
 
+  // Inside the native app (Capacitor webview) the page is served from the
+  // app bundle, so API calls must target the live site. On the website
+  // itself this stays '' and everything remains same-origin.
+  const API_BASE = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+    ? 'https://www.rubyfoodhub.com' : '';
+
   async function api(path, body) {
     const session = getSession();
-    const response = await fetch(path, {
+    const response = await fetch(API_BASE + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign({ token: session ? session.token : '' }, body || {}))
@@ -2040,7 +2046,7 @@
     loginBtn.disabled = true;
     loginError.hidden = true;
     try {
-      const response = await fetch('/api/admin-login', {
+      const response = await fetch(API_BASE + '/api/admin-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -2068,7 +2074,7 @@
     setupBtn.disabled = true;
     setupError.hidden = true;
     try {
-      const response = await fetch('/api/admin-setup', {
+      const response = await fetch(API_BASE + '/api/admin-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2099,7 +2105,7 @@
     const session = getSession();
     if (session) {
       try {
-        await fetch('/api/admin-logout', {
+        await fetch(API_BASE + '/api/admin-logout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: session.token })

@@ -1,0 +1,11 @@
+{
+  "appId": "com.rubyfoodhub.admin",
+  "appName": "Ruby FoodHub Admin",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}

@@ -6,3 +6,7 @@ node_modules/
 
 .vercel
 .env*
+
+# Capacitor app web assets are generated from the repo root by
+# apps/*/sync-www.js — never edit or commit them.
+apps/*/www/

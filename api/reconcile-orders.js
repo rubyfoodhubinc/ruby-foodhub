@@ -1,3 +1,4 @@
+const { applyCors } = require('./_lib/cors');
 const crypto = require('crypto');
 const Stripe = require('stripe');
 const { supabase } = require('./_lib/supabase');
@@ -18,6 +19,8 @@ function timingSafeEq(candidate, expected) {
 }
 
 module.exports = async (req, res) => {
+  // Native app (Capacitor) requests are cross-origin; answer preflight.
+  if (applyCors(req, res)) return;
   if (req.method !== 'POST' && req.method !== 'GET') {
     res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });

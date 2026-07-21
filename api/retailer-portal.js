@@ -1,3 +1,4 @@
+const { applyCors } = require('./_lib/cors');
 const Stripe = require('stripe');
 const { supabase } = require('./_lib/supabase');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
@@ -7,6 +8,16 @@ const { wholesaleCatalog } = require('./_lib/wholesale');
 const { applyStockChange } = require('./_lib/stock');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Stripe success/cancel URLs must be real https pages. Requests from the
+// native apps carry a capacitor://localhost (iOS) or https://localhost
+// (Android) origin, which Stripe can't redirect to — fall back to the
+// live site (the API host) in that case.
+function returnOrigin(req) {
+  const origin = req.headers.origin || '';
+  if (/^https:\/\//.test(origin) && !origin.startsWith('https://localhost')) return origin;
+  return `https://${req.headers.host}`;
+}
 
 // Support topics a retailer can raise, mapped to a readable label.
 const SUPPORT_TOPICS = {
@@ -36,6 +47,8 @@ async function markOrderPaid(orderId, stripeSessionId) {
 }
 
 module.exports = async (req, res) => {
+  // Native app (Capacitor) requests are cross-origin; answer preflight.
+  if (applyCors(req, res)) return;
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -137,7 +150,7 @@ module.exports = async (req, res) => {
       }
 
       // Stripe: charge the wholesale total via the usual hosted Checkout.
-      const origin = req.headers.origin || `https://${req.headers.host}`;
+      const origin = returnOrigin(req);
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         line_items: orderItems.map((i) => ({
@@ -183,7 +196,7 @@ module.exports = async (req, res) => {
       const items = Array.isArray(order.items) ? order.items : [];
       if (!items.length) return res.status(400).json({ error: 'Order has no items to charge.' });
 
-      const origin = req.headers.origin || `https://${req.headers.host}`;
+      const origin = returnOrigin(req);
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         line_items: items.map((i) => ({

@@ -1,3 +1,4 @@
+const { applyCors } = require('./_lib/cors');
 const { supabase } = require('./_lib/supabase');
 const { requireSession, logAudit } = require('./_lib/admin-auth');
 const {
@@ -87,6 +88,8 @@ async function sendBroadcast(audienceId, subject, html, name) {
 }
 
 async function handler(req, res) {
+  // Native app (Capacitor) requests are cross-origin; answer preflight.
+  if (applyCors(req, res)) return;
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });

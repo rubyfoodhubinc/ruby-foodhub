@@ -1,3 +1,4 @@
+const { applyCors } = require('./_lib/cors');
 const crypto = require('crypto');
 const { supabase } = require('./_lib/supabase');
 const { hashPassword, createSession, logAudit } = require('./_lib/admin-auth');
@@ -15,6 +16,8 @@ function timingSafeEq(candidate, expected) {
 // permanently inert — additional admins are created by an owner via
 // api/admin-users (action: create).
 module.exports = async (req, res) => {
+  // Native app (Capacitor) requests are cross-origin; answer preflight.
+  if (applyCors(req, res)) return;
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });

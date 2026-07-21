@@ -1,6 +1,9 @@
+const { applyCors } = require('./_lib/cors');
 const { requireSession, destroySession, logAudit } = require('./_lib/admin-auth');
 
 module.exports = async (req, res) => {
+  // Native app (Capacitor) requests are cross-origin; answer preflight.
+  if (applyCors(req, res)) return;
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });

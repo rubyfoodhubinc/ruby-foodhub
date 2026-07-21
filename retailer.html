@@ -263,9 +263,15 @@
     return v ? new Date(v).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
   }
 
+  // Inside the native app (Capacitor webview) the page is served from the
+  // app bundle, so API calls must target the live site. On the website
+  // itself this stays '' and everything remains same-origin.
+  const API_BASE = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+    ? 'https://www.rubyfoodhub.com' : '';
+
   async function api(path, body) {
     const session = getSession();
-    const response = await fetch(path, {
+    const response = await fetch(API_BASE + path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign({ token: session ? session.token : '' }, body || {}))
@@ -305,7 +311,7 @@
     const btn = document.getElementById('li-btn');
     btn.disabled = true; authError.hidden = true;
     try {
-      const response = await fetch('/api/retailer-auth', {
+      const response = await fetch(API_BASE + '/api/retailer-auth', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'login', email: document.getElementById('li-email').value, password: document.getElementById('li-password').value })
       });
@@ -325,7 +331,7 @@
     const btn = document.getElementById('ap-btn');
     btn.disabled = true; authError.hidden = true;
     try {
-      const response = await fetch('/api/retailer-auth', {
+      const response = await fetch(API_BASE + '/api/retailer-auth', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'signup',
@@ -348,7 +354,7 @@
   logoutBtn.addEventListener('click', async () => {
     const session = getSession();
     if (session) {
-      try { await fetch('/api/retailer-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout', token: session.token }) }); }
+      try { await fetch(API_BASE + '/api/retailer-auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout', token: session.token }) }); }
       catch (e) { /* cleared locally regardless */ }
     }
     backToAuth();
@@ -966,7 +972,7 @@
     const session = getSession();
     if (!session) return;
     try {
-      const data = await fetch('/api/retailer-auth', {
+      const data = await fetch(API_BASE + '/api/retailer-auth', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'me', token: session.token })
       }).then((r) => r.json());

@@ -1,0 +1,11 @@
+{
+  "appId": "com.rubyfoodhub.wholesale",
+  "appName": "Ruby FoodHub Wholesale",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
