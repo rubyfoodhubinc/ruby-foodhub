@@ -333,10 +333,11 @@ async function handler(req, res) {
     }
 
     if (action === 'stock-low') {
-      // Low-stock overview for the Home dashboard: anything at 5 or fewer.
+      // Low-stock overview (Home dashboard + Retailer Emails targeting):
+      // anything at 5 or fewer, with the retailer id for filtering.
       const { data, error } = await supabase
         .from('retailer_stock')
-        .select('quantity, retailer_accounts(business_name), products(name, variant)')
+        .select('retailer_id, quantity, retailer_accounts(business_name), products(name, variant)')
         .lte('quantity', 5);
       if (error) throw new Error(JSON.stringify(error));
       return res.status(200).json({ low: data || [] });

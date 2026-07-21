@@ -278,6 +278,7 @@
           <option value="">All statuses</option>
         </select>
         <label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="we-outstanding-only" style="width:auto;margin:0"/>Only retailers with an outstanding balance</label>
+        <label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" id="we-lowstock-only" style="width:auto;margin:0"/>Only retailers with low / out-of-stock items</label>
         <button type="button" class="btn btn-outline btn-sm" id="we-select-all">Select All Shown</button>
         <button type="button" class="btn btn-outline btn-sm" id="we-clear-sel">Clear</button>
         <span class="note" id="we-sel-note" style="margin:0"></span>
@@ -1043,6 +1044,15 @@
     const t = WS_REASON_TEMPLATES[e.target.value] || WS_REASON_TEMPLATES.custom;
     document.getElementById('we-subject').value = t.subject;
     document.getElementById('we-body').value = t.body;
+    // Picking "Low Stock Alert" auto-narrows the list to retailers whose
+    // recorded stock is actually low — Select All Shown then targets exactly
+    // the right group. The admin can untick the filter to override.
+    if (e.target.value === 'low_stock') {
+      document.getElementById('we-lowstock-only').checked = true;
+      renderWeRetailers();
+      document.getElementById('we-sel-note').textContent =
+        weSelected.size + ' retailer(s) selected. Showing only retailers with low stock — use "Select All Shown" to target them.';
+    }
   });
 
   function wsAccountPill(status) {
@@ -1457,6 +1467,7 @@
   /* ---------- RETAILER EMAILS (standalone tab) ---------- */
   let weLoaded = false;
   let weRetailers = [];
+  let weLowByRetailer = new Map();
   const weSelected = new Set();
 
   function weUpdateSelNote() {
@@ -1466,9 +1477,11 @@
   function weVisibleRetailers() {
     const status = document.getElementById('we-status-filter').value;
     const outstandingOnly = document.getElementById('we-outstanding-only').checked;
+    const lowStockOnly = document.getElementById('we-lowstock-only').checked;
     return weRetailers.filter((r) => {
       if (status && r.account_status !== status) return false;
       if (outstandingOnly && !(r.stats && r.stats.pendingTotal > 0)) return false;
+      if (lowStockOnly && !weLowByRetailer.has(r.id)) return false;
       return true;
     });
   }
@@ -1482,20 +1495,26 @@
       return;
     }
 
-    const rows = visible.map((r) =>
-      '<tr>' +
+    const rows = visible.map((r) => {
+      const lowItems = weLowByRetailer.get(r.id) || [];
+      const lowCell = lowItems.length
+        ? '<span class="pill ' + (lowItems.some((i) => i.quantity <= 0) ? 'pill-gray' : 'pill-amber') + '" title="' +
+          esc(lowItems.map((i) => i.label + ': ' + i.quantity).join('\n')) + '">' + lowItems.length + ' item(s) low</span>'
+        : '—';
+      return '<tr>' +
       '<td><input type="checkbox" class="we-check" data-id="' + esc(r.id) + '"' + (weSelected.has(r.id) ? ' checked' : '') + '/></td>' +
       '<td>' + esc(r.business_name) + '</td>' +
       '<td>' + esc(r.contact_name || '—') + '</td>' +
       '<td>' + esc(r.email) + '</td>' +
       '<td>' + wsAccountPill(r.account_status) + '</td>' +
       '<td>' + (r.stats && r.stats.pendingTotal > 0 ? '<span class="pill pill-amber">' + formatMoney(r.stats.pendingTotal) + ' outstanding</span>' : '—') + '</td>' +
-      '</tr>'
-    ).join('');
+      '<td>' + lowCell + '</td>' +
+      '</tr>';
+    }).join('');
 
     container.innerHTML =
       '<div class="table-scroll"><table><thead><tr>' +
-      '<th></th><th>Business</th><th>Contact</th><th>Email</th><th>Status</th><th>Outstanding</th>' +
+      '<th></th><th>Business</th><th>Contact</th><th>Email</th><th>Status</th><th>Outstanding</th><th>Low Stock</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 
     container.querySelectorAll('.we-check').forEach((cb) => {
@@ -1511,8 +1530,19 @@
   async function loadWsEmail() {
     weLoaded = true;
     try {
-      const data = await api('/api/admin-wholesale', { action: 'retailers' });
+      const [data, lowRes] = await Promise.all([
+        api('/api/admin-wholesale', { action: 'retailers' }),
+        api('/api/admin-wholesale', { action: 'stock-low' }).catch(() => ({ low: [] })),
+      ]);
       weRetailers = data.retailers;
+      weLowByRetailer = new Map();
+      for (const row of (lowRes.low || [])) {
+        if (!weLowByRetailer.has(row.retailer_id)) weLowByRetailer.set(row.retailer_id, []);
+        weLowByRetailer.get(row.retailer_id).push({
+          label: row.products ? row.products.name + ' — ' + row.products.variant : 'Unknown product',
+          quantity: row.quantity,
+        });
+      }
       renderWeRetailers();
     } catch (err) {
       document.getElementById('we-retailers').innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
@@ -1522,6 +1552,7 @@
 
   document.getElementById('we-status-filter').addEventListener('change', renderWeRetailers);
   document.getElementById('we-outstanding-only').addEventListener('change', renderWeRetailers);
+  document.getElementById('we-lowstock-only').addEventListener('change', renderWeRetailers);
 
   document.getElementById('we-select-all').addEventListener('click', () => {
     for (const r of weVisibleRetailers()) weSelected.add(r.id);
