@@ -700,7 +700,7 @@
         return '<tr>' +
           '<td style="white-space:nowrap">' + esc(fdate(o.created_at)) + '</td>' +
           '<td style="white-space:nowrap">' + esc(o.order_number) + '</td>' +
-          '<td>' + esc(items) + '</td>' +
+          '<td>' + esc(items) + (o.production_batch ? '<div class="note">Batch: ' + esc(o.production_batch) + '</div>' : '') + '</td>' +
           '<td style="white-space:nowrap;font-weight:700">' + money(o.total) + '</td>' +
           '<td>' + esc(methodLabel(o.payment_method)) + '</td>' +
           '<td>' + paymentPill(o) + '</td>' +

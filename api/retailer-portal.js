@@ -4,7 +4,7 @@ const { supabase } = require('./_lib/supabase');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { requireRetailerSession } = require('./_lib/retailer-auth');
 const { logAudit } = require('./_lib/admin-auth');
-const { wholesaleCatalog } = require('./_lib/wholesale');
+const { wholesaleCatalog, insertWholesaleOrder } = require('./_lib/wholesale');
 const { applyStockChange } = require('./_lib/stock');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -116,17 +116,12 @@ module.exports = async (req, res) => {
       if (!orderItems.length) return res.status(400).json({ error: 'No valid items in the order.' });
       total = Math.round(total * 100) / 100;
 
-      const { data: order, error } = await supabase
-        .from('wholesale_orders')
-        .insert({
-          retailer_id: account.id,
-          items: orderItems,
-          total,
-          payment_method: paymentMethod,
-        })
-        .select('*')
-        .single();
-      if (error) throw new Error(JSON.stringify(error));
+      const order = await insertWholesaleOrder({
+        retailer_id: account.id,
+        items: orderItems,
+        total,
+        payment_method: paymentMethod,
+      }, account.business_name);
 
       await logAudit(null, 'wholesale_order_placed', {
         order_id: order.id, order_number: order.order_number,

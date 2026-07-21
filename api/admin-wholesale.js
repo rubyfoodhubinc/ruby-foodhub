@@ -2,7 +2,7 @@ const { applyCors } = require('./_lib/cors');
 const { supabase } = require('./_lib/supabase');
 const { requireSession, logAudit } = require('./_lib/admin-auth');
 const { resend, isValidEmail, FROM_ADDRESS } = require('./_lib/resend');
-const { wholesaleCatalog } = require('./_lib/wholesale');
+const { wholesaleCatalog, insertWholesaleOrder } = require('./_lib/wholesale');
 const { applyStockChange } = require('./_lib/stock');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -67,7 +67,7 @@ async function handler(req, res) {
     if (action === 'all-orders') {
       const { data, error } = await supabase
         .from('wholesale_orders')
-        .select('id, order_number, items, total, payment_method, payment_status, claimed_payment_method, claimed_at, claimed_reference, order_status, cancel_reason, created_at, retailer_accounts(business_name)')
+        .select('*, retailer_accounts(business_name)')
         .order('created_at', { ascending: false });
       if (error) throw new Error(JSON.stringify(error));
       return res.status(200).json({ orders: data });
@@ -97,10 +97,20 @@ async function handler(req, res) {
       // markFulfilled=true is the "billable delivery" path: the goods are
       // already at the retailer's location, so the order is created as
       // fulfilled, their stock is incremented, and payment is due now.
-      const { retailerId, items, note, markFulfilled } = req.body;
+      const { retailerId, items, note, markFulfilled, productionBatch } = req.body;
       const fulfillNow = markFulfilled === true;
       if (!retailerId || !Array.isArray(items) || !items.length) {
         return res.status(400).json({ error: 'retailerId and at least one item are required.' });
+      }
+
+      // Goods leaving production carry an 8-character batch key. It's
+      // mandatory whenever the order ships to the retailer immediately.
+      const batch = String(productionBatch || '').trim().toUpperCase();
+      if (batch && !/^[A-Z0-9]{8}$/.test(batch)) {
+        return res.status(400).json({ error: 'Production batch number must be exactly 8 letters/digits.' });
+      }
+      if (fulfillNow && !batch) {
+        return res.status(400).json({ error: 'An 8-character production batch number is required when marking the order delivered.' });
       }
 
       const { data: retailer, error: rErr } = await supabase
@@ -127,18 +137,14 @@ async function handler(req, res) {
       if (!orderItems.length) return res.status(400).json({ error: 'No valid items selected.' });
       total = Math.round(total * 100) / 100;
 
-      const { data: order, error } = await supabase
-        .from('wholesale_orders')
-        .insert({
-          retailer_id: retailerId,
-          items: orderItems,
-          total,
-          payment_method: 'pay_on_delivery',
-          order_status: fulfillNow ? 'fulfilled' : 'pending',
-        })
-        .select('*')
-        .single();
-      if (error) throw new Error(JSON.stringify(error));
+      const order = await insertWholesaleOrder({
+        retailer_id: retailerId,
+        items: orderItems,
+        total,
+        payment_method: 'pay_on_delivery',
+        order_status: fulfillNow ? 'fulfilled' : 'pending',
+        ...(batch ? { production_batch: batch } : {}),
+      }, retailer.business_name);
 
       // Billable delivery: goods are already on-site, so stock them in
       // right away — by product_id, no name matching needed here.
@@ -147,7 +153,7 @@ async function handler(req, res) {
         for (const item of orderItems) {
           try {
             await applyStockChange(retailerId, item.product_id, item.quantity,
-              `Delivered via ${order.order_number} (added by admin)`, actor.id);
+              `Delivered via ${order.order_number}${batch ? ` (batch ${batch})` : ''} (added by admin)`, actor.id);
             stocked += 1;
           } catch (e) {
             console.error(`[stock] failed to stock-in ${item.product} for ${order.order_number}:`, e.message);
@@ -158,6 +164,7 @@ async function handler(req, res) {
       await logAudit(actor.id, 'wholesale_order_created_by_admin', {
         order_id: order.id, order_number: order.order_number, retailer_id: retailerId,
         business_name: retailer.business_name, total, mark_fulfilled: fulfillNow,
+        production_batch: batch || null,
         stocked_items: stocked, note: note ? String(note).trim().slice(0, 500) : null,
       });
 
@@ -179,7 +186,8 @@ async function handler(req, res) {
             subject,
             html: `<p style="font-family:sans-serif;line-height:1.6">Hi ${retailer.business_name},<br><br>` +
               `${intro}<br><br>` +
-              `<strong>Order ${order.order_number}</strong><br>${itemsText.replace(/\n/g, '<br>')}<br><br>` +
+              `<strong>Order ${order.order_number}</strong><br>${itemsText.replace(/\n/g, '<br>')}<br>` +
+              (batch ? `Production batch: <strong>${batch}</strong><br>` : '') + `<br>` +
               `${totalLine}<br><br>` +
               `You can pay online anytime from your <a href="https://www.rubyfoodhub.com/retailer">Ruby FoodHub retailer portal</a>, ` +
               `send a Zelle payment to <strong>bankpay@rubyfoodhub.com</strong> (Ruby Foodhub Inc), or pay our team on delivery. ` +
@@ -306,27 +314,39 @@ async function handler(req, res) {
     }
 
     if (action === 'set-order-status') {
-      const { orderId, status } = req.body;
+      const { orderId, status, productionBatch } = req.body;
       if (!orderId || !['pending', 'confirmed', 'fulfilled'].includes(status)) {
         return res.status(400).json({ error: 'orderId and status pending/confirmed/fulfilled required.' });
       }
 
+      const batch = String(productionBatch || '').trim().toUpperCase();
+      if (batch && !/^[A-Z0-9]{8}$/.test(batch)) {
+        return res.status(400).json({ error: 'Production batch number must be exactly 8 letters/digits.' });
+      }
+
       const { data: before, error: beforeErr } = await supabase
         .from('wholesale_orders')
-        .select('order_number, order_status, retailer_id, items')
+        .select('*')
         .eq('id', orderId)
         .maybeSingle();
       if (beforeErr) throw new Error(JSON.stringify(beforeErr));
       if (!before) return res.status(404).json({ error: 'Order not found.' });
       if (before.order_status === 'canceled') return res.status(400).json({ error: 'Order has been canceled.' });
 
+      // Every shipment that reaches a retailer must carry its production
+      // batch — required on the first transition into 'fulfilled'.
+      const finalBatch = batch || before.production_batch || '';
+      if (status === 'fulfilled' && before.order_status !== 'fulfilled' && !finalBatch) {
+        return res.status(400).json({ error: 'An 8-character production batch number is required to mark this order fulfilled.' });
+      }
+
       const { error } = await supabase
         .from('wholesale_orders')
-        .update({ order_status: status })
+        .update({ order_status: status, ...(batch ? { production_batch: batch } : {}) })
         .eq('id', orderId);
       if (error) throw new Error(JSON.stringify(error));
 
-      await logAudit(actor.id, 'wholesale_order_status_change', { order_id: orderId, order_number: before.order_number, status });
+      await logAudit(actor.id, 'wholesale_order_status_change', { order_id: orderId, order_number: before.order_number, status, production_batch: finalBatch || null });
 
       // Fulfilling an order stocks the retailer's location automatically —
       // one movement per line item, attributed to the acting admin. Only on
@@ -345,7 +365,7 @@ async function handler(req, res) {
           }
           try {
             await applyStockChange(before.retailer_id, productId, Number(item.quantity) || 0,
-              `Received via ${before.order_number} fulfillment`, actor.id);
+              `Received via ${before.order_number} fulfillment${finalBatch ? ` (batch ${finalBatch})` : ''}`, actor.id);
             stocked += 1;
           } catch (e) {
             console.error(`[stock] failed to stock-in ${item.product} for ${before.order_number}:`, e.message);

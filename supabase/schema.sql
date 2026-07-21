@@ -281,3 +281,9 @@ alter table retailer_accounts add constraint retailer_accounts_account_status_ch
   check (account_status in ('active', 'pending', 'suspended', 'closed'));
 
 alter table retailer_accounts add column if not exists deleted_at timestamptz;
+
+-- 014_production_batch.sql -----------------------------------------------
+
+-- Production batch tracking: an 8-character batch key (letters/digits)
+-- entered by an admin whenever goods ship to a retailer.
+alter table wholesale_orders add column if not exists production_batch text;
