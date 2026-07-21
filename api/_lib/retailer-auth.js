@@ -19,8 +19,14 @@ async function verifyRetailerLogin(email, password) {
 
   if (error) throw new Error(JSON.stringify(error));
 
-  const ok = await bcrypt.compare(String(password || ''), account ? account.password_hash : DUMMY_HASH);
-  return ok && account ? account : null;
+  // A deleted (closed) account can never be signed into again. Its stored
+  // hash is scrambled anyway, but reject explicitly rather than relying on
+  // bcrypt's handling of a malformed hash. Still run a compare against the
+  // dummy hash so timing doesn't reveal which accounts are closed.
+  const usable = account && account.account_status !== 'closed' ? account : null;
+
+  const ok = await bcrypt.compare(String(password || ''), usable ? usable.password_hash : DUMMY_HASH);
+  return ok && usable ? usable : null;
 }
 
 async function createRetailerSession(retailerId) {
@@ -54,7 +60,11 @@ async function requireRetailerSession(token) {
     return null;
   }
 
-  return session.retailer_accounts || null;
+  const acct = session.retailer_accounts || null;
+  // Deletion revokes sessions, but never serve a closed account regardless.
+  if (acct && acct.account_status === 'closed') return null;
+
+  return acct;
 }
 
 async function destroyRetailerSession(token) {

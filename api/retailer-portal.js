@@ -451,6 +451,105 @@ If you need to add anything, just reply to this email.
       return res.status(200).json({ success: true, logoUrl });
     }
 
+    if (action === 'delete-account') {
+      // Self-service account deletion (App Store guideline 5.1.1(v)).
+      // Personal data is wiped immediately and sessions are revoked, so
+      // the account can never be used again. Order rows are retained
+      // (anonymized via this account) because they are financial records
+      // needed for accounting/tax — disclosed in the privacy policy.
+      const { confirm } = req.body;
+      if (String(confirm || '').trim().toUpperCase() !== 'DELETE') {
+        return res.status(400).json({ error: 'Type DELETE to confirm account deletion.' });
+      }
+
+      // Outstanding balance doesn't block deletion, but the team must know.
+      const { data: owed } = await supabase
+        .from('wholesale_orders')
+        .select('order_number, total, payment_status, order_status')
+        .eq('retailer_id', account.id)
+        .in('payment_status', ['pending', 'awaiting_confirmation'])
+        .neq('order_status', 'canceled');
+      const outstanding = (owed || []).reduce((s, o) => s + (Number(o.total) || 0), 0);
+
+      const stamp = new Date().toISOString();
+      const { error } = await supabase
+        .from('retailer_accounts')
+        .update({
+          business_name: 'Deleted Account',
+          contact_name: null,
+          // Unique but unusable — the email column has a UNIQUE constraint.
+          email: `deleted-${account.id}@deleted.invalid`,
+          password_hash: 'deleted-' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+          phone: null,
+          address: null,
+          logo_url: null,
+          account_status: 'closed',
+          deleted_at: stamp,
+        })
+        .eq('id', account.id);
+      if (error) throw new Error(JSON.stringify(error));
+
+      // Revoke every live session for this account.
+      await supabase.from('retailer_sessions').delete().eq('retailer_id', account.id);
+
+      // Remove the uploaded logo from storage too.
+      try {
+        await supabase.storage.from('retailer-logos')
+          .remove([`${account.id}.jpg`, `${account.id}.png`, `${account.id}.webp`]);
+      } catch (e) {
+        console.error('logo cleanup on account deletion failed:', e.message);
+      }
+
+      await logAudit(null, 'retailer_account_deleted', {
+        retailer_id: account.id, business_name: account.business_name,
+        email: account.email, outstanding_balance: outstanding,
+        outstanding_orders: (owed || []).map((o) => o.order_number),
+      });
+
+      // Confirmation to the retailer at their real address, sent before
+      // they lose access — plus a heads-up to the team.
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: account.email,
+          subject: 'Your Ruby FoodHub wholesale account has been deleted',
+          text:
+`Hi ${account.contact_name || account.business_name},
+
+Your Ruby FoodHub wholesale account (${account.email}) has been deleted as you requested. Your personal details have been removed from our systems and you can no longer sign in.
+
+Please note: past order and payment records are kept as required for accounting and tax purposes, and are no longer linked to your personal details.${outstanding > 0 ? `
+
+Important: our records show an outstanding balance of $${outstanding.toFixed(2)}. Deleting your account does not cancel this balance — our team will contact you about settling it.` : ''}
+
+If you'd like to work with us again, you're welcome to sign up any time at rubyfoodhub.com/retailer.
+
+— Ruby FoodHub Wholesale Team`,
+        });
+      } catch (e) {
+        console.error('deletion confirmation email failed:', e.message);
+      }
+
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: 'sales@rubyfoodhub.com',
+          subject: `Retailer account deleted: ${account.business_name}${outstanding > 0 ? ' — OUTSTANDING BALANCE' : ''}`,
+          text:
+`${account.business_name} (${account.email}) deleted their wholesale account from the portal.
+
+Outstanding balance: $${outstanding.toFixed(2)}${outstanding > 0 ? `
+Unpaid orders: ${(owed || []).map((o) => o.order_number).join(', ')}
+
+Follow up on payment — the order records are retained in the admin dashboard.` : ' (nothing owed)'}`,
+        });
+      } catch (e) {
+        console.error('deletion notification to sales failed:', e.message);
+      }
+
+      return res.status(200).json({ success: true, outstanding });
+    }
+
     if (action === 'verify-stripe') {
       const { sessionId } = req.body;
       if (!sessionId) return res.status(400).json({ error: 'Missing session id.' });

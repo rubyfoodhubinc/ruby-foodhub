@@ -114,6 +114,9 @@
       <button type="button" class="btn btn-full" id="ap-btn">Submit Application</button>
     </div>
     <p class="error" id="auth-error" hidden></p>
+    <p class="note" style="text-align:center;margin-top:18px">
+      <a href="https://www.rubyfoodhub.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+    </p>
   </div>
 
   <div id="portal-view" hidden>
@@ -198,6 +201,23 @@
       <textarea id="pr-address" rows="2" placeholder="Business address"></textarea>
       <button type="button" class="btn" id="pr-save-btn">Save Profile</button>
       <p class="note" id="pr-note"></p>
+
+      <div style="margin-top:34px;padding-top:22px;border-top:1px solid rgba(34,30,26,.1)">
+        <h2 style="font-size:17px;margin:0 0 6px">Privacy &amp; Account</h2>
+        <p class="note" style="margin:0 0 14px">
+          Read our <a href="https://www.rubyfoodhub.com/privacy" target="_blank" rel="noopener" style="font-weight:700">Privacy Policy</a>
+          to see what we store and why.
+        </p>
+        <button type="button" class="btn btn-outline btn-sm" id="pr-delete-btn"
+          style="border-color:oklch(55% 0.2 25);color:oklch(48% 0.2 25)">Delete My Account</button>
+        <p class="note" style="margin-top:8px">
+          Permanently deletes your account and personal details (business name, contact, email, phone,
+          address, logo). You will be signed out immediately and cannot sign in again. Past order and
+          payment records are kept as required for accounting and tax, no longer linked to your details.
+          Any unpaid balance remains owed.
+        </p>
+        <p class="note" id="pr-delete-note"></p>
+      </div>
     </div>
 
     <div class="card" id="view-help" hidden>
@@ -963,6 +983,49 @@
     } catch (err) {
       document.getElementById('pr-note').textContent = 'Error: ' + err.message;
     } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Account deletion (App Store guideline 5.1.1(v)). Two-step: confirm the
+  // consequences, then type DELETE — the same word the API requires.
+  document.getElementById('pr-delete-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('pr-delete-btn');
+    const note = document.getElementById('pr-delete-note');
+    note.textContent = '';
+
+    if (!window.confirm(
+      'Permanently delete your Ruby FoodHub wholesale account?\n\n' +
+      '• Your personal details are erased and you are signed out immediately\n' +
+      '• You will not be able to sign in again\n' +
+      '• Past order records are kept for accounting and tax purposes\n' +
+      '• Any unpaid balance is still owed\n\n' +
+      'This cannot be undone.'
+    )) return;
+
+    const typed = window.prompt('To confirm, type DELETE below:');
+    if (typed === null) return;
+    if (typed.trim().toUpperCase() !== 'DELETE') {
+      note.textContent = 'Account not deleted — you must type DELETE exactly.';
+      return;
+    }
+
+    btn.disabled = true;
+    note.textContent = 'Deleting your account…';
+    try {
+      const data = await api('/api/retailer-portal', { action: 'delete-account', confirm: 'DELETE' });
+      window.alert(
+        'Your account has been deleted.' +
+        (data.outstanding > 0
+          ? '\n\nNote: an outstanding balance of ' + money(data.outstanding) +
+            ' remains owed. Our team will be in touch about settling it.'
+          : '') +
+        '\n\nA confirmation email has been sent to you.'
+      );
+      // Clear local session and return to the sign-in screen.
+      backToAuth();
+    } catch (err) {
+      note.textContent = 'Could not delete account: ' + err.message;
       btn.disabled = false;
     }
   });

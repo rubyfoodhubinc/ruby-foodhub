@@ -29,8 +29,11 @@ async function handler(req, res) {
   try {
     if (action === 'retailers') {
       const [{ data: retailers, error: rErr }, { data: orders, error: oErr }] = await Promise.all([
+        // Deleted (closed) accounts are excluded — their personal data is
+        // gone. Their past orders remain visible under "Deleted Account".
         supabase.from('retailer_accounts')
           .select('id, business_name, contact_name, email, phone, address, account_status, last_login_at, created_at')
+          .neq('account_status', 'closed')
           .order('created_at', { ascending: false }),
         supabase.from('wholesale_orders').select('retailer_id, items, total, payment_status, order_status'),
       ]);
@@ -410,10 +413,19 @@ async function handler(req, res) {
       if (!retailerId || !['active', 'pending', 'suspended'].includes(status)) {
         return res.status(400).json({ error: 'retailerId and status active/pending/suspended required.' });
       }
+      // A deleted account is permanently closed — it cannot be revived,
+      // and its personal data no longer exists to restore.
+      const { data: existing } = await supabase
+        .from('retailer_accounts').select('account_status').eq('id', retailerId).maybeSingle();
+      if (existing && existing.account_status === 'closed') {
+        return res.status(400).json({ error: 'This account was deleted by the retailer and cannot be reactivated.' });
+      }
+
       const { data, error } = await supabase
         .from('retailer_accounts')
         .update({ account_status: status })
         .eq('id', retailerId)
+        .neq('account_status', 'closed')
         .select('business_name, email');
       if (error) throw new Error(JSON.stringify(error));
       if (!data || !data.length) return res.status(404).json({ error: 'Retailer not found.' });
@@ -453,7 +465,8 @@ async function handler(req, res) {
       const { data: recipients, error } = await supabase
         .from('retailer_accounts')
         .select('id, business_name, email')
-        .in('id', retailerIds);
+        .in('id', retailerIds)
+        .neq('account_status', 'closed');
       if (error) throw new Error(JSON.stringify(error));
 
       let sent = 0;
@@ -516,10 +529,12 @@ async function handler(req, res) {
       // anything at 5 or fewer, with the retailer id for filtering.
       const { data, error } = await supabase
         .from('retailer_stock')
-        .select('retailer_id, quantity, retailer_accounts(business_name), products(name, variant)')
+        .select('retailer_id, quantity, retailer_accounts(business_name, account_status), products(name, variant)')
         .lte('quantity', 5);
       if (error) throw new Error(JSON.stringify(error));
-      return res.status(200).json({ low: data || [] });
+      // Deleted accounts can't be restocked or emailed — drop them.
+      const low = (data || []).filter((s) => !s.retailer_accounts || s.retailer_accounts.account_status !== 'closed');
+      return res.status(200).json({ low });
     }
 
     if (action === 'email-history') {
