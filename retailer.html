@@ -7,6 +7,9 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
   body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: oklch(97% 0.015 60); color: oklch(22% 0.02 40); }
+  /* The page itself never scrolls sideways — wide tables scroll inside
+     their own .table-scroll wrappers, keeping vertical scroll usable. */
+  html, body { max-width: 100%; overflow-x: hidden; }
   * { box-sizing: border-box; }
   button { font-family: inherit; cursor: pointer; }
   a { color: oklch(45% 0.17 20); text-decoration: none; }
@@ -71,7 +74,8 @@
   .pay-choice { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
   .pay-choice label { flex: 1; min-width: 220px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 12px; padding: 14px 16px; font-size: 14px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; }
   .pay-choice label.selected { border-color: oklch(45% 0.17 20); background: oklch(97% 0.02 20); }
-  .pay-choice input { width: auto; margin: 3px 0 0; }
+  .pay-choice input { width: auto; margin: 3px 0 0; flex: none; }
+  .pay-choice label > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .note { font-size: 12.5px; color: rgba(34,30,26,.6); margin: 8px 0; min-height: 16px; }
   .empty { text-align: center; padding: 40px 0; color: rgba(34,30,26,.5); }
   h2 { font-size: 17px; margin: 0 0 14px; }
@@ -121,6 +125,7 @@
 
   <div id="portal-view" hidden>
     <div id="status-banner"></div>
+    <div id="due-banner"></div>
 
     <div class="portal-nav" id="portal-nav" hidden>
       <button type="button" data-view="home" class="active">Home</button>
@@ -164,8 +169,10 @@
       <div class="pay-choice" id="pay-choice">
         <label id="pay-stripe-label" class="selected"><input type="radio" name="pay" value="stripe" checked />
           <span><strong>Pay now via Stripe</strong><br><span class="note">Card payment — order confirms immediately.</span></span></label>
-        <label id="pay-pod-label"><input type="radio" name="pay" value="pay_on_delivery" />
-          <span><strong>Pay on delivery</strong><br><span class="note">Order submits now; pay when your delivery arrives.</span></span></label>
+        <label id="pay-zelle-label"><input type="radio" name="pay" value="zelle" />
+          <span><strong>Pay by Zelle</strong><br><span class="note">Send payment to <strong>bankpay@rubyfoodhub.com</strong> — we show the details after you place the order, then you report the payment for our team to confirm.</span></span></label>
+        <label id="pay-cash-label"><input type="radio" name="pay" value="cash" />
+          <span><strong>Pay by cash on delivery</strong><br><span class="note">Order submits now; pay our team in cash when your delivery arrives.</span></span></label>
       </div>
       <button type="button" class="btn" id="place-order-btn">Place Order</button>
       <p class="note" id="order-note"></p>
@@ -542,6 +549,9 @@
     if (o.order_status === 'canceled') return '<span class="pill pill-gray">No Charge</span>';
     return '<span class="pill pill-amber">Payment Pending</span>';
   }
+  function methodLabel(method) {
+    return { stripe: 'Stripe', pay_on_delivery: 'Pay on delivery', cash: 'Cash', zelle: 'Zelle' }[method] || method;
+  }
   function statusPill(o) {
     if (o.order_status === 'canceled') {
       return '<span class="pill pill-gray">Canceled</span>' +
@@ -644,6 +654,31 @@
     payModalEl.querySelector('#pm-zelle').addEventListener('click', (e) => claim('zelle', e.target));
   }
 
+  // Standing payment push: whenever there's an unpaid balance, a banner at
+  // the top of every portal view says how much is due and offers Pay Now.
+  function updateDueBanner(allOrders) {
+    const el = document.getElementById('due-banner');
+    if (!el) return;
+    const live = allOrders.filter((o) => o.order_status !== 'canceled');
+    const owed = live.filter((o) => o.payment_status === 'pending');
+    const awaiting = live.filter((o) => o.payment_status === 'awaiting_confirmation');
+    const sum = (list) => list.reduce((s, o) => s + (Number(o.total) || 0), 0);
+    if (!owed.length) {
+      el.innerHTML = awaiting.length
+        ? '<div class="notice">Your reported payment' + (awaiting.length > 1 ? 's' : '') + ' totaling <strong>' + money(sum(awaiting)) + '</strong> ' + (awaiting.length > 1 ? 'are' : 'is') + ' awaiting confirmation by our team.</div>'
+        : '';
+      return;
+    }
+    el.innerHTML =
+      '<div class="notice" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
+      '<span style="flex:1;min-width:220px"><strong>Payment due: ' + money(sum(owed)) + '</strong> across ' + owed.length + ' order' + (owed.length > 1 ? 's' : '') + '. Pay by card now, or send Zelle / pay cash and report it.</span>' +
+      '<button type="button" class="btn btn-sm" id="due-pay-btn">Pay Now</button></div>';
+    document.getElementById('due-pay-btn').addEventListener('click', () => {
+      if (owed.length === 1) openPayModal(owed[0]);
+      else document.querySelector('.portal-nav [data-view="dashboard"]').click();
+    });
+  }
+
   function wirePayButtons(container) {
     container.querySelectorAll('.pay-now-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -657,6 +692,7 @@
     try {
       const data = await api('/api/retailer-portal', { action: 'orders' });
       data.orders.forEach((o) => ordersById.set(o.id, o));
+      updateDueBanner(data.orders);
       const container = document.getElementById('orders-container');
       if (!data.orders.length) { container.innerHTML = '<div class="empty">No orders yet — place your first wholesale order.</div>'; return; }
       const rows = data.orders.map((o) => {
@@ -666,7 +702,7 @@
           '<td style="white-space:nowrap">' + esc(o.order_number) + '</td>' +
           '<td>' + esc(items) + '</td>' +
           '<td style="white-space:nowrap;font-weight:700">' + money(o.total) + '</td>' +
-          '<td>' + esc(o.payment_method === 'stripe' ? 'Stripe' : 'Pay on delivery') + '</td>' +
+          '<td>' + esc(methodLabel(o.payment_method)) + '</td>' +
           '<td>' + paymentPill(o) + '</td>' +
           '<td>' + statusPill(o) + '</td>' +
           '<td>' + payNowButton(o) + '</td>' +
@@ -722,8 +758,10 @@
 
   document.querySelectorAll('input[name="pay"]').forEach((radio) => {
     radio.addEventListener('change', () => {
-      document.getElementById('pay-stripe-label').classList.toggle('selected', radio.value === 'stripe' && radio.checked);
-      document.getElementById('pay-pod-label').classList.toggle('selected', radio.value === 'pay_on_delivery' && radio.checked);
+      document.querySelectorAll('#pay-choice label').forEach((label) => {
+        const input = label.querySelector('input[name="pay"]');
+        label.classList.toggle('selected', !!input && input.checked);
+      });
     });
   });
 
@@ -737,7 +775,10 @@
 
     const paymentMethod = document.querySelector('input[name="pay"]:checked').value;
     const total = updateTotal();
-    if (!window.confirm('Place wholesale order for ' + money(total) + (paymentMethod === 'stripe' ? ' and pay now via Stripe?' : ', to be paid on delivery?'))) return;
+    const confirmTail = paymentMethod === 'stripe' ? ' and pay now via Stripe?'
+      : paymentMethod === 'zelle' ? ' and pay by Zelle? Our Zelle details are shown right after you place the order.'
+      : ', to be paid in cash on delivery?';
+    if (!window.confirm('Place wholesale order for ' + money(total) + confirmTail)) return;
 
     btn.disabled = true;
     btn.textContent = 'Placing order…';
@@ -747,12 +788,18 @@
         window.location.href = data.checkoutUrl;
         return;
       }
-      orderNote.textContent = 'Order ' + data.orderNumber + ' submitted — payment due on delivery. Our team will confirm your delivery date.';
+      if (data.order) ordersById.set(data.order.id, data.order);
       quantities.clear();
       loadCatalog();
       updateTotal();
       loadOrders();
       showView('dashboard');
+      if (paymentMethod === 'zelle') {
+        statusBanner.innerHTML = '<div class="notice">Order <strong>' + esc(data.orderNumber) + '</strong> submitted. Send your Zelle payment to <strong>bankpay@rubyfoodhub.com</strong> (Ruby Foodhub Inc), then report it so our team can confirm. It stays "Payment Pending" until confirmed.</div>';
+        if (data.order) openPayModal(data.order);
+      } else {
+        statusBanner.innerHTML = '<div class="notice good">Order <strong>' + esc(data.orderNumber) + '</strong> submitted — pay our team in cash on delivery. You can also pay online anytime from the Pay button on the order.</div>';
+      }
     } catch (err) {
       orderNote.textContent = 'Error: ' + err.message;
     } finally {
@@ -788,6 +835,7 @@
   }
 
   function renderHomeView(allOrders, stock) {
+    updateDueBanner(allOrders);
     const live = allOrders.filter((o) => o.order_status !== 'canceled');
     const sum = (list) => list.reduce((s, o) => s + (Number(o.total) || 0), 0);
 

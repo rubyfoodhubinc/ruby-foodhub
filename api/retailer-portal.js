@@ -96,7 +96,7 @@ module.exports = async (req, res) => {
 
       const { items, paymentMethod } = req.body;
       if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'No items in the order.' });
-      if (!['stripe', 'pay_on_delivery'].includes(paymentMethod)) {
+      if (!['stripe', 'pay_on_delivery', 'cash', 'zelle'].includes(paymentMethod)) {
         return res.status(400).json({ error: 'Choose a payment method.' });
       }
 
@@ -134,19 +134,25 @@ module.exports = async (req, res) => {
         total, payment_method: paymentMethod,
       });
 
-      if (paymentMethod === 'pay_on_delivery') {
+      if (paymentMethod !== 'stripe') {
+        // Cash, Zelle, and (legacy) pay-on-delivery orders submit unpaid and
+        // stay owed until the money is verified and confirmed by an admin.
+        const methodLabel = paymentMethod === 'zelle' ? 'ZELLE' : paymentMethod === 'cash' ? 'CASH (on delivery)' : 'PAY ON DELIVERY';
         try {
           const itemsText = orderItems.map((i) => `- ${i.quantity} x ${i.product} — ${i.variant} @ $${i.wholesale_price.toFixed(2)}`).join('\n');
+          const tail = paymentMethod === 'zelle'
+            ? `They were shown the Zelle details (bankpay@rubyfoodhub.com) and asked to report the payment once sent. Verify the money, then confirm in Admin -> Wholesale.`
+            : `Confirm the payment in Admin -> Wholesale once collected.`;
           await resend.emails.send({
             from: FROM_ADDRESS,
             to: 'sales@rubyfoodhub.com',
-            subject: `Wholesale order ${order.order_number} (pay on delivery) — ${account.business_name}`,
-            text: `${account.business_name} (${account.contact_name}, ${account.email}, ${account.phone || 'no phone'}) placed a PAY ON DELIVERY order.\n\n${itemsText}\n\nTotal due on delivery: $${total.toFixed(2)}\n\nConfirm the payment in Admin -> Wholesale once collected.`,
+            subject: `Wholesale order ${order.order_number} (${methodLabel.toLowerCase()}) — ${account.business_name}`,
+            text: `${account.business_name} (${account.contact_name}, ${account.email}, ${account.phone || 'no phone'}) placed a ${methodLabel} order.\n\n${itemsText}\n\nTotal due: $${total.toFixed(2)}\n\n${tail}`,
           });
         } catch (e) {
           console.error('wholesale order notification failed:', e.message);
         }
-        return res.status(200).json({ success: true, orderNumber: order.order_number, paymentMethod });
+        return res.status(200).json({ success: true, orderNumber: order.order_number, paymentMethod, order });
       }
 
       // Stripe: charge the wholesale total via the usual hosted Checkout.

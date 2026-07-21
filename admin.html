@@ -7,6 +7,9 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <style>
   body { margin: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: oklch(97% 0.015 60); color: oklch(22% 0.02 40); }
+  /* The page itself never scrolls sideways — wide tables scroll inside
+     their own .table-scroll wrappers, keeping vertical scroll usable. */
+  html, body { max-width: 100%; overflow-x: hidden; }
   * { box-sizing: border-box; }
   button { font-family: inherit; cursor: pointer; }
 
@@ -68,6 +71,11 @@
   .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.6; }
   .expand-caret { display: inline-block; width: 16px; color: rgba(34,30,26,.45); font-size: 11px; }
   .detail-cell { background: oklch(98.5% 0.008 60); padding: 18px 24px 22px; white-space: normal; }
+  /* Expanded detail content must never widen the outer table (which would
+     force the whole page to pan sideways) — its nested tables scroll inside
+     their own .table-scroll wrappers instead. */
+  .detail-cell .detail-contain { contain: inline-size; }
+  .detail-cell .items-block { overflow-x: auto; }
   .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 28px; margin-bottom: 14px; }
   .detail-field .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(34,30,26,.5); margin-bottom: 3px; }
   .detail-field .value { font-size: 14px; white-space: pre-line; }
@@ -593,7 +601,7 @@
         '<tr class="summary-row" data-order="' + esc(o.order_id) + '">' +
         '<td><span class="expand-caret">' + (isOpen ? '▼' : '►') + '</span></td>' + cells + '</tr>';
       const detail = isOpen
-        ? '<tr><td class="detail-cell" colspan="' + colCount + '">' + renderDetail(o) + '</td></tr>'
+        ? '<tr><td class="detail-cell" colspan="' + colCount + '"><div class="detail-contain">' + renderDetail(o) + '</div></td></tr>'
         : '';
       return summary + detail;
     }).join('');
@@ -1119,14 +1127,14 @@
         '</tr>';
       const addOrderOpen = wsAddOrderOpen.has(r.id);
       const detail = isOpen
-        ? '<tr><td class="detail-cell" colspan="10">' +
+        ? '<tr><td class="detail-cell" colspan="10"><div class="detail-contain">' +
           '<div class="items-block" style="margin-bottom:16px">' +
             '<button type="button" class="btn btn-sm ws-addorder-toggle" data-retailer="' + esc(r.id) + '">' + (addOrderOpen ? '− Hide Add Order' : '+ Add Order to This Account') + '</button>' +
             (addOrderOpen ? '<div class="ws-addorder-form" data-retailer="' + esc(r.id) + '" style="margin-top:10px"><div class="loading">Loading catalog…</div></div>' : '') +
           '</div>' +
           '<div id="ws-orders-' + esc(r.id) + '"><div class="loading">Loading orders…</div></div>' +
           '<div id="ws-stock-' + esc(r.id) + '" style="margin-top:18px"><div class="loading">Loading stock…</div></div>' +
-          '</td></tr>'
+          '</div></td></tr>'
         : '';
       return summary + detail;
     }).join('');
@@ -1201,15 +1209,15 @@
       container.innerHTML =
         '<div class="table-scroll"><table><thead><tr><th>Product</th><th>Variant</th><th>Wholesale $</th><th>Qty</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-top:10px;cursor:pointer">' +
-          '<input type="checkbox" class="ao-fulfilled" style="width:16px;height:16px"/>' +
+          '<input type="checkbox" class="ao-fulfilled" checked style="width:16px;height:16px"/>' +
           'Mark as delivered now — items are added to the retailer\'s stock and payment becomes due immediately' +
         '</label>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">' +
           '<input type="text" class="ao-note" placeholder="Note (optional, e.g. phone order taken by Jane)" style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid rgba(34,30,26,.18);border-radius:8px;font-family:inherit"/>' +
           '<span class="ao-total note" style="font-weight:700">Total: ' + formatMoney(0) + '</span>' +
-          '<button type="button" class="btn btn-sm ao-submit" data-retailer="' + esc(retailerId) + '">Create Order (Pay on Delivery)</button>' +
+          '<button type="button" class="btn btn-sm ao-submit" data-retailer="' + esc(retailerId) + '">Create Order &amp; Request Payment</button>' +
         '</div>' +
-        '<p class="note">This order will appear on the retailer\'s account as pay-on-delivery — they can pay online from their portal anytime, or you can confirm payment received once fulfilled. Tick "Mark as delivered" if the goods are already at their location.</p>' +
+        '<p class="note">The order lands on the retailer\'s account unpaid: they\'re emailed that payment is due and see a Pay Now prompt in their portal (Stripe, cash, or Zelle). Untick "Mark as delivered" only if the goods haven\'t reached their location yet — payment then falls due on delivery.</p>' +
         '<p class="note ao-msg"></p>';
 
       const totalEl = container.querySelector('.ao-total');
@@ -1310,7 +1318,7 @@
           '<input type="text" class="stk-note" placeholder="Note (e.g. restock, sold through, damaged)" style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid rgba(34,30,26,.18);border-radius:8px;font-family:inherit"/>' +
           '<button type="button" class="btn btn-sm stk-apply" data-retailer="' + esc(retailerId) + '">Apply</button>' +
         '</div>' +
-        '<p class="note">Adjustments here only correct inventory (recounts, damage, sold-through) — they do NOT bill the retailer. To record a billable delivery, use "+ Add Order to This Account" above and tick "Mark as delivered now".</p>' +
+        '<p class="note"><strong>Adding stock bills the retailer:</strong> a positive quantity records a delivered, payable order at the wholesale price — the retailer is emailed that payment is due and sees it in their portal. Use a negative quantity for inventory-only corrections (recounts, damage, sold-through), which never bill.</p>' +
         '<p class="note stk-note-msg"></p>' +
         (movementRows
           ? '<div class="label" style="margin-top:12px">Recent Movements</div>' +
@@ -1323,15 +1331,43 @@
         const btn = e.target;
         const msg = target.querySelector('.stk-note-msg');
         const change = Math.trunc(Number(target.querySelector('.stk-qty').value));
-        if (!change) { msg.textContent = 'Enter a positive number to add stock or a negative number to remove it.'; return; }
+        if (!change) { msg.textContent = 'Enter a positive number to add stock (billed as a delivered order) or a negative number for an inventory-only correction.'; return; }
+        const productId = target.querySelector('.stk-product').value;
+        const note = target.querySelector('.stk-note').value.trim();
+        const productLabel = target.querySelector('.stk-product').selectedOptions[0].textContent;
+        if (change > 0) {
+          // Adding stock = a delivery the retailer owes for. Route it through
+          // the billable create-order path so an unpaid, fulfilled order is
+          // created, stock is incremented, and the retailer is emailed.
+          if (!window.confirm('Add ' + change + ' × ' + productLabel + ' to this retailer\'s stock as a DELIVERED, PAYABLE order at the current wholesale price? They\'ll be emailed that payment is due.')) return;
+          btn.disabled = true;
+          msg.textContent = '';
+          try {
+            await api('/api/admin-wholesale', {
+              action: 'create-order', retailerId, markFulfilled: true,
+              items: [{ product_id: productId, quantity: change }],
+              note: note || 'Stock added at location by admin',
+            });
+            wsOrdersCache.delete(retailerId);
+            loadRetailerOrders(retailerId);
+            loadRetailerStock(retailerId);
+          } catch (err) {
+            msg.textContent = err.message.indexOf('No valid items') !== -1
+              ? 'Error: this product has no wholesale price set — add one in the Wholesale Prices panel first, then add the stock.'
+              : 'Error: ' + err.message;
+            btn.disabled = false;
+          }
+          return;
+        }
+        if (!window.confirm('Remove ' + Math.abs(change) + ' × ' + productLabel + ' from this retailer\'s stock? This is an inventory-only correction — no billing changes.')) return;
         btn.disabled = true;
         try {
           await api('/api/admin-wholesale', {
             action: 'stock-adjust',
             retailerId,
-            productId: target.querySelector('.stk-product').value,
+            productId,
             change,
-            note: target.querySelector('.stk-note').value.trim()
+            note
           });
           loadRetailerStock(retailerId);
         } catch (err) {
@@ -1363,7 +1399,7 @@
         const items = (Array.isArray(o.items) ? o.items : []).map((i) => i.quantity + '× ' + i.product + ' — ' + i.variant + ' @ ' + formatMoney(i.wholesale_price)).join('<br>');
         const isCanceled = o.order_status === 'canceled';
         const isClaim = o.payment_status === 'awaiting_confirmation';
-        const canConfirm = !isCanceled && (isClaim || (o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending'));
+        const canConfirm = !isCanceled && (isClaim || (o.payment_method !== 'stripe' && o.payment_status === 'pending'));
         const statusOptions = ['pending', 'confirmed', 'fulfilled'].map((s) =>
           '<option value="' + s + '"' + (s === o.order_status ? ' selected' : '') + '>' + s.charAt(0).toUpperCase() + s.slice(1) + '</option>'
         ).join('');
@@ -1377,7 +1413,7 @@
           '<td style="white-space:nowrap">' + esc(o.order_number) + '</td>' +
           '<td>' + items + '</td>' +
           '<td style="white-space:nowrap;font-weight:700">' + formatMoney(o.total) + '</td>' +
-          '<td>' + esc(o.payment_method === 'stripe' ? 'Stripe' : 'Pay on delivery') + '</td>' +
+          '<td>' + esc({ stripe: 'Stripe', pay_on_delivery: 'Pay on delivery', cash: 'Cash', zelle: 'Zelle' }[o.payment_method] || o.payment_method) + '</td>' +
           '<td>' + wsPaymentPill(o) +
             (isClaim && o.claimed_at ? '<div class="note">Reported ' + esc(formatDate(o.claimed_at)) + '</div>' : '') +
             (isClaim && o.claimed_reference ? '<div class="note" style="max-width:220px;white-space:normal">Ref: ' + esc(o.claimed_reference) + '</div>' : '') +
@@ -1520,7 +1556,7 @@
 
     const retailPending = orders.filter((o) => (o.order_status || 'pending') === 'pending').length;
     const wsToFulfill = wsLive.filter((o) => o.order_status !== 'fulfilled').length;
-    const podAwaiting = wsLive.filter((o) => o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending');
+    const podAwaiting = wsLive.filter((o) => o.payment_method !== 'stripe' && o.payment_status === 'pending');
     const claimsToVerify = wsLive.filter((o) => o.payment_status === 'awaiting_confirmation');
     const pendingApps = homeRetailers.filter((r) => r.account_status === 'pending').length;
 
@@ -1532,7 +1568,7 @@
     document.getElementById('home-actions').innerHTML =
       actionCard('Retail Orders Pending Delivery', retailPending, 'awaiting fulfillment', 'orders') +
       actionCard('Wholesale Orders To Fulfill', wsToFulfill, 'pending or confirmed', 'wholesale') +
-      actionCard('Pay-on-Delivery To Confirm', podAwaiting.length, formatMoney(sumOf(podAwaiting)) + ' to collect', 'wholesale') +
+      actionCard('Payments To Collect', podAwaiting.length, formatMoney(sumOf(podAwaiting)) + ' unpaid (cash/Zelle/on delivery)', 'wholesale') +
       actionCard('Cash/Zelle Claims To Verify', claimsToVerify.length, formatMoney(sumOf(claimsToVerify)) + ' reported paid', 'wholesale') +
       actionCard('Retailer Applications', pendingApps, 'awaiting approval', 'wholesale') +
       actionCard('Stock Low / Out at Retailers', (lowStock || []).length, outCount + ' fully out of stock', 'wholesale');
