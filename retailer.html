@@ -668,7 +668,10 @@
     const live = allOrders.filter((o) => o.order_status !== 'canceled');
     const sum = (list) => list.reduce((s, o) => s + (Number(o.total) || 0), 0);
 
-    const owedOrders = live.filter((o) => o.payment_method === 'pay_on_delivery' && o.payment_status === 'pending');
+    // Every live unpaid order counts as owed — pay-on-delivery orders,
+    // admin-added deliveries, and Stripe checkouts that were started but
+    // never completed. All of them carry a Pay button.
+    const owedOrders = live.filter((o) => o.payment_status === 'pending');
     const lastOrder = live.length ? live[0] : null;
 
     const kpi = (label, val, sub) =>

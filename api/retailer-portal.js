@@ -19,9 +19,11 @@ const SUPPORT_TOPICS = {
 
 async function markOrderPaid(orderId, stripeSessionId) {
   // Idempotent: webhook and the on-return verification can both call this.
+  // payment_method is set to 'stripe' because that's how it was actually
+  // paid, even if the order started life as pay-on-delivery.
   const { data, error } = await supabase
     .from('wholesale_orders')
-    .update({ payment_status: 'paid' })
+    .update({ payment_status: 'paid', payment_method: 'stripe' })
     .eq('id', orderId)
     .neq('payment_status', 'paid')
     .select('order_number, retailer_id, total');
@@ -94,7 +96,7 @@ module.exports = async (req, res) => {
         const entry = byId.get(item.product_id);
         const quantity = Math.max(1, Math.min(1000, Number(item.quantity) || 0));
         if (!entry || !Number(item.quantity)) continue;
-        orderItems.push({ product: entry.name, variant: entry.variant, quantity, wholesale_price: entry.wholesale_price });
+        orderItems.push({ product_id: entry.product_id, product: entry.name, variant: entry.variant, quantity, wholesale_price: entry.wholesale_price });
         total += entry.wholesale_price * quantity;
       }
       if (!orderItems.length) return res.status(400).json({ error: 'No valid items in the order.' });

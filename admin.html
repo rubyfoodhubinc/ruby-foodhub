@@ -1188,12 +1188,16 @@
 
       container.innerHTML =
         '<div class="table-scroll"><table><thead><tr><th>Product</th><th>Variant</th><th>Wholesale $</th><th>Qty</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-top:10px;cursor:pointer">' +
+          '<input type="checkbox" class="ao-fulfilled" style="width:16px;height:16px"/>' +
+          'Mark as delivered now — items are added to the retailer\'s stock and payment becomes due immediately' +
+        '</label>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">' +
           '<input type="text" class="ao-note" placeholder="Note (optional, e.g. phone order taken by Jane)" style="flex:1;min-width:220px;padding:8px 12px;border:1.5px solid rgba(34,30,26,.18);border-radius:8px;font-family:inherit"/>' +
           '<span class="ao-total note" style="font-weight:700">Total: ' + formatMoney(0) + '</span>' +
           '<button type="button" class="btn btn-sm ao-submit" data-retailer="' + esc(retailerId) + '">Create Order (Pay on Delivery)</button>' +
         '</div>' +
-        '<p class="note">This order will appear on the retailer\'s account as pay-on-delivery — they can pay online from their portal anytime, or you can confirm payment received once fulfilled.</p>' +
+        '<p class="note">This order will appear on the retailer\'s account as pay-on-delivery — they can pay online from their portal anytime, or you can confirm payment received once fulfilled. Tick "Mark as delivered" if the goods are already at their location.</p>' +
         '<p class="note ao-msg"></p>';
 
       const totalEl = container.querySelector('.ao-total');
@@ -1208,6 +1212,8 @@
       });
       const noteInput = container.querySelector('.ao-note');
       noteInput.addEventListener('click', (e) => e.stopPropagation());
+      const fulfilledBox = container.querySelector('.ao-fulfilled');
+      fulfilledBox.addEventListener('click', (e) => e.stopPropagation());
 
       container.querySelector('.ao-submit').addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -1219,11 +1225,15 @@
           if (qty > 0) items.push({ product_id: inp.dataset.product, quantity: qty });
         });
         if (!items.length) { msg.textContent = 'Enter a quantity for at least one product.'; return; }
-        if (!window.confirm('Create this order on the retailer\'s account? They\'ll be emailed and can pay online or on delivery.')) return;
+        const fulfillNow = fulfilledBox.checked;
+        const confirmMsg = fulfillNow
+          ? 'Create this order as DELIVERED? The items will be added to the retailer\'s stock and they\'ll be emailed that payment is due (pay online or in person).'
+          : 'Create this order on the retailer\'s account? They\'ll be emailed and can pay online or on delivery.';
+        if (!window.confirm(confirmMsg)) return;
         btn.disabled = true;
         msg.textContent = '';
         try {
-          await api('/api/admin-wholesale', { action: 'create-order', retailerId, items, note: noteInput.value.trim() });
+          await api('/api/admin-wholesale', { action: 'create-order', retailerId, items, note: noteInput.value.trim(), markFulfilled: fulfillNow });
           wsOrdersCache.delete(retailerId);
           wsAddOrderOpen.delete(retailerId);
           wholesaleLoaded = false;
@@ -1288,6 +1298,7 @@
           '<input type="text" class="stk-note" placeholder="Note (e.g. restock, sold through, damaged)" style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid rgba(34,30,26,.18);border-radius:8px;font-family:inherit"/>' +
           '<button type="button" class="btn btn-sm stk-apply" data-retailer="' + esc(retailerId) + '">Apply</button>' +
         '</div>' +
+        '<p class="note">Adjustments here only correct inventory (recounts, damage, sold-through) — they do NOT bill the retailer. To record a billable delivery, use "+ Add Order to This Account" above and tick "Mark as delivered now".</p>' +
         '<p class="note stk-note-msg"></p>' +
         (movementRows
           ? '<div class="label" style="margin-top:12px">Recent Movements</div>' +
@@ -1456,7 +1467,7 @@
       '<div class="kpi-card"><div class="period">Combined Revenue (All-Time)</div><div class="rev">' + formatMoney(retailRevenue + wsRevenue) + '</div><div class="sub">' + (orders.length + wsLive.length) + ' total transactions</div></div>' +
       '<div class="kpi-card"><div class="period">Retail Revenue</div><div class="rev">' + formatMoney(retailRevenue) + '</div><div class="sub">' + orders.length + ' order(s)</div></div>' +
       '<div class="kpi-card"><div class="period">Wholesale Revenue</div><div class="rev">' + formatMoney(wsRevenue) + '</div><div class="sub">' + formatMoney(wsCollected) + ' collected</div></div>' +
-      '<div class="kpi-card"><div class="period">Wholesale Outstanding</div><div class="rev">' + formatMoney(wsOutstanding) + '</div><div class="sub">pay-on-delivery not yet confirmed</div></div>';
+      '<div class="kpi-card"><div class="period">Wholesale Outstanding</div><div class="rev">' + formatMoney(wsOutstanding) + '</div><div class="sub">unpaid — awaiting online payment or delivery confirmation</div></div>';
 
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());

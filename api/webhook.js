@@ -153,9 +153,12 @@ async function handler(req, res) {
     const session = event.data.object;
     const orderId = session.metadata.wholesaleOrderId;
     try {
+      // Also record HOW it was paid: a pay-on-delivery order settled online
+      // via the portal's Pay Now button really was paid by card, so the
+      // Method column should say Stripe, not Pay on delivery.
       const { data, error } = await supabase
         .from('wholesale_orders')
-        .update({ payment_status: 'paid' })
+        .update({ payment_status: 'paid', payment_method: 'stripe' })
         .eq('id', orderId)
         .neq('payment_status', 'paid')
         .select('order_number, total, retailer_id');

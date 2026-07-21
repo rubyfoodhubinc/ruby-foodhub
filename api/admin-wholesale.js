@@ -60,13 +60,17 @@ async function handler(req, res) {
         supabase.from('retailer_accounts')
           .select('id, business_name, contact_name, email, phone, address, account_status, last_login_at, created_at')
           .order('created_at', { ascending: false }),
-        supabase.from('wholesale_orders').select('retailer_id, items, total, payment_status'),
+        supabase.from('wholesale_orders').select('retailer_id, items, total, payment_status, order_status'),
       ]);
       if (rErr) throw new Error(JSON.stringify(rErr));
       if (oErr) throw new Error(JSON.stringify(oErr));
 
       const stats = new Map();
       for (const o of orders || []) {
+        // Canceled orders carry no money owed and no goods — a canceled
+        // order's payment_status stays 'pending' forever, so counting it
+        // would inflate the Pending $ column indefinitely.
+        if (o.order_status === 'canceled') continue;
         if (!stats.has(o.retailer_id)) {
           stats.set(o.retailer_id, { orderCount: 0, paidTotal: 0, pendingTotal: 0, qtyByProduct: {} });
         }
@@ -115,7 +119,11 @@ async function handler(req, res) {
       // phone-in or in-person order). Always created as pay-on-delivery —
       // the retailer can pay online later via their portal's Pay Now
       // button, or pay in person and have the admin confirm it.
-      const { retailerId, items, note } = req.body;
+      // markFulfilled=true is the "billable delivery" path: the goods are
+      // already at the retailer's location, so the order is created as
+      // fulfilled, their stock is incremented, and payment is due now.
+      const { retailerId, items, note, markFulfilled } = req.body;
+      const fulfillNow = markFulfilled === true;
       if (!retailerId || !Array.isArray(items) || !items.length) {
         return res.status(400).json({ error: 'retailerId and at least one item are required.' });
       }
@@ -138,7 +146,7 @@ async function handler(req, res) {
         const entry = byId.get(item.product_id);
         const quantity = Math.max(1, Math.min(1000, Number(item.quantity) || 0));
         if (!entry || !Number(item.quantity)) continue;
-        orderItems.push({ product: entry.name, variant: entry.variant, quantity, wholesale_price: entry.wholesale_price });
+        orderItems.push({ product_id: entry.product_id, product: entry.name, variant: entry.variant, quantity, wholesale_price: entry.wholesale_price });
         total += entry.wholesale_price * quantity;
       }
       if (!orderItems.length) return res.status(400).json({ error: 'No valid items selected.' });
@@ -151,35 +159,61 @@ async function handler(req, res) {
           items: orderItems,
           total,
           payment_method: 'pay_on_delivery',
+          order_status: fulfillNow ? 'fulfilled' : 'pending',
         })
         .select('*')
         .single();
       if (error) throw new Error(JSON.stringify(error));
 
+      // Billable delivery: goods are already on-site, so stock them in
+      // right away — by product_id, no name matching needed here.
+      let stocked = 0;
+      if (fulfillNow) {
+        for (const item of orderItems) {
+          try {
+            await applyStockChange(retailerId, item.product_id, item.quantity,
+              `Delivered via ${order.order_number} (added by admin)`, actor.id);
+            stocked += 1;
+          } catch (e) {
+            console.error(`[stock] failed to stock-in ${item.product} for ${order.order_number}:`, e.message);
+          }
+        }
+      }
+
       await logAudit(actor.id, 'wholesale_order_created_by_admin', {
         order_id: order.id, order_number: order.order_number, retailer_id: retailerId,
-        business_name: retailer.business_name, total, note: note ? String(note).trim().slice(0, 500) : null,
+        business_name: retailer.business_name, total, mark_fulfilled: fulfillNow,
+        stocked_items: stocked, note: note ? String(note).trim().slice(0, 500) : null,
       });
 
       if (isValidEmail(retailer.email)) {
         try {
           const itemsText = orderItems.map((i) => `- ${i.quantity} x ${i.product} — ${i.variant} @ $${i.wholesale_price.toFixed(2)}`).join('\n');
+          const subject = fulfillNow
+            ? `Delivery added to your Ruby FoodHub account — ${order.order_number} — payment due`
+            : `A new order was added to your Ruby FoodHub account — ${order.order_number}`;
+          const intro = fulfillNow
+            ? 'Our team has recorded a delivery to your location. The items below have been added to your stock, and payment is now due:'
+            : 'Our team has added a new wholesale order to your account:';
+          const totalLine = fulfillNow
+            ? `<strong>Total due: $${total.toFixed(2)}</strong>`
+            : `<strong>Total: $${total.toFixed(2)}</strong> — pay on delivery`;
           await resend.emails.send({
             from: FROM_ADDRESS,
             to: retailer.email,
-            subject: `A new order was added to your Ruby FoodHub account — ${order.order_number}`,
+            subject,
             html: `<p style="font-family:sans-serif;line-height:1.6">Hi ${retailer.business_name},<br><br>` +
-              `Our team has added a new wholesale order to your account:<br><br>` +
+              `${intro}<br><br>` +
               `<strong>Order ${order.order_number}</strong><br>${itemsText.replace(/\n/g, '<br>')}<br><br>` +
-              `<strong>Total: $${total.toFixed(2)}</strong> — pay on delivery<br><br>` +
-              `You can view this order and pay online anytime from your <a href="https://www.rubyfoodhub.com/retailer">Ruby FoodHub retailer portal</a>.</p>` + RETAILER_EMAIL_FOOTER,
+              `${totalLine}<br><br>` +
+              `You can pay online anytime from your <a href="https://www.rubyfoodhub.com/retailer">Ruby FoodHub retailer portal</a>, or pay our team on delivery.</p>` + RETAILER_EMAIL_FOOTER,
           });
         } catch (e) {
           console.error('order-added notification failed:', e.message);
         }
       }
 
-      return res.status(200).json({ success: true, order });
+      return res.status(200).json({ success: true, order, stockedItems: stocked });
     }
 
     if (action === 'confirm-payment') {
@@ -233,7 +267,9 @@ async function handler(req, res) {
         const { data: catalog } = await supabase.from('products').select('id, name, variant');
         const byNameVariant = new Map((catalog || []).map((p) => [`${p.name}::${p.variant}`, p.id]));
         for (const item of (Array.isArray(before.items) ? before.items : [])) {
-          const productId = byNameVariant.get(`${item.product}::${item.variant}`);
+          // Newer orders store the product_id directly; fall back to
+          // name+variant matching for orders created before that.
+          const productId = item.product_id || byNameVariant.get(`${item.product}::${item.variant}`);
           if (!productId) {
             console.error(`[stock] no product match for "${item.product} — ${item.variant}" on ${before.order_number}; skipped`);
             continue;
