@@ -10,3 +10,11 @@ node_modules/
 # Capacitor app web assets are generated from the repo root by
 # apps/*/sync-www.js — never edit or commit them.
 apps/*/www/
+
+# Android release-signing keystores and their passwords. Losing these is
+# fine (you still have the key); committing them to a public/shared repo
+# is not — keep the .jks/.keystore file and keystore.properties backed up
+# OUTSIDE git (password manager / secure cloud storage), never inside it.
+apps/*/android/*.jks
+apps/*/android/*.keystore
+apps/*/android/keystore.properties

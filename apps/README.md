@@ -33,16 +33,59 @@ Then rebuild/re-release the app **only if you want the new UI inside the
 app** — the API/backend always updates instantly for existing app installs
 since data comes from the live site.
 
-## Building
+## Building Android — from the command line (no Android Studio needed)
 
-Android (works on Windows — requires Android Studio):
+This works on Windows. Requires JDK 21 (Capacitor 7's Android module targets
+Java 21 — a separate JDK 17 also works for running Gradle itself, but 21 is
+simplest since it covers both) and the Android SDK command-line tools
+(platform-tools, `platforms;android-35`, `build-tools;35.0.0`).
+
+If `dl.google.com` / Maven fail with a Java `PKIX path building failed`
+error but work fine in a browser or `curl`, this environment has a
+TLS-inspecting proxy whose root CA Windows trusts but Java's separate
+cacerts store doesn't. Point Java at the Windows trust store instead of
+installing anything: `set JAVA_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`
+(and `GRADLE_OPTS` to the same for Gradle itself).
 
 ```
-npm run open:android    # opens the project in Android Studio
-# Build > Generate Signed App Bundle (.aab) for the Play Store
+npm run sync                     # rebuild www/ and sync into android/
+cd android
+./gradlew assembleDebug          # unsigned debug APK — good for sanity checks
+./gradlew bundleRelease          # signed .aab — what you upload to Play Console
 ```
 
-iOS (**requires a Mac** with Xcode + CocoaPods — cannot be built on Windows):
+`bundleRelease` needs `android/keystore.properties` (git-ignored, see below)
+pointing at a real upload keystore — without it the release build produces
+an **unsigned** bundle Play Console will reject.
+
+### The upload keystore — read this before doing anything else with it
+
+Each app has its own keystore (`android/rubyfoodhub-admin-upload.jks` and
+`android/rubyfoodhub-wholesale-upload.jks`), generated once with:
+
+```
+keytool -genkeypair -v -keystore <name>-upload.jks -alias <alias> \
+  -keyalg RSA -keysize 2048 -validity 10957 -storetype PKCS12
+```
+
+**This keystore IS the app, forever.** Losing it — or losing the password —
+means you can never publish an update to that app again; you'd have to ship
+it as a brand-new listing with zero reviews and zero installs. Google
+cannot recover it for you. Right now:
+
+1. Back up both `.jks` files AND `keystore.properties` (which holds the
+   passwords) to somewhere outside this machine — a password manager that
+   supports file attachments, or encrypted cloud storage. Today, not later.
+2. Never commit them — `.gitignore` already excludes `apps/*/android/*.jks`
+   and `apps/*/android/keystore.properties`, so a normal `git add` /
+   `git commit` is safe, but don't override that.
+3. If you ever move to a new machine, copy both files over — `npm install`
+   alone will not bring them back.
+
+## Building iOS
+
+**Requires a Mac** with Xcode + CocoaPods — Apple does not allow building,
+signing, or archiving an iOS app anywhere else, no exceptions.
 
 ```
 npm install && npm run sync
@@ -52,13 +95,12 @@ npm run open:ios        # opens the project in Xcode
 
 ## App icons & splash screens
 
-Native projects currently use the default Capacitor icons. Generate real
-ones from a 1024×1024 logo (run inside each app folder):
+Generated via `@capacitor/assets` from the Ruby FoodHub logo mark — white
+background for Wholesale, charcoal (`#241F1B`) for Admin, so the two are
+instantly distinguishable on a home screen. To regenerate after a logo
+change, put a 1024×1024 source in `assets/icon.png` (per app) and run:
 
 ```
 npm install -D @capacitor/assets
-npx capacitor-assets generate --iconBackgroundColor '#ffffff'
+npx capacitor-assets generate --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#241F1B'
 ```
-
-with `assets/icon.png` (1024×1024) and optionally `assets/splash.png`
-(2732×2732) placed in an `assets/` folder first.
