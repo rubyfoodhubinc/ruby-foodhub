@@ -1,6 +1,7 @@
 # Ruby FoodHub — Engineering Handoff Note
 **Prepared by:** outgoing session (acting as Chief Engineer for this stretch of work)
 **Date:** July 2026 (session ending 2026-07-21)
+**Last updated:** 2026-07-21 (afternoon session — payment-push changes, layout fix, app icons; commits `d194889`, `8910150`, `ae3c83b`; see §10)
 **Purpose:** Full record of what was built, current state, and exactly what the next analyst/engineer needs to pick up.
 
 Repo: `github.com/rubyfoodhubinc/ruby-foodhub` (branch `main`)
@@ -54,6 +55,11 @@ This is the complete build sequence, oldest to newest, for context on *why* thin
 24. Zelle ID (`bankpay@rubyfoodhub.com`) and the real Zelle QR tag wired into the payment chooser and relevant emails
 25. **Capacitor native apps** for Admin and Retailer/Wholesale portals — see §6
 26. **App Store compliance**: in-app account deletion (retailer) + updated privacy policy — see §7
+27. **Cash/Zelle at order placement** (2026-07-21, `d194889`): retailer Place Order tab now offers Stripe / Zelle / cash-on-delivery, matching the Pay Now chooser; a Zelle order immediately opens the payment chooser (QR tag + bankpay@rubyfoodhub.com) so the payment can be sent and reported on the spot — see §10
+28. **Payment push in the retailer portal** (`d194889`): standing "Payment due: $X — Pay Now" banner on every portal view while any order is unpaid — see §10
+29. **Billable stock-ins + Add Order defaults** (`d194889`): admin "Stock at This Location" positive additions now create a delivered, payable order; "Add Order to This Account" defaults to "Mark as delivered now" — see §10
+30. **Portal layout fix** (`d194889`): expanded admin detail rows no longer force sideways page scrolling; page-level horizontal overflow disabled on both portals — see §10
+31. **App icons & splash screens** (`8910150`): real Ruby FoodHub logo artwork generated via `@capacitor/assets` for both apps, Android + iOS — the former store-submission blocker is cleared — see §6
 
 ---
 
@@ -67,7 +73,8 @@ This is the complete build sequence, oldest to newest, for context on *why* thin
 - **Server-side price authority**: retail (`products`) and wholesale (`wholesale_prices`) checkout always look up price server-side by id — client-submitted prices are never trusted.
 - **Audit logging**: `audit_log` table, `logAudit()` helper, used on nearly every mutating action. `admin_user_id = null` means a system action.
 - **Stock ledger**: `retailer_stock` (current qty) + `stock_movements` (full history) via `applyStockChange()` in `api/_lib/stock.js` (shared by admin adjustments, order fulfillment, and retailer sold-reports).
-- **Wholesale order payment states**: `pending` → (`awaiting_confirmation` if a cash/Zelle claim is filed) → `confirmed_by_admin`, or `paid` directly via Stripe. Canceled orders are excluded from all financial rollups.
+- **Wholesale order payment states**: `pending` → (`awaiting_confirmation` if a cash/Zelle claim is filed) → `confirmed_by_admin`, or `paid` directly via Stripe. Canceled orders are excluded from all financial rollups. `payment_method` may now be `stripe`, `zelle`, `cash`, or legacy `pay_on_delivery` **at placement time** (constraint from migration 012 already allows all four); admins can confirm payment received on any unpaid non-Stripe order.
+- **Billing rule (owner decision, 2026-07-21)**: anything that puts product at a retailer's location must bill them. Positive "Stock at This Location" adjustments route through the billable `create-order` path (`markFulfilled: true`); only negative adjustments are inventory-only corrections. Do not reintroduce unbilled stock-in paths.
 - **Verification discipline used all session**: every backend change `node --check`'d; every inline `<script>` block extracted and `node --check`'d; HTML tag/div balance grep-counted; a cross-check that every frontend API action call has a matching backend handler. No code pushed without this pass. *(No live browser click-through was possible from the sandbox — no outbound network for `vercel dev` in most sessions. This is a known gap; see §8.)*
 
 ---
@@ -122,7 +129,7 @@ Each app bundles its portal page as `www/index.html` (via `sync-www.js`, gitigno
 Full day-to-day workflow (rebuilding `www/`, opening in Android Studio/Xcode) is documented in **`apps/README.md`** — read that before touching the app folders.
 
 ### What is NOT done for the apps
-- **App icons**: both apps still use the **default Capacitor icon**. This is an automatic rejection on both stores. `apps/README.md` has the exact `@capacitor/assets` command to run once real 1024×1024 artwork is supplied — **nobody has supplied that artwork yet**. This was flagged to the user as the next actionable item; no icon work has been started.
+- ~~App icons~~ **DONE (2026-07-21, commit `8910150`)**: real logo artwork generated via `@capacitor/assets` for both apps (dark background for Admin, light for Wholesale), Android + iOS sets committed, `cap sync` run. Source artwork lives in `apps/*/assets/`.
 - No screenshots, no store listings, no Data Safety/App Privacy forms filled in on either console.
 - No signed builds produced (no keystore created yet for Android; no Xcode archive — also iOS **cannot be built on this Windows machine**, needs a Mac).
 - No demo reviewer credentials created (dedicated demo admin + demo retailer accounts).
@@ -149,8 +156,8 @@ App bundles (`apps/*/www/`) were re-synced so the native projects ship this flow
 ## 8. Known gaps / things to watch
 
 1. **Migration 013 run-status unconfirmed** — see §4. Verify before relying on account deletion.
-2. **No live browser verification most of this session** — the sandbox mostly had no outbound network, so `vercel dev` couldn't boot. All verification was static (`node --check`, tag-balance counts, action-name cross-checks between frontend calls and backend handlers). **Recommend a real click-through pass** on: retailer account deletion end-to-end, the cash/Zelle claim → confirm/reject cycle, and the admin "mark as delivered" billable-order path, before leaning on them hard in production.
-3. **App icons** are the single biggest remaining blocker to app store submission — see §6.
+2. **Partial live verification** — the 2026-07-21 afternoon session click-tested the new retailer UI (payment options, due banner, pay modal, layout containment) in a real browser against a local static server and confirmed the new markup deployed to production. Still **not** exercised end-to-end with real money/data: retailer account deletion, the cash/Zelle claim → confirm/reject cycle, the billable stock-in path (order insert + stock movement + email), and Stripe checkout for a placed order. Recommend a logged-in click-through of those before leaning on them hard.
+3. ~~App icons~~ **cleared 2026-07-21** — see §6; remaining store blockers are signed builds, listings, and Mac access for iOS.
 4. **iOS build requires a Mac** — cannot be done from this Windows machine at all. Needs a borrowed Mac, MacinCloud, or a CI service like Codemagic.
 5. **Admin app should likely not be a public store listing** — Apple tends to reject internal/staff-only tools from the public App Store. Recommended path: Apple's "Unlisted App Distribution" or TestFlight-only; Google Play closed testing track. This was flagged to the user but no submission-track decision has been made yet.
 6. **Google Play new personal accounts** require a 14-day/12-tester closed test before going to production; enrolling as an *organization* (recommended, already advised) skips this.
@@ -160,12 +167,50 @@ App bundles (`apps/*/www/`) were re-synced so the native projects ship this flow
 
 ## 9. Immediate next steps, in priority order
 
-1. **Verify migration 013 ran in Supabase.** (5 minutes, do this first.)
-2. **Get 1024×1024 icon artwork** from the user (or generate from the existing logo assets — `logo-full.png`/`logo-mark.png` are in the repo root) and run the `@capacitor/assets` step documented in `apps/README.md` for both apps.
-3. **Live-verify** the three flows called out in §8.2 in a real deployed environment (not just static checks).
-4. Pick up the still-open App Store submission checklist from the prior turn: developer account enrollment (org, not personal), signed Android build + keystore, Mac access for iOS, store listing content, demo reviewer credentials, Data Safety/App Privacy form answers, and a distribution-track decision for the Admin app (unlisted/TestFlight vs. public).
-5. No other feature work is currently requested or pending — the last several turns were entirely App Store readiness, not new product features. Confirm with the user before starting anything not on this list.
+1. **Verify migration 013 ran in Supabase.** (5 minutes, do this first — still unconfirmed as of 2026-07-21.)
+2. ~~Icon artwork~~ **DONE** (commit `8910150` — see §6).
+3. **Live-verify with a real login** the flows called out in §8.2: cash/Zelle claim → confirm/reject, billable stock-in, Zelle order placement, account deletion.
+4. Pick up the still-open App Store submission checklist: developer account enrollment (org, not personal), signed Android build + keystore, Mac access for iOS, store listing content + screenshots (icons are now real, so screenshots can be taken), demo reviewer credentials, Data Safety/App Privacy form answers, and a distribution-track decision for the Admin app (unlisted/TestFlight vs. public).
+5. No other feature work is currently requested or pending. Confirm with the user before starting anything not on this list.
 
 ---
 
-*End of handoff note. All commits referenced above are on `main` and already pushed to `github.com/rubyfoodhubinc/ruby-foodhub`. Nothing is stashed or uncommitted as of this note.*
+## 10. Session record — 2026-07-21 afternoon (payment push + layout + icons)
+
+User request: review this handoff, then fix four issues on the retailer/admin portals and push. All four were implemented, verified, and deployed (commit `d194889`), followed by the app-icon commit (`8910150`) and this doc being added to the repo (`ae3c83b`).
+
+### 10.1 Place Order tab now offers Stripe / Zelle / Cash
+*Problem:* the Pay Now chooser on existing orders offered Stripe/cash/Zelle, but the Place Order tab only offered Stripe/pay-on-delivery.
+- `retailer.html`: pay-choice radios are now **Pay now via Stripe / Pay by Zelle / Pay by cash on delivery**. Selecting Zelle places the order and immediately opens the existing payment chooser (Zelle QR tag + `bankpay@rubyfoodhub.com`) so the retailer can send and report payment on the spot. Method column maps all four values (Stripe / Zelle / Cash / Pay on delivery).
+- `api/retailer-portal.js` `place-order`: accepts `cash` and `zelle` (schema already allowed them via migration 012 — **no new migration needed**); non-Stripe orders return the created order row so the frontend can open the chooser; the sales@ notification email is method-aware.
+- `admin.html`: order tables show the new method labels; **Confirm Payment Received** now appears for any unpaid non-Stripe order (was pay-on-delivery only); Home KPI card renamed to "Payments To Collect" and counts all unpaid non-Stripe orders.
+
+### 10.2 Sideways-scrolling / wide-page fix (both portals)
+*Problem:* pages went wider than the screen; vertical position had to be given up to reach the horizontal scrollbar at the bottom and pan across.
+*Root cause:* expanding a retailer (admin Wholesale tab) or an order (admin Orders tab) put wide nested tables inside a `<td>` of the outer table — intrinsic table sizing ignores `overflow`, so the nested tables forced the outer table (and page) wide.
+- `admin.html`: expanded detail rows are wrapped in `<div class="detail-contain">` with `contain: inline-size`, so nested tables scroll inside their own `.table-scroll` wrappers instead of widening the page. Verified with an injected 3,455px-wide nested table: inner container scrolls, page stays at viewport width.
+- Both `admin.html` and `retailer.html`: `html, body { max-width: 100%; overflow-x: hidden; }` — the page itself can never pan sideways; every wide table has its own scroller. Also fixed the pay-choice labels clipping long tokens (`overflow-wrap: anywhere`).
+
+### 10.3 Stock at This Location now bills the retailer
+*Problem:* admin stock additions only updated inventory — product reached the retailer with no order to pay.
+*Owner decision:* **anything that puts product at a retailer's location must bill them.**
+- `admin.html`: a **positive** adjustment now routes through `create-order` with `markFulfilled: true` — creates a delivered, unpaid order at the current wholesale price, increments stock, emails the retailer that payment is due, refreshes the orders + stock panels. Distinct confirm dialogs for add (billable) vs. remove (correction). Friendly error if the product has no wholesale price set yet.
+- **Negative** adjustments still use `stock-adjust` (inventory-only: recounts, damage, sold-through) and never bill. The `stock-adjust` API itself is unchanged (still accepts positives if ever needed programmatically); the UI is what enforces the billing rule.
+
+### 10.4 Add Order to This Account pushes for payment
+- `admin.html`: "Mark as delivered now" **defaults to checked**; button renamed **"Create Order & Request Payment"**; helper text rewritten around payment being due.
+- `retailer.html`: new standing **payment-due banner** (`#due-banner`, `updateDueBanner()`) at the top of every portal view whenever any order is unpaid: "Payment due: $X across N orders" + a **Pay Now** button (opens the chooser directly for a single unpaid order, else jumps to My Orders). Also shows an "awaiting confirmation" notice when claims are pending. Refreshed by both `loadOrders()` and `renderHomeView()`.
+
+### 10.5 Verification performed
+- `node --check` on `api/retailer-portal.js`, `api/admin-wholesale.js`, and both extracted inline portal scripts; div/tr tag-balance counts clean.
+- Real-browser click-through against a local static server (`.claude/launch.json` in the Desktop entry folder has a `portal-static` config on port 4173): three payment options render and select correctly, due banner renders with mock orders, pay modal opens with Zelle QR, layout containment proven, zero console errors.
+- Production check after deploy: `/retailer` and `/admin` on www.rubyfoodhub.com confirmed serving the new markup (Zelle/cash options, due banner, overflow guards, detail-contain rule).
+- `apps/admin-app` and `apps/retailer-app`: `node sync-www.js` + `npx cap sync` re-run, so the native bundles ship all of the above on next build.
+- Note for future sessions: the sandboxed shell on this machine **cannot make outbound TLS connections** (curl fails even to github.com, though git push works) — use the in-app browser for any live-site checks.
+
+### 10.6 App icons (follow-up commit `8910150`)
+Icon/splash artwork for both apps was found generated-but-uncommitted in the working tree (real logo: dark background Admin, light Wholesale; `@capacitor/assets` output for Android + iOS, manifest reformat, `@capacitor/assets` devDependency). Reviewed and committed at the user's request, clearing the store-submission blocker. Source artwork: `apps/*/assets/`.
+
+---
+
+*End of handoff note. All commits referenced above are on `main` and already pushed to `github.com/rubyfoodhubinc/ruby-foodhub`. Nothing is stashed or uncommitted as of the 2026-07-21 update.*
