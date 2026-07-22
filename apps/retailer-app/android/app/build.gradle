@@ -10,10 +10,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.rubyfoodhub.wholesale"
+    namespace "com.rubyfoodhub.retailer"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.rubyfoodhub.wholesale"
+        applicationId "com.rubyfoodhub.retailer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

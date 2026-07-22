@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Ruby FoodHub Wholesale</string>
     <string name="title_activity_main">Ruby FoodHub Wholesale</string>
-    <string name="package_name">com.rubyfoodhub.wholesale</string>
-    <string name="custom_url_scheme">com.rubyfoodhub.wholesale</string>
+    <string name="package_name">com.rubyfoodhub.retailer</string>
+    <string name="custom_url_scheme">com.rubyfoodhub.retailer</string>
 </resources>
