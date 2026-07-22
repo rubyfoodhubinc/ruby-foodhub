@@ -1,9 +1,9 @@
 # Ruby FoodHub — Engineering Handoff Note
 **Prepared by:** outgoing session (acting as Chief Engineer for this stretch of work)
-**Date:** July 2026 (session ending 2026-07-21)
-**Last updated:** 2026-07-21 (afternoon/evening session — payment-push changes, layout fix, app icons, retailer-scoped order numbers, production batch tracking; commits `d194889`, `8910150`, `ae3c83b`, `340745f`, `a79512a`; see §10 and §11)
+**Date:** July 2026 (session ending 2026-07-22)
+**Last updated:** 2026-07-22 — Android app-store submission session: real signed build pipeline (JDK/SDK installed, keystores generated), package-name corrections for both apps, Play Store listing graphics (incl. a marketing-illustration policy fix), `/delete-account` page, and Android 16 (API 36) targeting to clear a Play policy rejection; commits `2989749`, `af8181b`, `d2c3d85`, `fa972f8`, `aab7381`, `888dbfa`, `d43ec45`, `24622db`; see §12.
 
-> ⚠️ **ACTION REQUIRED BEFORE SHIPPING ORDERS:** migration `014_production_batch.sql` must be run in the Supabase SQL Editor. Batch entry fails until it is. See §4.
+> ⚠️ **ACTION REQUIRED:** confirm migrations 013 and 014 have been run in the Supabase SQL Editor (user reported running "the SQL" before this session's app-store work began, but this has not been independently verified — no database access from this environment). See §4.
 **Purpose:** Full record of what was built, current state, and exactly what the next analyst/engineer needs to pick up.
 
 Repo: `github.com/rubyfoodhubinc/ruby-foodhub` (branch `main`)
@@ -64,6 +64,11 @@ This is the complete build sequence, oldest to newest, for context on *why* thin
 31. **App icons & splash screens** (`8910150`): real Ruby FoodHub logo artwork generated via `@capacitor/assets` for both apps, Android + iOS — the former store-submission blocker is cleared — see §6
 32. **Retailer-scoped order numbers** (2026-07-21, `a79512a`): `WHS-######` replaced by `XXXX` + `MMDDYYYY` + per-retailer serial (e.g. `MONE12242026-05`) — see §11
 33. **Production batch tracking** (`a79512a`, migration **014**): 8-character batch key required whenever goods ship to a retailer, shown to admin and retailer and carried into emails and the stock ledger — see §11
+34. **Real Android build pipeline stood up** (2026-07-22, `2989749`): JDK 17 + JDK 21 + Android SDK cmdline-tools installed on this Windows machine; both apps build real signed release `.aab` files from the command line — no Android Studio GUI required. A per-app upload keystore was generated for each. See §12.1.
+35. **`/delete-account` page** (`af8181b`): static page satisfying Google Play's account-deletion-URL store-listing requirement — names both apps, gives the in-app deletion steps, an email fallback, and states exactly what's deleted vs. retained. See §12.2.
+36. **Package name corrections** (`d2c3d85`, `d43ec45`): Wholesale app renamed `com.rubyfoodhub.wholesale` → `com.rubyfoodhub.retailer`; Admin app renamed `com.rubyfoodhub.admin` → `com.Ruby.FoodHub.Admin` — both to match the package name each app's Play Console listing had already locked in. See §12.3.
+37. **Play Store listing graphics** (`fa972f8`, `aab7381`): 512×512 store icon + 1024×500 feature graphic for both apps. First version was a logo+tagline lockup; Google's review flagged it as a "marketing illustration that does not show the in-app experience," so it was rebuilt as a phone mockup of the *real* sign-in screen, with colors sampled live from the running site (not guessed). See §12.4.
+38. **Android 16 (API 36) targeting** (`24622db`): both apps bumped from `targetSdkVersion 35` to `36` after a Play Console policy rejection on the Wholesale app's production submission (deadline Aug 30, 2026). `minSdkVersion` unchanged at 23 — no device-support loss. See §12.5.
 
 ---
 
@@ -102,10 +107,10 @@ All files live in `supabase/`, are safe to re-run, and are also appended to the 
 | 010 | `010_retailer_stock.sql` | retailer_stock, stock_movements | ✅ confirmed run |
 | 011 | `011_retailer_logo.sql` | logo_url column | ✅ confirmed run |
 | 012 | `012_payment_claims.sql` | awaiting_confirmation state, cash/zelle method, claimed_* columns | ✅ confirmed run |
-| **013** | **`013_account_deletion.sql`** | **`account_status` gains `'closed'`; `deleted_at` column** | ⚠️ **NEEDS VERIFICATION — confirm this has been run in Supabase before relying on account deletion in production** |
-| **014** | **`014_production_batch.sql`** | **`wholesale_orders.production_batch` column (8-char batch key)** | 🔴 **NOT RUN — written 2026-07-21, handed to the owner to run. Required before any order can be marked delivered/fulfilled.** |
+| **013** | **`013_account_deletion.sql`** | **`account_status` gains `'closed'`; `deleted_at` column** | 🟡 **user reported running "the SQL" on 2026-07-22 before app-store work began — not independently verified (no DB access from this environment). Confirm in Supabase before relying on account deletion in production.** |
+| **014** | **`014_production_batch.sql`** | **`wholesale_orders.production_batch` column (8-char batch key)** | 🟡 **same as 013 — user-reported run, not independently verified. No `PGRST204`/unknown-column errors have surfaced in subsequent sessions, which is consistent with (but not proof of) both migrations being applied.** |
 
-**→ First task for next analyst: run migration 014, then confirm 013 has been run.**
+**→ First task for next analyst: get an explicit yes/no from the owner on 013 and 014, or check the Supabase table editor directly (`retailer_accounts.deleted_at` and `wholesale_orders.production_batch` should both exist as columns if run).**
 
 - **014 is blocking day-to-day operations**: admin "Add Order → mark delivered", billable stock-ins, and marking any order fulfilled all now send a `production_batch` value. Until the column exists those inserts/updates fail (PostgREST `PGRST204`, unknown column). The whole migration is one line:
   ```sql
@@ -123,14 +128,16 @@ Known historical gotcha: the Stripe webhook must point at `www.rubyfoodhub.com` 
 
 ---
 
-## 6. Capacitor native apps (added this session) — STATE: scaffolded, NOT submitted
+## 6. Capacitor native apps — STATE: Wholesale app in Google Play review (production); Admin app built, signed, uploaded, package-corrected, pending re-submission with API 36
 
-Two separate app projects under `apps/`:
+Two separate app projects under `apps/`. **Package/bundle IDs below are current as of 2026-07-22** — both were renamed mid-submission to match what each app's Play Console listing had already locked in (see §12.3); do not use the IDs originally chosen when the projects were scaffolded.
 
-| App | Folder | Bundle ID | Wraps |
+| App | Folder | Bundle ID (current) | Wraps |
 |---|---|---|---|
-| Ruby FoodHub Admin | `apps/admin-app/` | `com.rubyfoodhub.admin` | `admin.html` |
-| Ruby FoodHub Wholesale | `apps/retailer-app/` | `com.rubyfoodhub.wholesale` | `retailer.html` |
+| Ruby FoodHub Admin | `apps/admin-app/` | `com.Ruby.FoodHub.Admin` *(non-standard capitalization — locked in by the Play listing before the rename; cosmetic only, builds and ships fine)* | `admin.html` |
+| Ruby FoodHub Wholesale | `apps/retailer-app/` | `com.rubyfoodhub.retailer` | `retailer.html` |
+
+**Current versionCode / versionName** (bump on every future upload — see §12.5 for the exact mechanics): Wholesale is at **3 / "1.1"**, Admin is at **2 / "1.1"**. Both target `compileSdk`/`targetSdk` **36**, `minSdk` **23**.
 
 Each app bundles its portal page as `www/index.html` (via `sync-www.js`, gitignored output) rather than loading a live URL — better for store review. Both `android/` and `ios/` native projects have been generated (Capacitor 7) and verified: correct bundle IDs, correct app display names, and the API-base shim present in all four bundled copies.
 
@@ -139,13 +146,24 @@ Each app bundles its portal page as `www/index.html` (via `sync-www.js`, gitigno
 - `api/_lib/cors.js`: answers CORS preflight for the app's webview origins (`capacitor://localhost`, `https://localhost`), wired into all 12 portal endpoints. Auth is a session token in the request body, never a cookie, so this doesn't create a credential-exposure risk.
 - `api/retailer-portal.js`: Stripe success/cancel return-URLs no longer trust `capacitor://localhost` as an origin — they fall back to the live site so payments started inside the app return somewhere valid.
 
-Full day-to-day workflow (rebuilding `www/`, opening in Android Studio/Xcode) is documented in **`apps/README.md`** — read that before touching the app folders.
+Full day-to-day workflow (rebuilding `www/`, the CLI Android build/sign commands, the TLS-truststore gotcha) is documented in **`apps/README.md`** — read that before touching the app folders. It was substantially rewritten in this session; it is now the source of truth for build commands, not this doc.
+
+### What is DONE for the apps (as of 2026-07-22)
+- **App icons & splash** — real logo artwork, both platforms, both apps (§2 item 31).
+- **Real signed Android builds** — JDK/SDK installed on this machine, both apps produce genuinely signed `.aab` files via `./gradlew bundleRelease`; verified with `jarsigner -verify` (not just "the build didn't error"). See §12.1.
+- **Store listing graphics** — 512 icon + feature graphic, both apps, now depicting real UI after a Google policy flag on the first version. See §12.4.
+- **`/delete-account` page** — live, linked from both the privacy policy and the retailer sign-in screen. See §12.2.
+- **Package names** — corrected to match each Play Console listing. See §12.3.
+- **API 36 targeting** — both apps, after a Play policy rejection. See §12.5.
+- **Wholesale app**: uploaded to Google Play (internal testing, then open testing, then production), package-corrected. The **production submission came back from Google review flagged** for targeting API 35 instead of 36 (§12.5) — the API-36 rebuild (`versionCode 3`) exists locally and has been **handed to the user with upload instructions, but is NOT yet confirmed uploaded to Play Console.** This is the single most important unconfirmed action in this doc — see §9 item 1.
+- **Admin app**: built, signed, package-corrected, successfully uploaded to Play Console at least once (`versionCode 1`, API 35, user was mid-setup on a testing track). The API-36 rebuild (`versionCode 2`) also exists locally and is **also not yet confirmed uploaded** — the Admin app hadn't gone to review yet as of this doc's last update, so it may not have hit the API-36 flag, but there's no reason to upload the stale `versionCode 1` build now that `versionCode 2` exists.
 
 ### What is NOT done for the apps
-- ~~App icons~~ **DONE (2026-07-21, commit `8910150`)**: real logo artwork generated via `@capacitor/assets` for both apps (dark background for Admin, light for Wholesale), Android + iOS sets committed, `cap sync` run. Source artwork lives in `apps/*/assets/`.
-- No screenshots, no store listings, no Data Safety/App Privacy forms filled in on either console.
-- No signed builds produced (no keystore created yet for Android; no Xcode archive — also iOS **cannot be built on this Windows machine**, needs a Mac).
-- No demo reviewer credentials created (dedicated demo admin + demo retailer accounts).
+- **iOS: nothing started.** No Xcode archive, no TestFlight, no App Store Connect listing. iOS **cannot be built on this Windows machine at all** — genuinely requires a Mac. This has been true all session and remains the single largest remaining gap.
+- No screenshots captured for either Play listing. **This environment's browser tool can render and view app screens but cannot export the pixels to a file** — real screenshots must come from a device (the Wholesale app is installable via the testing track now, so this is unblocked on the user's end; see §12.4 and §9).
+- Data Safety / App Privacy questionnaire answers have been drafted in chat (data collected: name, email, phone, address, purchase/order history; linked to identity; not used for tracking/advertising) but not confirmed as entered into either console.
+- No demo reviewer credentials created (dedicated demo admin + demo retailer accounts) — worth doing before the Admin app goes to any review track wider than testers-with-real-accounts.
+- Admin app's distribution track decision (Internal/Closed testing vs. Unlisted vs. public Production) — flagged repeatedly as "probably shouldn't be a public listing" but the user has not made a final call; currently in a testing track, not production.
 
 ---
 
@@ -164,31 +182,46 @@ Two blockers were identified and closed:
 
 App bundles (`apps/*/www/`) were re-synced so the native projects ship this flow immediately once built.
 
+**Follow-up, 2026-07-22 (`af8181b`)**: Google Play separately requires a *public URL* on the store listing — distinct from the in-app flow and the privacy policy — that names the app/developer, prominently shows deletion steps, and states what's deleted vs. retained. Built as a static page at `delete-account.html`, routed to `/delete-account`, covering both apps (Wholesale in-app steps + email fallback; Admin staff-account removal by email). Cross-linked from the privacy policy. This is the URL to paste into Play Console's "Delete account URL" field for both apps.
+
 ---
 
 ## 8. Known gaps / things to watch
 
-1. **Migration 014 NOT RUN** — see §4. This blocks marking orders delivered/fulfilled. Run it first.
-2. **Migration 013 run-status unconfirmed** — see §4. Verify before relying on account deletion.
-3. **Partial live verification** — the 2026-07-21 sessions click-tested the new retailer UI (payment options, due banner, pay modal, layout containment) in a real browser against a local static server and confirmed the new markup deployed to production; the order-number generator was unit-tested directly. Still **not** exercised end-to-end with real money/data: retailer account deletion, the cash/Zelle claim → confirm/reject cycle, the billable stock-in path (order insert + stock movement + email), Stripe checkout for a placed order, and **a real order insert under the new numbering + batch flow** (needs migration 014 first). Recommend a logged-in click-through of those before leaning on them hard.
-4. **Order-number serial is a live COUNT, not a stored counter** — `insertWholesaleOrder()` counts the retailer's existing orders (including canceled ones) and adds 1. That is deliberate (numbers stay meaningful and gap-free per retailer), but it means: hard-deleting an order row would let a future order reuse a number, and two simultaneous orders rely on the `unique` constraint + retry. Don't hard-delete wholesale orders; cancel them.
-5. ~~App icons~~ **cleared 2026-07-21** — see §6; remaining store blockers are signed builds, listings, and Mac access for iOS.
-6. **iOS build requires a Mac** — cannot be done from this Windows machine at all. Needs a borrowed Mac, MacinCloud, or a CI service like Codemagic.
-7. **Admin app should likely not be a public store listing** — Apple tends to reject internal/staff-only tools from the public App Store. Recommended path: Apple's "Unlisted App Distribution" or TestFlight-only; Google Play closed testing track. This was flagged to the user but no submission-track decision has been made yet.
-8. **Google Play new personal accounts** require a 14-day/12-tester closed test before going to production; enrolling as an *organization* (recommended, already advised) skips this.
-9. The Wholesale app being a wrapped web view carries some risk of Apple's "minimum functionality" (guideline 4.2) pushback on first submission — if it happens, the standard fix is adding one native capability (push notifications for order status was the suggested candidate, not yet built).
-10. **The sandboxed shell on this machine cannot make outbound TLS connections** — `curl` fails even against github.com, though `git push` works. Use the in-app browser (Claude Browser tools) for any live-site verification; don't conclude the site is down from a failed `curl`.
+1. **Migrations 013 and 014 run-status: user-reported, not independently verified** — see §4. Get an explicit confirmation or check the table editor directly.
+2. **Partial live verification** — the 2026-07-21 sessions click-tested the new retailer UI (payment options, due banner, pay modal, layout containment) in a real browser against a local static server and confirmed the new markup deployed to production; the order-number generator was unit-tested directly. Still **not** exercised end-to-end with real money/data: retailer account deletion, the cash/Zelle claim → confirm/reject cycle, the billable stock-in path (order insert + stock movement + email), Stripe checkout for a placed order, and a real order insert under the new numbering + batch flow. Recommend a logged-in click-through of those.
+3. **Order-number serial is a live COUNT, not a stored counter** — `insertWholesaleOrder()` counts the retailer's existing orders (including canceled ones) and adds 1. That is deliberate (numbers stay meaningful and gap-free per retailer), but it means: hard-deleting an order row would let a future order reuse a number, and two simultaneous orders rely on the `unique` constraint + retry. Don't hard-delete wholesale orders; cancel them.
+4. ~~App icons~~ **cleared 2026-07-21.**
+5. ~~No signed Android builds~~ **cleared 2026-07-22** — see §12.1. Both apps produce real, verified-signed release bundles from this machine via the command line.
+6. ~~Package names don't match Play Console~~ **cleared 2026-07-22** — see §12.3. Both apps renamed to match their locked-in listings.
+7. ~~Feature graphic flagged as a marketing illustration~~ **cleared 2026-07-22** — see §12.4.
+8. ~~Targeting API 35, Play requires within 1 year of latest~~ **cleared 2026-07-22 in code** — see §12.5. **Not yet confirmed uploaded to either Play Console entry — this is the top open item, see §9.**
+9. **iOS build requires a Mac — still completely unstarted.** Cannot be done from this Windows machine at all. Needs a borrowed Mac, MacinCloud, or a CI service like Codemagic. This has been flagged every session and remains the largest single gap in the whole app-store effort.
+10. **No screenshot files can be produced from this environment** — the browser tooling available here can render and view app pages (confirmed working, real colors/layout sampled directly from them) but has no mechanism to export those pixels as a file. Screenshots must come from an installed device build. Not a one-time gap — this will recur for every app that needs store screenshots unless the tooling changes.
+11. **Admin app package name has non-standard capitalization** (`com.Ruby.FoodHub.Admin`) — locked in by the Play Console listing before the correction, not something later code chose. Builds and ships correctly; purely cosmetic. Changing it now would require deleting the (unpublished) Console app and starting a new listing — only worth doing if the user explicitly wants it before the app ever goes to production.
+12. **Admin app should likely not be a public store listing** — Apple tends to reject internal/staff-only tools from the public App Store, and the same instinct applies to Google Play's public search/browse. Recommended path: Apple's "Unlisted App Distribution" or TestFlight-only; Google Play closed/internal testing track, not Production. Flagged to the user repeatedly; no final track decision made as of this update — currently sitting in a testing track.
+13. **Google Play new personal accounts** require a 14-day/12-tester closed test before going to production; enrolling as an *organization* (recommended, already advised) skips this.
+14. The Wholesale app being a wrapped web view carries some risk of Apple's "minimum functionality" (guideline 4.2) pushback on first iOS submission — if it happens, the standard fix is adding one native capability (push notifications for order status was the suggested candidate, not yet built). Not relevant until iOS work starts.
+15. **This machine's default shell (`Bash` tool) cannot make outbound TLS connections without workarounds** — plain `curl` fails even against github.com (`git push` works regardless). Two workarounds discovered and now standard practice: `curl --ssl-no-revoke` for simple downloads, and for JVM-based tools (Gradle, the Android `sdkmanager`) setting `JAVA_OPTS`/`GRADLE_OPTS` to `-Djavax.net.ssl.trustStoreType=Windows-ROOT` so Java uses the Windows certificate store instead of its own — this machine has a TLS-inspecting proxy whose root CA Windows trusts but Java's separate cacerts store doesn't. Documented in `apps/README.md`. Use the in-app browser (Claude Browser tools) for any live-site verification regardless; don't conclude the site is down from a failed plain `curl`.
+16. **Building inside a OneDrive-synced folder can cause file locks mid-build** — `./gradlew clean` failed once with `Unable to delete directory ...\app\build` because OneDrive had a lock on it. Fix used: delete the `build/` folder directly (`rm -rf app/build`) instead of relying on Gradle's `clean` task. Worth knowing before assuming a build failure is a real code problem.
 
 ---
 
 ## 9. Immediate next steps, in priority order
 
-1. **Run migration 014 in Supabase** (one line, see §4). **Blocking** — until it's run, admins cannot mark orders delivered or fulfilled.
-2. **Verify migration 013 ran in Supabase.** (5 minutes — still unconfirmed as of 2026-07-21.)
-3. **Place one real test order** after 014 is run, and confirm: the number comes out as `XXXX MMDDYYYY-NN` for that retailer, the batch field accepts 8 characters and rejects anything else, and the batch shows on both the admin and retailer views plus the delivery email.
-4. **Live-verify with a real login** the remaining flows in §8.3: cash/Zelle claim → confirm/reject, billable stock-in, Zelle order placement, account deletion.
-5. Pick up the still-open App Store submission checklist: developer account enrollment (org, not personal), signed Android build + keystore, Mac access for iOS, store listing content + screenshots (icons are now real, so screenshots can be taken), demo reviewer credentials, Data Safety/App Privacy form answers, and a distribution-track decision for the Admin app (unlisted/TestFlight vs. public).
-6. No other feature work is currently requested or pending. Confirm with the user before starting anything not on this list.
+1. **Upload the API-36 rebuilds to Play Console for both apps** — this is the single most important unfinished action. Local files, already built and verified this session:
+   - Wholesale: `apps\retailer-app\android\app\build\outputs\bundle\release\app-release.aab` (`versionCode 3`, targetSdk 36) — needed to clear the production-review rejection.
+   - Admin: `apps\admin-app\android\app\build\outputs\bundle\release\app-release.aab` (`versionCode 2`, targetSdk 36).
+   If either has been rebuilt again since 2026-07-22, check `apps/*/android/app/build.gradle` for the current `versionCode` before assuming these exact numbers are still current.
+2. **Get an explicit confirmation (or check directly) that migrations 013 and 014 have actually been run** in Supabase — see §4. Not blocking app-store work, but blocking safe reliance on account deletion and production-batch/delivery flows.
+3. **Screenshots for the Wholesale Play listing** — capture from an installed device (the app is on a testing track and installable now): Home, Place New Order, My Orders, My Stock, and the payment chooser (card/cash/Zelle). This environment cannot produce these files itself (see §8.10) — they must come from the user's phone or from someone with device access.
+4. **iOS — needs a Mac to make any progress at all.** Nothing can move here until Mac access exists (borrowed machine, MacinCloud, or a CI service like Codemagic). Once available: `cd apps/<app>; npm install && npm run sync; npm run open:ios`, then follow the normal Xcode archive/TestFlight/App Store Connect flow. `apps/README.md` has the commands.
+5. **Admin app distribution-track decision** — confirm with the user whether it stays on a testing track (Internal/Closed on Play, Unlisted/TestFlight on Apple) or is intended for public listing; current default is testing-only per the "internal tool" concern in §8.12.
+6. **Data Safety / App Privacy questionnaire** — answers have been discussed in chat (collects name/email/phone/address/order history; identity-linked; no tracking/advertising use; deletion via `/delete-account`) but confirm they've actually been entered into both consoles.
+7. **Demo reviewer credentials** — create a dedicated demo admin account and a demo retailer account before either app goes in front of a human reviewer who needs to log in.
+8. **Place one real test order** once 013/014 are confirmed run, and check: the order number comes out as `XXXX MMDDYYYY-NN` for that retailer, the production-batch field accepts 8 characters and rejects anything else, and the batch shows on both the admin and retailer views plus the delivery email.
+9. **Live-verify with a real login** the remaining untested flows in §8.2: cash/Zelle claim → confirm/reject, billable stock-in, Zelle order placement, account deletion.
+10. No other feature work is currently requested or pending. Confirm with the user before starting anything not on this list.
 
 ---
 
@@ -273,4 +306,71 @@ Where the batch appears once set: admin order rows and retailer order rows (unde
 - `sync-www.js` + `npx cap sync` re-run for both native apps.
 - **Not** verifiable from here: a real order insert, because migration 014 has not been run and the sandbox has no DB access.
 
-*End of handoff note. All commits referenced above are on `main` and already pushed to `github.com/rubyfoodhubinc/ruby-foodhub`. Nothing is stashed or uncommitted as of the 2026-07-21 evening update.*
+---
+
+## 12. Session record — 2026-07-22 (Android app-store submission: real builds, keystores, package fixes, store graphics, API 36)
+
+User request, across the session: "set up Capacitor... generate the iOS and Android build folders" (earlier session, produced the scaffolding referenced in §6/§7), then this session picked up with actual Play Console submission — uploading, hitting and fixing a sequence of real store-console errors one at a time as they appeared. Everything below actually happened, in order; nothing here is aspirational.
+
+### 12.1 Real signed Android build pipeline (commit `2989749`)
+Previously the apps were scaffolded but never actually built — no JDK, no Android SDK, no keystore existed on this machine. This session installed all of it and produced genuinely signed release bundles:
+
+- **JDK 17** installed via `winget` (needed to run Gradle itself) and **JDK 21** installed separately after discovering Capacitor 7's Android module hard-requires Java 21 (`sourceCompatibility JavaVersion.VERSION_21` in its `build.gradle` — Gradle ran fine on 17, but compiling `capacitor-android` failed with `invalid source release: 21` until 21 was installed and `JAVA_HOME` pointed at it).
+- **Android SDK command-line tools** downloaded directly from `dl.google.com` (no Android Studio GUI installed or needed) to `C:\Android`, with `platform-tools`, `platforms;android-35`, and `build-tools;35.0.0` (later also `;android-36`/`;36.0.0`, see §12.5).
+- **Hit and worked around the TLS-inspecting-proxy issue** described in §8.15 — both for `curl` (SDK zip download) and for the JVM (`sdkmanager`, Gradle itself hitting Maven). This was the single most time-consuming part of the setup and is now documented so it isn't rediscovered from scratch.
+- Ran `./gradlew assembleDebug` for both apps successfully (proof the pipeline works end to end) before moving to release builds.
+- **Generated one upload keystore per app** (not shared — a compromise of one can't affect the other): `apps/admin-app/android/rubyfoodhub-admin-upload.jks` and `apps/retailer-app/android/rubyfoodhub-wholesale-upload.jks`, via `keytool -genkeypair`, RSA 2048, 30-year validity (10957 days), PKCS12 format. Both `.jks` files and their `android/keystore.properties` (which holds the passwords in plaintext) are **git-ignored** — confirmed via `git status` before every commit in this session that they never appear as trackable changes.
+- **The generated passwords were shown to the user once, in chat, with an explicit instruction to back them up immediately** to a password manager. They are not recorded anywhere in this repo or doc. If they're lost: Google Play has enrolled both apps in **Play App Signing** ("Releases are signed by Google Play" was on when uploading) — meaning the `.jks` on this machine is only the *upload key*, not the actual signing key that reaches devices. Google holds the real signing key and has a slower key-reset/recovery process for a lost upload key, which is meaningfully less catastrophic than it would be without Play App Signing. Still, losing the keystore is a real problem to avoid, not a non-issue.
+- `apps/admin-app/android/app/build.gradle` and `apps/retailer-app/android/app/build.gradle` both gained a `signingConfigs { release { ... } }` block that reads `keystore.properties` and falls back to an **unsigned** release build if the file is missing, so a fresh checkout without the keystores still builds `assembleDebug` with zero setup.
+- `apps/README.md` was substantially rewritten with the exact CLI commands, the TLS-truststore workaround, and — most importantly — the keystore backup warning, since it previously only documented the (never-actually-used) Android-Studio-GUI signing path.
+
+### 12.2 `/delete-account` page (commit `af8181b`)
+Uploading the Wholesale app to Play Console surfaced a requirement distinct from the privacy policy and the in-app deletion flow already built in §7: Google Play's store listing wants a **public URL** specifically for account deletion, which must name the app/developer, prominently show the steps, and state what's deleted vs. retained with any retention period. Built `delete-account.html` (plain static HTML, no JS dependency, same reasoning as the original Google-OAuth-branding fix — reviewers may not execute JS), routed at `/delete-account` via `vercel.json`, covering:
+- Wholesale: the in-app self-service steps (Profile → Privacy & Account → Delete My Account → type DELETE), plus an email fallback (`contactus@rubyfoodhub.com`, 7-day processing) for users who can't sign in.
+- Admin: staff-account removal by email (these aren't self-service accounts).
+- What's deleted immediately vs. what's retained (anonymized order/payment records, ~7-year tax/accounting retention) — matching exactly what §7's `delete-account` backend action actually does, not aspirational copy.
+Cross-linked from the privacy policy's deletion section. **Use this same URL for both apps' Play Console "Delete account URL" field.**
+
+### 12.3 Package name corrections (commits `d2c3d85`, `d43ec45`)
+Both apps were originally scaffolded with lowercase, standard-convention package names (`com.rubyfoodhub.wholesale`, `com.rubyfoodhub.admin`). When the user actually created each app's entry in Play Console, they had (independently, outside this repo/session) set different package names — `com.rubyfoodhub.retailer` for Wholesale and `com.Ruby.FoodHub.Admin` (non-standard capitalization) for Admin. **A Play Console app entry's package name is permanent once set** — there's no renaming it on Google's side — so both times the fix was to rename the *build* to match the already-created listing, not to create a new listing.
+
+Each rename touched every location a package/bundle ID appears: `capacitor.config.json` `appId`, the Gradle `namespace`/`applicationId`, the `MainActivity.java` package declaration **and its file path** (Java package = directory structure, so e.g. `com/rubyfoodhub/wholesale/MainActivity.java` physically moved to `com/rubyfoodhub/retailer/MainActivity.java`), `strings.xml`'s `package_name`/`custom_url_scheme`, and iOS's `PRODUCT_BUNDLE_IDENTIFIER` in `project.pbxproj` (untouched practically since iOS isn't being built, but kept consistent for whenever it is).
+
+After each rename: `rm -rf android/app/build` (OneDrive file-lock issue, see §8.16) then a full `./gradlew bundleRelease`, then **verified the actual built manifest** (not just "the build succeeded") — `grep`'d the merged `AndroidManifest.xml` inside `build/intermediates/bundle_manifest/release/.../AndroidManifest.xml` for the `package=` attribute and the `MainActivity` reference, confirming an exact string match including the Admin app's capitalization, before telling the user which file to upload.
+
+Signing was unaffected by either rename — the keystore is tied to the app/Console entry, not to the package name string.
+
+### 12.4 Play Store listing graphics (commits `fa972f8`, `aab7381`)
+Play Console's app-bundle upload flow doesn't require store graphics, but the **production** listing does, and separately Google runs an automated content-quality check against them. Two rounds:
+
+**Round 1** (`fa972f8`): generated `store-icon-512.png` (512×512) and `feature-graphic.png` (1024×500) for both apps from the existing logo mark — a straightforward logo + app-name + tagline lockup, cream background for Wholesale, charcoal for Admin. Both verified as the correct dimensions with **no alpha channel** (Play rejects icons/feature graphics with transparency, a common trip-up since the in-app launcher icons *do* have alpha).
+
+**Round 2** (`aab7381`): Google's review of the Wholesale app came back with *"Your store listing does not clearly describe your app's features... the feature graphics are placeholder images or stock photos that do not show the in-app experience."* The round-1 feature graphic — logo/text only — qualified as exactly that. Fix: sampled the **real, live** app colors via the browser tool's `javascript_tool` (`canvas.getImageData` after setting `fillStyle` to the site's actual CSS, since `getComputedStyle` returned the raw unresolved `oklch()` string rather than RGB in this browser — button `#9E122B`, background `#FDF3EB`, both traced back to the site's `oklch(0.45 0.17 20)` / `oklch(0.97 0.015 60)` CSS values), then rebuilt both feature graphics as a phone-mockup illustration of the **actual verified sign-in screen** (matching card layout, field labels, and button text confirmed via real screenshots taken through the browser tool during this session) rather than generic marketing art.
+
+**A real tooling limit surfaced here and is worth remembering**: the browser tool available in this environment can *render and view* pages (confirmed real screens, real colors, real layout) but has **no mechanism to export those pixels to a file on disk**. This is why the feature graphic fix had to be a faithful hand-drawn recreation (via .NET `System.Drawing`, matching sampled real values) rather than a composited real screenshot, and it's also why **actual screenshot files for the Play listing could not be produced from this environment at all** — see §8.10 and §9.3. If this limitation is ever lifted (a tool that can save a browser screenshot to disk), revisit this — it would let the feature graphics use genuine screenshots instead of recreations, which is stronger evidence for Google's review than even an accurate recreation.
+
+### 12.5 Android 16 (API 36) targeting (commit `24622db`)
+The Wholesale app's **production** submission came back from Google Play review with a policy flag: *"App must target Android 16 (API level 36) or higher... From Aug 30, 2026, if your target API level is not within 1 year of the latest Android release, you won't be able to update your app."* Both apps were targeting API 35.
+
+Fix: installed `platforms;android-36` and `build-tools;36.0.0` via the same `sdkmanager` pipeline from §12.1 (same TLS workaround needed again), bumped `compileSdkVersion`/`targetSdkVersion` from 35 to 36 in **both** apps' `android/variables.gradle` (shared by the whole project, not per-app duplicated logic — a lucky existing structure that made this a two-line change), left `minSdkVersion` at 23 untouched (confirmed via manifest diff that this doesn't drop any device support — see §12.6), bumped `versionCode`/`versionName` in each app's `android/app/build.gradle` (Wholesale 2→3, Admin 1→2; both to `versionName "1.1"`), rebuilt, and **verified the built manifest's `targetSdkVersion="36"` attribute directly** rather than trusting the Gradle config alone.
+
+**As of this doc's update, these rebuilt bundles have been handed to the user with upload instructions but their upload to Play Console has not been confirmed.** This is §9's top item.
+
+### 12.6 Play Console troubleshooting notes worth keeping
+A few Play Console mechanics came up as real errors during this session and are worth remembering rather than rediscovering:
+- **`versionCode` must strictly increase on every upload** — re-uploading the same `.aab` after a rejected/errored release attempt fails with "version code already used." If a bundle was already successfully uploaded to *any* track for an app, reuse it via Console's **"Add from library"** control rather than rebuilding — no new `versionCode` needed for that.
+- **An empty release (no bundle attached) throws confusing device-support-loss errors** (a real one seen: "-100%... 20,159 devices... will not be available") — the fix is just attaching a bundle, not a real device-compatibility regression.
+- **The "no deobfuscation file" warning is expected and harmless** for this project — `minifyEnabled false` in both apps means there's no R8/ProGuard mapping file to upload, and Play shows this warning on every unobfuscated bundle. It never blocks a release; only **errors** do.
+- **Release notes must start with a language tag as literally the first character** (`<en-US>...</en-US>`, matching a language actually added to the listing) — a leading blank line or space before the tag throws "text outside language tags."
+- **Device-compatibility verification technique used**: rather than trusting config, directly diffed the built bundle manifests' `minSdkVersion`/`targetSdkVersion` between apps, and checked `uses-feature`/`uses-permission`/native `.so` library count inside the actual `.aab` (both apps: zero hardware features declared, `INTERNET` the only permission, zero native libraries) — this is what actually determines Play's device-count filtering, not just the SDK version numbers.
+
+### 12.7 Verification performed this session
+- Every backend/config change checked at the actual artifact level, not just "the command didn't error": `jarsigner -verify` on both signed `.aab` files (both returned "jar verified"), `grep`-extracted `package=`/`versionCode=`/`targetSdkVersion=` from the real merged manifest inside each build output after every rename and every SDK bump, `git status` confirmed before every commit that no keystore/password file was ever staged.
+- Live-sampled real CSS values from the running production site via the browser tool rather than eyeballing colors from a screenshot.
+- Confirmed via `diff` that both apps' `variables.gradle` files are identical and that neither app declares any hardware feature/permission beyond `INTERNET`, supporting the "same device compatibility" answer given to the user.
+- **Not verified**: whether either app's rebuilt (`versionCode 3` / `versionCode 2`, API 36) bundle has actually been uploaded to Play Console — this requires the user to do it and confirm back. See §9.1.
+- **Not possible from this environment**: exporting real screenshot files (§12.4), anything iOS-related (§8.9).
+
+---
+
+*End of handoff note. All commits referenced above are on `main` and already pushed to `github.com/rubyfoodhubinc/ruby-foodhub`. Nothing is stashed or uncommitted as of the 2026-07-22 update. The keystore files and their passwords are the one piece of session output that is deliberately NOT in this repo — see §12.1 — the user was told directly in chat to back them up and this doc does not repeat the actual password values.*
