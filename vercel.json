@@ -5,7 +5,8 @@
     { "source": "/account", "destination": "/Account.dc.html" },
     { "source": "/retailer", "destination": "/retailer.html" },
     { "source": "/retailer/login", "destination": "/retailer.html" },
-    { "source": "/privacy", "destination": "/Privacy Policy.dc.html" }
+    { "source": "/privacy", "destination": "/Privacy Policy.dc.html" },
+    { "source": "/delete-account", "destination": "/delete-account.html" }
   ],
   "crons": [
     { "path": "/api/reconcile-orders", "schedule": "0 12 * * *" }
