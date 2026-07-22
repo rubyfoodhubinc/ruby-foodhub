@@ -1,4 +1,4 @@
-package com.rubyfoodhub.admin;
+package com.Ruby.FoodHub.Admin;
 
 import com.getcapacitor.BridgeActivity;
 
