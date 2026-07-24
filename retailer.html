@@ -23,6 +23,12 @@
   .auth-card { max-width: 420px; margin: 60px auto; }
   .auth-card h1 { font-size: 20px; margin: 0 0 18px; text-align: center; }
   input, textarea, select { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14.5px; margin-bottom: 12px; font-family: inherit; background: #fff; }
+  /* iOS force-zooms into any form control under 16px and never zooms back out,
+     which leaves the whole layout panned sideways. Touch devices only, so the
+     desktop type scale is unchanged. */
+  @media (pointer: coarse) {
+    input, textarea, select { font-size: 16px; }
+  }
   .btn { background: oklch(45% 0.17 20); color: #fff; border: none; border-radius: 100px; padding: 12px 20px; font-size: 14px; font-weight: 700; }
   .btn:hover { background: oklch(52% 0.19 20); }
   .btn:disabled { background: #ccc; cursor: not-allowed; }

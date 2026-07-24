@@ -118,6 +118,17 @@
   /* ---------- Email composer ---------- */
   .compose-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .compose-grid input[type="text"], .compose-grid input[type="email"], .compose-grid select, .compose-grid textarea { width: 100%; padding: 11px 14px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; font-size: 14px; font-family: inherit; background: #fff; }
+  /* iOS force-zooms into any form control under 16px and never zooms back out,
+     which leaves the whole layout panned sideways. Touch devices only, so the
+     desktop type scale is unchanged. Selectors mirror the rules above so they
+     win on source order rather than needing !important. */
+  @media (pointer: coarse) {
+    input, textarea, select,
+    .login-card input, .form-stack input, .form-stack select,
+    .toolbar input[type="search"], .toolbar input[type="date"], .toolbar select,
+    .status-select, .price-input,
+    .compose-grid input[type="text"], .compose-grid input[type="email"], .compose-grid select, .compose-grid textarea { font-size: 16px; }
+  }
   .editor-toolbar { display: flex; gap: 6px; margin-bottom: 6px; }
   .editor-toolbar button { border: 1.5px solid rgba(34,30,26,.18); background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 700; }
   .editor-toolbar button:hover { border-color: oklch(45% 0.17 20); color: oklch(45% 0.17 20); }
