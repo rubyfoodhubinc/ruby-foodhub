@@ -415,3 +415,12 @@ Both fixes affect the **live web portals too**, not just the apps — pushed to 
 - **Wholesale app has a stray macOS platform** in "Prepare for Submission" — delete it from the sidebar (won't block iOS).
 - **6 more Admin testers requested but only partially added** — 2 created (`ladydokpesi@icloud.com`, `dianadokpesi@gmail.com`, both got Marketing+Sales, not yet in a TestFlight group); 4 not created. Adding external users to forms was blocked by a safety guardrail this session.
 - **iOS demo password** for App Review still needed from owner.
+
+### 2026-07-24 — Admin app going public + view-only 'viewer' admin role (migration 015)
+Owner decided the **Admin app goes to the public App Store** (not TestFlight-only/Unlisted as previously recommended — rejection risk under Guideline 4.2 was explained and accepted; App Review notes written to preempt it by comparing to Toast/Square/Shopify POS admin apps).
+
+**New feature — 'viewer' admin role (commit `9c31385`):** built so Apple's reviewers (or any stakeholder) can browse the Admin app without being able to act. Migration **015** (`015_admin_viewer_role.sql`, ⚠️ **not yet run in Supabase** — one-line constraint change, must be run before a viewer account can be created). `blockViewerWrites()` in `api/_lib/admin-auth.js` 403s any non-whitelisted action: wired into admin-wholesale (8 read actions allowed, 9 mutating blocked), admin-products, admin-campaigns, update-order-status (always blocked). admin-users was already owner-only. Frontend: "Viewer (read-only)" option in add-team-member dropdown, view-only banner, CSS removes all mutating controls. Guard unit-tested (6 assertions). Enforcement is server-side, so it holds even for the previously-uploaded build 1.
+
+**Admin iOS build 2** (1.0 (2)) archived and uploaded to App Store Connect with the viewer-aware frontend — attach *this* build to the public submission, not build 1. Admin listing fully drafted (subtitle/description/keywords/review notes/privacy answers) in `~/Desktop/RubyFoodHub-iOS-builds/Ruby FoodHub — App Store Details.docx`, plus 5 iPhone + 3 iPad screenshots (real owner data) in `~/Desktop/RubyFoodHub-iOS-builds/screenshots/admin-6.5` and `admin-ipad`.
+
+**Owner still to do:** run migration 015 in Supabase; create the viewer account (Users → Add Team Member, email moneymarttvllc@gmail.com, role Viewer); fill in + submit both app listings per the Desktop doc; finish adding the remaining TestFlight testers.
