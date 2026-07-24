@@ -32,6 +32,10 @@
   .sidebar .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; padding: 4px 10px 18px; }
   .sidebar .brand img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
   .nav-item { display: block; width: 100%; text-align: left; background: transparent; border: none; border-radius: 10px; padding: 11px 14px; font-size: 14px; font-weight: 600; color: rgba(34,30,26,.75); }
+  /* Same specificity as .nav-item above, so source order alone decided the
+     tie and the [hidden] attribute never actually hid a nav item (e.g. the
+     Users tab for non-owner accounts). One extra selector wins deterministically. */
+  .nav-item[hidden] { display: none; }
   .nav-item:hover { background: oklch(96% 0.02 60); }
   .nav-item.active { background: oklch(45% 0.17 20); color: #fff; }
   .sidebar .spacer { flex: 1; }
