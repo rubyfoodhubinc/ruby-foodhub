@@ -79,4 +79,13 @@ async function logAudit(adminUserId, action, details) {
   }
 }
 
-module.exports = { hashPassword, verifyLogin, createSession, requireSession, destroySession, logAudit };
+// View-only accounts may call read actions only. Sends the 403 itself and
+// returns true when blocked, so callers can just `if (blockViewerWrites(...)) return;`
+function blockViewerWrites(user, res, action, readActions) {
+  if (!user || user.role !== 'viewer') return false;
+  if (readActions && readActions.has(action)) return false;
+  res.status(403).json({ error: 'This account is view-only — it can browse every screen but cannot make changes.' });
+  return true;
+}
+
+module.exports = { hashPassword, verifyLogin, createSession, requireSession, destroySession, logAudit, blockViewerWrites };

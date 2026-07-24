@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
       const { name, email, password, role } = req.body;
       const cleanName = String(name || '').trim();
       const cleanEmail = String(email || '').trim().toLowerCase();
-      const cleanRole = role === 'owner' ? 'owner' : 'manager';
+      const cleanRole = ['owner', 'manager', 'viewer'].includes(role) ? role : 'manager';
       if (!cleanName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
         return res.status(400).json({ error: 'A name and valid email are required.' });
       }

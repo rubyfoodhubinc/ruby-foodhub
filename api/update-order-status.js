@@ -1,6 +1,6 @@
 const { applyCors } = require('./_lib/cors');
 const { supabase } = require('./_lib/supabase');
-const { requireSession, logAudit } = require('./_lib/admin-auth');
+const { requireSession, logAudit, blockViewerWrites } = require('./_lib/admin-auth');
 
 const ALLOWED_STATUSES = ['pending', 'fulfilled', 'delivered'];
 
@@ -18,6 +18,8 @@ module.exports = async (req, res) => {
   if (!user) {
     return res.status(401).json({ error: 'Session expired — please sign in again.' });
   }
+  // This endpoint only mutates, so a view-only account is always blocked.
+  if (blockViewerWrites(user, res, 'update-status', null)) return;
 
   if (!orderId || !ALLOWED_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'orderId and a status of pending/fulfilled/delivered are required.' });

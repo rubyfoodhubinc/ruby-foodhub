@@ -287,3 +287,11 @@ alter table retailer_accounts add column if not exists deleted_at timestamptz;
 -- Production batch tracking: an 8-character batch key (letters/digits)
 -- entered by an admin whenever goods ship to a retailer.
 alter table wholesale_orders add column if not exists production_batch text;
+
+-- 015_admin_viewer_role.sql ----------------------------------------------
+
+-- View-only admin role: can sign in and read every admin screen, but every
+-- mutating API action rejects it server-side.
+alter table admin_users drop constraint if exists admin_users_role_check;
+alter table admin_users
+  add constraint admin_users_role_check check (role in ('owner', 'manager', 'viewer'));

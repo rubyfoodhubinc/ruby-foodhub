@@ -137,6 +137,33 @@
   .editor-body img { max-width: 100%; }
   .preview-frame { width: 100%; height: 420px; border: 1.5px solid rgba(34,30,26,.18); border-radius: 10px; background: #fff; }
   .warn { background: oklch(95% 0.03 20); color: oklch(45% 0.17 20); border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.5; }
+
+  /* ---------- View-only ('viewer') role ----------
+     The server rejects every mutating action from a viewer session; these
+     rules make the UI honest about it by removing the controls that would
+     only ever return a 403. Selectors list every mutating control; read
+     helpers (search, filters, CSV export, the Home "Open" shortcuts) stay. */
+  .viewer-banner { display: none; background: oklch(93% 0.06 75); color: oklch(40% 0.1 75); font-size: 13px; font-weight: 700; padding: 10px 16px; text-align: center; }
+  body.role-viewer .viewer-banner { display: block; }
+  body.role-viewer #sync-btn,
+  body.role-viewer #viewer-add-product-panel,
+  body.role-viewer #em-send-btn,
+  body.role-viewer #em-template-save,
+  body.role-viewer #we-send-btn,
+  body.role-viewer .ws-confirm-pay,
+  body.role-viewer .ws-reject-claim,
+  body.role-viewer .ws-cancel,
+  body.role-viewer .ws-addorder-toggle,
+  body.role-viewer .ao-submit,
+  body.role-viewer .stk-apply,
+  body.role-viewer .save-price,
+  body.role-viewer .user-toggle,
+  body.role-viewer .toggle-active { display: none !important; }
+  body.role-viewer .status-select,
+  body.role-viewer .price-input,
+  body.role-viewer .stk-qty,
+  body.role-viewer .stk-batch,
+  body.role-viewer .stk-note { pointer-events: none; opacity: .55; }
 </style>
 </head>
 <body>
@@ -178,6 +205,8 @@
   </div>
 
   <div class="content">
+
+    <div class="viewer-banner">View-only account — you can browse every screen, but making changes is disabled.</div>
 
     <section id="section-home">
       <h1>Home</h1>
@@ -222,7 +251,7 @@
       <h1>Products</h1>
       <p class="note">Prices here drive the live storefront and checkout. Marking a variant inactive hides it from the store without touching past orders.</p>
       <div id="products-container"><div class="loading">Loading products…</div></div>
-      <div class="panel" style="max-width:460px;margin-top:22px">
+      <div class="panel" id="viewer-add-product-panel" style="max-width:460px;margin-top:22px">
         <h2>Add New Product / Variant</h2>
         <div class="form-stack">
           <input type="text" id="prod-name" placeholder="Product name (e.g. Ruby Ginger Refresher)" />
@@ -356,6 +385,7 @@
           <select id="team-role">
             <option value="manager" selected>Manager</option>
             <option value="owner">Owner</option>
+            <option value="viewer">Viewer (read-only)</option>
           </select>
           <button type="button" class="btn" id="team-add-btn">Add Team Member</button>
           <p class="note" id="team-note"></p>
@@ -415,6 +445,7 @@
     adminView.hidden = false;
     loggedInAs.textContent = 'Logged in as ' + session.name + ' (' + session.role + ')';
     document.getElementById('nav-users').hidden = session.role !== 'owner';
+    document.body.classList.toggle('role-viewer', session.role === 'viewer');
   }
 
   function backToLogin(message) {

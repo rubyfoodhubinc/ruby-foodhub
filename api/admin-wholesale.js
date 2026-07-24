@@ -1,6 +1,11 @@
 const { applyCors } = require('./_lib/cors');
 const { supabase } = require('./_lib/supabase');
-const { requireSession, logAudit } = require('./_lib/admin-auth');
+const { requireSession, logAudit, blockViewerWrites } = require('./_lib/admin-auth');
+
+const VIEWER_READ_ACTIONS = new Set([
+  'retailers', 'all-orders', 'retailer-orders', 'catalog',
+  'stock-get', 'stock-low', 'email-history', 'wholesale-prices',
+]);
 const { resend, isValidEmail, FROM_ADDRESS } = require('./_lib/resend');
 const { wholesaleCatalog, insertWholesaleOrder } = require('./_lib/wholesale');
 const { applyStockChange } = require('./_lib/stock');
@@ -25,6 +30,7 @@ async function handler(req, res) {
   const { token, action } = req.body || {};
   const actor = await requireSession(token);
   if (!actor) return res.status(401).json({ error: 'Session expired — please sign in again.' });
+  if (blockViewerWrites(actor, res, action, VIEWER_READ_ACTIONS)) return;
 
   try {
     if (action === 'retailers') {
