@@ -389,3 +389,29 @@ This section is appended to by a scheduled agent every day at **12:00 AM America
 
 ### 2026-07-22 — automation initialized
 `RubyFood Action.md` forked from `July Action.md` (commit `fc44664`) and the daily update routine was scheduled. No repo changes to report yet beyond the fork itself. First automated entry expected 2026-07-23 00:00 America/New_York.
+
+### 2026-07-23 — iOS App Store work (the Windows-era blocker is gone)
+This session ran on a **Mac** with a synced clone of the repo, which clears the single largest gap every prior session flagged: iOS could not be built at all on the old Windows machine. Major progress on the iOS front plus two production bug fixes.
+
+**Commits pushed to `main` this session:**
+- `154db52` — stop iOS zooming into form fields on both portals. iOS force-zooms into any form control with text under 16px and never zooms back, which left the layout panned sideways with the header/buttons clipped. Found live in the Simulator. Fixed for touch devices only via `@media (pointer: coarse)` bumping controls to 16px; desktop type scale untouched. Also added `ITSAppUsesNonExemptEncryption=false` to both iOS `Info.plist`s, and committed the CocoaPods workspace/lockfiles from the first Mac `cap sync ios`.
+- `3a5ed03` — stack retailer tables into cards under 620px. The order/catalog/stock tables were wider than a phone and side-scrolled, hiding the column a row described (e.g. product name scrolled off before you reached its qty box). `labelCells()` stamps each `<th>` onto its cells as `data-label`; CSS turns each row into a labelled card on narrow screens. iPad still renders the full table.
+
+Both fixes affect the **live web portals too**, not just the apps — pushed to `main` (Vercel auto-deploys).
+
+**iOS apps — both uploaded to App Store Connect, build 1.0 (1):**
+- Node installed, both Capacitor iOS projects synced, iOS 26.1 SDK downloaded into Xcode 26.1.1. Both apps archived + signed with a **Cloud Managed Apple Distribution** cert (team `R7A65YU39K`, RUBYNAV INC) and uploaded via `altool` with an App Store Connect API key (Key ID `992P7733ZH`, key saved at `~/.appstoreconnect/private_keys/`). Both builds show **Ready to Submit**.
+- **Admin app record created** in App Store Connect (`com.Ruby.FoodHub.Admin`, SKU `rubyfoodhub-admin`) — previously only Wholesale existed.
+- Decisions locked: **Wholesale → public App Store**, **Admin → TestFlight only** for staff (per §8.12 internal-tool concern).
+
+**Screenshots captured** (old doc listed this as a permanent env gap — no longer true on the Mac): 5 iPhone (1320×2868) + 4 iPad (2064×2752), at `~/Desktop/RubyFoodHub-iOS-builds/screenshots/`. Listing copy drafted at `~/Desktop/RubyFoodHub-iOS-builds/LISTING-COPY.md`.
+
+**Migration 014 CONFIRMED APPLIED in production** — the retailer app displays `Batch: ABTCHIGH` on order `MONE07212026-08`, direct evidence the `production_batch` column exists. Resolves the top open question in §4/§8.1 for 014. (013/account-deletion still not independently verified.)
+
+**Admin TestFlight:** internal group "Ruby FoodHub Staff" created, build attached. 3 testers invited and active (one already installed on a real iPhone 17 Pro): `widokpesi@icloud.com`, `rubynavinctech@gmail.com`, `dianadopsy@gmail.com`.
+
+**Still open / needs the owner:**
+- **Wholesale listing not submitted.** Browser automation could not type into App Store Connect's fields (verified 3 ways — nothing saved), and screenshot upload needs the native macOS file picker. The owner must fill the listing by hand from `LISTING-COPY.md`, drag in the screenshots, attach build 1.0 (1), add the demo-account password (`moneymarttvllc@gmail.com`) to App Review notes, complete App Privacy + age rating, set price Free, then Submit.
+- **Wholesale app has a stray macOS platform** in "Prepare for Submission" — delete it from the sidebar (won't block iOS).
+- **6 more Admin testers requested but only partially added** — 2 created (`ladydokpesi@icloud.com`, `dianadokpesi@gmail.com`, both got Marketing+Sales, not yet in a TestFlight group); 4 not created. Adding external users to forms was blocked by a safety guardrail this session.
+- **iOS demo password** for App Review still needed from owner.
