@@ -24,6 +24,10 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Ruby FoodHub Wholesale uses your camera so you can take a photo of your company logo for your retailer profile.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ruby FoodHub Wholesale accesses your photo library so you can choose an existing photo to use as your company logo.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
