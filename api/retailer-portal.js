@@ -4,7 +4,7 @@ const { supabase } = require('./_lib/supabase');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { requireRetailerSession } = require('./_lib/retailer-auth');
 const { logAudit } = require('./_lib/admin-auth');
-const { wholesaleCatalog, insertWholesaleOrder } = require('./_lib/wholesale');
+const { wholesaleCatalog, publicProductList, insertWholesaleOrder } = require('./_lib/wholesale');
 const { applyStockChange } = require('./_lib/stock');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -55,6 +55,19 @@ module.exports = async (req, res) => {
   }
 
   const { action, token } = req.body || {};
+
+  // No login required: lets the app satisfy App Store guideline 5.1.1(v)
+  // (non-account content must be freely browsable). Product names only —
+  // wholesale pricing stays behind an approved account.
+  if (action === 'public-catalog') {
+    try {
+      return res.status(200).json({ products: await publicProductList() });
+    } catch (err) {
+      console.error('retailer-portal public-catalog error:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   const account = await requireRetailerSession(token);
   if (!account) return res.status(401).json({ error: 'Session expired — please sign in again.' });
 

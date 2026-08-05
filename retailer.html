@@ -125,6 +125,7 @@
     <div class="tabs">
       <button type="button" id="tab-signin" class="active">Sign In</button>
       <button type="button" id="tab-apply">Apply for Access</button>
+      <button type="button" id="tab-browse">Browse Products</button>
     </div>
 
     <div id="signin-form">
@@ -142,6 +143,11 @@
       <textarea id="ap-address" rows="2" placeholder="Business address (optional)"></textarea>
       <input type="password" id="ap-password" placeholder="Choose a password (10+ characters)" autocomplete="new-password" />
       <button type="button" class="btn btn-full" id="ap-btn">Submit Application</button>
+    </div>
+
+    <div id="browse-form" hidden>
+      <p class="note" style="text-align:center">A look at what Ruby FoodHub carries. Sign in or apply for a wholesale account to see pricing and place orders.</p>
+      <div id="browse-list"><p class="note" style="text-align:center">Loading…</p></div>
     </div>
     <p class="error" id="auth-error" hidden></p>
     <p class="note" style="text-align:center;margin-top:18px">
@@ -358,20 +364,43 @@
   }
 
   /* ---------- auth tabs ---------- */
-  document.getElementById('tab-signin').addEventListener('click', () => {
-    document.getElementById('tab-signin').classList.add('active');
-    document.getElementById('tab-apply').classList.remove('active');
-    document.getElementById('signin-form').hidden = false;
-    document.getElementById('apply-form').hidden = true;
+  const authTabs = ['tab-signin', 'tab-apply', 'tab-browse'];
+  const authForms = { 'tab-signin': 'signin-form', 'tab-apply': 'apply-form', 'tab-browse': 'browse-form' };
+  let browseCatalogLoaded = false;
+
+  function selectAuthTab(activeId) {
+    authTabs.forEach((id) => {
+      document.getElementById(id).classList.toggle('active', id === activeId);
+      document.getElementById(authForms[id]).hidden = id !== activeId;
+    });
     authError.hidden = true;
+    if (activeId === 'tab-browse' && !browseCatalogLoaded) {
+      browseCatalogLoaded = true;
+      loadPublicCatalog();
+    }
+  }
+  authTabs.forEach((id) => {
+    document.getElementById(id).addEventListener('click', () => selectAuthTab(id));
   });
-  document.getElementById('tab-apply').addEventListener('click', () => {
-    document.getElementById('tab-apply').classList.add('active');
-    document.getElementById('tab-signin').classList.remove('active');
-    document.getElementById('apply-form').hidden = false;
-    document.getElementById('signin-form').hidden = true;
-    authError.hidden = true;
-  });
+
+  async function loadPublicCatalog() {
+    const list = document.getElementById('browse-list');
+    try {
+      const response = await fetch(API_BASE + '/api/retailer-portal', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'public-catalog' })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not load products.');
+      list.innerHTML = (data.products || []).length
+        ? '<ul style="list-style:none;padding:0;margin:0">' +
+          data.products.map((name) => '<li style="padding:12px 4px;border-bottom:1px solid rgba(34,30,26,.08);font-weight:700">' + esc(name) + '</li>').join('') +
+          '</ul>'
+        : '<p class="empty">No products listed yet — check back soon.</p>';
+    } catch (err) {
+      list.innerHTML = '<p class="empty">' + esc(err.message) + '</p>';
+    }
+  }
 
   document.getElementById('li-btn').addEventListener('click', async () => {
     const btn = document.getElementById('li-btn');

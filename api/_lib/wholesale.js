@@ -20,6 +20,22 @@ async function wholesaleCatalog() {
     .sort((a, b) => a.name.localeCompare(b.name) || a.wholesale_price - b.wholesale_price);
 }
 
+// Public, no-login product list for the retailer app's browse view (App
+// Store guideline 5.1.1(v): browsing must not require an account). Deliberately
+// omits wholesale_price — pricing is only shown to approved retailer accounts —
+// and only the distinct product names, not every packed variant, since the
+// public view is "what do you sell," not a wholesale order form.
+async function publicProductList() {
+  const { data, error } = await supabase
+    .from('products')
+    .select('name')
+    .eq('active', true);
+  if (error) throw new Error(JSON.stringify(error));
+
+  const names = [...new Set((data || []).map((p) => p.name))];
+  return names.sort((a, b) => a.localeCompare(b));
+}
+
 // Wholesale order numbers are retailer-scoped and human-readable: the first
 // four letters of the business name + the order date (MMDDYYYY, US Eastern) +
 // a per-retailer serial. MoneyMart's fifth order on 12-24-2026 becomes
@@ -61,4 +77,4 @@ async function insertWholesaleOrder(row, businessName) {
   throw new Error(JSON.stringify(lastError));
 }
 
-module.exports = { wholesaleCatalog, orderNumberFor, insertWholesaleOrder };
+module.exports = { wholesaleCatalog, publicProductList, orderNumberFor, insertWholesaleOrder };
