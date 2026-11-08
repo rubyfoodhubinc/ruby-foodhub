@@ -1,0 +1,526 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0B9BF11D2E101C096C53C8C6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6C6BD7AB1FF59C7F25D9B5 /* Models.swift */; };
+		2F7F196FBBA2CE97208D5FDA /* PortalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C52C964129F594106D6108 /* PortalStore.swift */; };
+		499A70559DE210788524373E /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F59BDEC50F61E0508795A8 /* Components.swift */; };
+		59A97C357225E56A70FD8FE2 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FFB4C62242D9EEB0C53D1A /* APIClient.swift */; };
+		612AC3165A9FE14186548FFF /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9DBC8745F62B064A13CA972 /* Keychain.swift */; };
+		70F5BF98896B94265B1C5321 /* StockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BFC9D717A3452B3AEA0D7C /* StockView.swift */; };
+		88FE54AFCF9056FB93459C5F /* PlaceOrderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6C43D5758B44A4E1563D84 /* PlaceOrderView.swift */; };
+		8AC7163CE4A0F20572773AF3 /* OrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A195035FEBE6C504A86A2B /* OrdersView.swift */; };
+		911559C05F6833A56BA86D1B /* DecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339895EDF4D4599499AE4012 /* DecodingTests.swift */; };
+		950845263B0984E43A63EF20 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3FBDF654A841ED5D266E76B6 /* Assets.xcassets */; };
+		98FBE5BF1C713A3D324063D1 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5480E35E55F88A10CD2C6972 /* HelpView.swift */; };
+		AA0E9A495C7D98465B477DB6 /* RetailerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2565B530DBEE8B06FC05A843 /* RetailerApp.swift */; };
+		BC3046B6F3AB3CC8B12EEB61 /* PortalScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78EFE673FCAEA9D69E5AAFFE /* PortalScreen.swift */; };
+		D1C8E20E307C67FDB768E563 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222D7FA667144D8CFB6E3A65 /* HomeView.swift */; };
+		D415674100AD57626CD9F12D /* MockServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C64DAA15C1D3D2AF193BA3F /* MockServer.swift */; };
+		DAF8782F5B1463F305D2ACB8 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF6CDA833E2795F69C4B43C /* Theme.swift */; };
+		DBBE03F2EC8CF829829C19C3 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4189A5A068F89562C26F5002 /* Formatters.swift */; };
+		F6568232175C10DE0E50F289 /* AuthScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53FA77A65A69830AEB803CAB /* AuthScreen.swift */; };
+		FB52289EAA13A153C1DDBFE1 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3045AE009F5EB7DEE71DF91 /* ProfileView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9284188734E012010777FB01 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2DE1464AFB197EEB27BB90DF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 261A958CED754F620B37ED76;
+			remoteInfo = RubyFoodHubRetailer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1C64DAA15C1D3D2AF193BA3F /* MockServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockServer.swift; sourceTree = "<group>"; };
+		222D7FA667144D8CFB6E3A65 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		2565B530DBEE8B06FC05A843 /* RetailerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerApp.swift; sourceTree = "<group>"; };
+		339895EDF4D4599499AE4012 /* DecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodingTests.swift; sourceTree = "<group>"; };
+		3FBDF654A841ED5D266E76B6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4189A5A068F89562C26F5002 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		47FFB4C62242D9EEB0C53D1A /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		53FA77A65A69830AEB803CAB /* AuthScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthScreen.swift; sourceTree = "<group>"; };
+		5480E35E55F88A10CD2C6972 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
+		78EFE673FCAEA9D69E5AAFFE /* PortalScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortalScreen.swift; sourceTree = "<group>"; };
+		84C52C964129F594106D6108 /* PortalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortalStore.swift; sourceTree = "<group>"; };
+		8A6C43D5758B44A4E1563D84 /* PlaceOrderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceOrderView.swift; sourceTree = "<group>"; };
+		B39BCF82C0409DC3FAF99ACA /* RubyFoodHubRetailerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RubyFoodHubRetailerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B3F59BDEC50F61E0508795A8 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		BB6C6BD7AB1FF59C7F25D9B5 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		D0BFC9D717A3452B3AEA0D7C /* StockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StockView.swift; sourceTree = "<group>"; };
+		E3045AE009F5EB7DEE71DF91 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		E7FC76DB30FA793F0C27DC66 /* RubyFoodHubRetailer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RubyFoodHubRetailer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EBF6CDA833E2795F69C4B43C /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		F6A195035FEBE6C504A86A2B /* OrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrdersView.swift; sourceTree = "<group>"; };
+		F9DBC8745F62B064A13CA972 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		2E2DAF4ED37DC56FB222FE3B /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				47FFB4C62242D9EEB0C53D1A /* APIClient.swift */,
+				1C64DAA15C1D3D2AF193BA3F /* MockServer.swift */,
+				BB6C6BD7AB1FF59C7F25D9B5 /* Models.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		334BB243B5DE21CD50DE2EDF /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				339895EDF4D4599499AE4012 /* DecodingTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		338485A9FE1A113E8056D18B = {
+			isa = PBXGroup;
+			children = (
+				4BA4E3E5CDC07FF9C36C8C42 /* Resources */,
+				88FB07B8BB5CC1AAB5BEFD72 /* Sources */,
+				334BB243B5DE21CD50DE2EDF /* Tests */,
+				A50F5FC847F8D922F31F8859 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3A14BC15C434A31550686228 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				4189A5A068F89562C26F5002 /* Formatters.swift */,
+				F9DBC8745F62B064A13CA972 /* Keychain.swift */,
+				EBF6CDA833E2795F69C4B43C /* Theme.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		4BA4E3E5CDC07FF9C36C8C42 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				3FBDF654A841ED5D266E76B6 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		5B62C8C8D62209479EC5E061 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				84C52C964129F594106D6108 /* PortalStore.swift */,
+				2565B530DBEE8B06FC05A843 /* RetailerApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		6FDE94A5EBDB0E2C581CAD35 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				53FA77A65A69830AEB803CAB /* AuthScreen.swift */,
+				B3F59BDEC50F61E0508795A8 /* Components.swift */,
+				5480E35E55F88A10CD2C6972 /* HelpView.swift */,
+				222D7FA667144D8CFB6E3A65 /* HomeView.swift */,
+				F6A195035FEBE6C504A86A2B /* OrdersView.swift */,
+				8A6C43D5758B44A4E1563D84 /* PlaceOrderView.swift */,
+				78EFE673FCAEA9D69E5AAFFE /* PortalScreen.swift */,
+				E3045AE009F5EB7DEE71DF91 /* ProfileView.swift */,
+				D0BFC9D717A3452B3AEA0D7C /* StockView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		88FB07B8BB5CC1AAB5BEFD72 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				5B62C8C8D62209479EC5E061 /* App */,
+				2E2DAF4ED37DC56FB222FE3B /* Networking */,
+				3A14BC15C434A31550686228 /* Support */,
+				6FDE94A5EBDB0E2C581CAD35 /* Views */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		A50F5FC847F8D922F31F8859 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E7FC76DB30FA793F0C27DC66 /* RubyFoodHubRetailer.app */,
+				B39BCF82C0409DC3FAF99ACA /* RubyFoodHubRetailerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		261A958CED754F620B37ED76 /* RubyFoodHubRetailer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A321E78E4C9CFD3F047F23E4 /* Build configuration list for PBXNativeTarget "RubyFoodHubRetailer" */;
+			buildPhases = (
+				6A5BDD3AA56D7994254590D7 /* Sources */,
+				A0DBC59EDF7E1A1C5F0FE37D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RubyFoodHubRetailer;
+			packageProductDependencies = (
+			);
+			productName = RubyFoodHubRetailer;
+			productReference = E7FC76DB30FA793F0C27DC66 /* RubyFoodHubRetailer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		546A2B0E2BF25CF586F7675F /* RubyFoodHubRetailerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A761575645DBB969379EB57A /* Build configuration list for PBXNativeTarget "RubyFoodHubRetailerTests" */;
+			buildPhases = (
+				A63819CC8C757B95F5421D61 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5D271DBBB9A514ED4FDE18FB /* PBXTargetDependency */,
+			);
+			name = RubyFoodHubRetailerTests;
+			packageProductDependencies = (
+			);
+			productName = RubyFoodHubRetailerTests;
+			productReference = B39BCF82C0409DC3FAF99ACA /* RubyFoodHubRetailerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2DE1464AFB197EEB27BB90DF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					261A958CED754F620B37ED76 = {
+						DevelopmentTeam = R7A65YU39K;
+						ProvisioningStyle = Automatic;
+					};
+					546A2B0E2BF25CF586F7675F = {
+						DevelopmentTeam = R7A65YU39K;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = BB962227D8E147A6C8030EEA /* Build configuration list for PBXProject "RubyFoodHubRetailer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 338485A9FE1A113E8056D18B;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A50F5FC847F8D922F31F8859 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				261A958CED754F620B37ED76 /* RubyFoodHubRetailer */,
+				546A2B0E2BF25CF586F7675F /* RubyFoodHubRetailerTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A0DBC59EDF7E1A1C5F0FE37D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				950845263B0984E43A63EF20 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6A5BDD3AA56D7994254590D7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59A97C357225E56A70FD8FE2 /* APIClient.swift in Sources */,
+				F6568232175C10DE0E50F289 /* AuthScreen.swift in Sources */,
+				499A70559DE210788524373E /* Components.swift in Sources */,
+				DBBE03F2EC8CF829829C19C3 /* Formatters.swift in Sources */,
+				98FBE5BF1C713A3D324063D1 /* HelpView.swift in Sources */,
+				D1C8E20E307C67FDB768E563 /* HomeView.swift in Sources */,
+				612AC3165A9FE14186548FFF /* Keychain.swift in Sources */,
+				D415674100AD57626CD9F12D /* MockServer.swift in Sources */,
+				0B9BF11D2E101C096C53C8C6 /* Models.swift in Sources */,
+				8AC7163CE4A0F20572773AF3 /* OrdersView.swift in Sources */,
+				88FE54AFCF9056FB93459C5F /* PlaceOrderView.swift in Sources */,
+				BC3046B6F3AB3CC8B12EEB61 /* PortalScreen.swift in Sources */,
+				2F7F196FBBA2CE97208D5FDA /* PortalStore.swift in Sources */,
+				FB52289EAA13A153C1DDBFE1 /* ProfileView.swift in Sources */,
+				AA0E9A495C7D98465B477DB6 /* RetailerApp.swift in Sources */,
+				70F5BF98896B94265B1C5321 /* StockView.swift in Sources */,
+				DAF8782F5B1463F305D2ACB8 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A63819CC8C757B95F5421D61 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				911559C05F6833A56BA86D1B /* DecodingTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5D271DBBB9A514ED4FDE18FB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 261A958CED754F620B37ED76 /* RubyFoodHubRetailer */;
+			targetProxy = 9284188734E012010777FB01 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		089FE5DB55FCE96DB625A818 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = R7A65YU39K;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		597A5BAE72EEFAEF1C44378F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 2;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = R7A65YU39K;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A41829DA1517E6801E5BA7E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ruby FoodHub Wholesale";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rubyfoodhub.retailer;
+				PRODUCT_NAME = RubyFoodHubRetailer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E3309D67CD06938835FB9528 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ruby FoodHub Wholesale";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rubyfoodhub.retailer;
+				PRODUCT_NAME = RubyFoodHubRetailer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E818E86A0C67294DAFE16B3B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rubyfoodhub.retailer.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RubyFoodHubRetailer.app/RubyFoodHubRetailer";
+			};
+			name = Release;
+		};
+		FE30A7578A45623D5D1CFFE6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rubyfoodhub.retailer.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RubyFoodHubRetailer.app/RubyFoodHubRetailer";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A321E78E4C9CFD3F047F23E4 /* Build configuration list for PBXNativeTarget "RubyFoodHubRetailer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A41829DA1517E6801E5BA7E3 /* Debug */,
+				E3309D67CD06938835FB9528 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A761575645DBB969379EB57A /* Build configuration list for PBXNativeTarget "RubyFoodHubRetailerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FE30A7578A45623D5D1CFFE6 /* Debug */,
+				E818E86A0C67294DAFE16B3B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BB962227D8E147A6C8030EEA /* Build configuration list for PBXProject "RubyFoodHubRetailer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				597A5BAE72EEFAEF1C44378F /* Debug */,
+				089FE5DB55FCE96DB625A818 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2DE1464AFB197EEB27BB90DF /* Project object */;
+}
