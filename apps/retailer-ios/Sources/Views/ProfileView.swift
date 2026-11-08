@@ -59,9 +59,9 @@ struct ProfileView: View {
         .card()
         .onAppear(perform: fillIfNeeded)
         .onChange(of: store.account?.id) { _, _ in fillIfNeeded() }
-        .onAppear { if store.requestDeleteAccount { store.requestDeleteAccount = false; deleteNote = ""; deleteStep1 = true } }
+        .onAppear { if store.requestDeleteAccount { store.requestDeleteAccount = false; if !deleting { deleteNote = ""; deleteStep1 = true } } }
         .onChange(of: store.requestDeleteAccount) { _, wanted in
-            if wanted { store.requestDeleteAccount = false; deleteNote = ""; deleteStep1 = true }
+            if wanted { store.requestDeleteAccount = false; if !deleting { deleteNote = ""; deleteStep1 = true } }
         }
         // Logo source chooser: library always; camera only on devices that have one.
         .confirmationDialog("Upload Company Logo", isPresented: $showSourceChooser, titleVisibility: .visible) {
