@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const RETAILER_EMAIL_FOOTER = `
 <hr style="border:none;border-top:1px solid #e5e0dc;margin:32px 0 16px">
 <p style="font-size:12px;color:#8a837d;font-family:sans-serif;line-height:1.6">
-  Ruby FoodHub Inc. · Texas, USA · Wholesale Partner Communication<br>
+  RUBYNAV INC · 15322 Marek Ln, Guy, TX · Wholesale Partner Communication<br>
   Questions? Reply to this email or write to <a href="mailto:sales@rubyfoodhub.com">sales@rubyfoodhub.com</a>.
 </p>`;
 

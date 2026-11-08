@@ -20,7 +20,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const BROADCAST_FOOTER = `
 <hr style="border:none;border-top:1px solid #e5e0dc;margin:32px 0 16px">
 <p style="font-size:12px;color:#8a837d;font-family:sans-serif;line-height:1.6">
-  Ruby FoodHub Inc. · Texas, USA<br>
+  RUBYNAV INC · 15322 Marek Ln, Guy, TX<br>
   You're receiving this because you subscribed to Ruby FoodHub updates or shopped with us.<br>
   <a href="{{{RESEND_UNSUBSCRIBE_URL}}}">Unsubscribe</a>
 </p>`;
@@ -30,7 +30,7 @@ const BROADCAST_FOOTER = `
 const INDIVIDUAL_FOOTER = `
 <hr style="border:none;border-top:1px solid #e5e0dc;margin:32px 0 16px">
 <p style="font-size:12px;color:#8a837d;font-family:sans-serif;line-height:1.6">
-  Ruby FoodHub Inc. · Texas, USA<br>
+  RUBYNAV INC · 15322 Marek Ln, Guy, TX<br>
   To stop receiving promotional emails, reply to this email with "unsubscribe" or write to
   <a href="mailto:sales@rubyfoodhub.com?subject=Unsubscribe">sales@rubyfoodhub.com</a>.
 </p>`;
