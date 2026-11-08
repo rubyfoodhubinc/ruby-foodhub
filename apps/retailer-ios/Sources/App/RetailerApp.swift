@@ -102,7 +102,7 @@ struct LegalFooter: View {
         let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
         VStack(spacing: 2) {
             Text("Ruby FoodHub Wholesale \(v) (\(b))")
-            Text("© 2026 RUBYNAV INC. Ruby FoodHub is a product of RUBYNAV INC.")
+            Text("© 2026 RUBYNAV INC. This app is a product of RUBYNAV INC.")
         }
         .font(.caption2)
         .foregroundStyle(Brand.ink(0.45))

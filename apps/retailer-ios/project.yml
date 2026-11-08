@@ -29,7 +29,7 @@ targets:
         CFBundleDevelopmentRegion: en
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
-        NSHumanReadableCopyright: "© 2026 RUBYNAV INC. Ruby FoodHub is a product of RUBYNAV INC."
+        NSHumanReadableCopyright: "© 2026 RUBYNAV INC. This app is a product of RUBYNAV INC."
         NSCameraUsageDescription: Ruby FoodHub Wholesale uses your camera so you can take a photo of your company logo for your retailer profile.
         NSPhotoLibraryUsageDescription: Ruby FoodHub Wholesale accesses your photo library so you can choose an existing photo to use as your company logo.
         UILaunchScreen:
