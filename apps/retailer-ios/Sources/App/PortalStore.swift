@@ -57,6 +57,8 @@ final class PortalStore: ObservableObject {
     @Published var authError: String?
 
     @Published var view: PortalView = .home
+    /// Raised from the top-bar Account menu; ProfileView opens the delete confirmation.
+    @Published var requestDeleteAccount = false
     @Published var statusBanner: Banner?
 
     @Published var orders: [Order] = []

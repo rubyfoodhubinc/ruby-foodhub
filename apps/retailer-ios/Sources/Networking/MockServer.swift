@@ -43,12 +43,12 @@ enum MockServer {
 
     static var ordersJSON: [[String: Any]] {
         [
-            order("o1", "FRES11052026-06", 2, [("Zobo Hibiscus Drink", "12-pack", 4, 21.0), ("Tigernut Kunu", "6-pack", 2, 13.5)], 111.0, "cash", "pending", "fulfilled"),
-            order("o2", "FRES10282026-05", 10, [("Zobo Hibiscus Drink", "24-pack", 2, 39.0)], 78.0, "zelle", "awaiting_confirmation", "confirmed", claimed: "zelle"),
-            order("o3", "FRES10122026-04", 26, [("Chapman Punch", "12-pack", 3, 24.0)], 72.0, "pay_on_delivery", "pending", "pending"),
-            order("o4", "FRES09182026-03", 50, [("Zobo Hibiscus Drink", "12-pack", 6, 21.0)], 126.0, "stripe", "paid", "fulfilled", batch: "B-0918-A"),
-            order("o5", "FRES08032026-02", 96, [("Tigernut Kunu", "Single", 24, 2.5)], 60.0, "cash", "pending", "canceled", cancel: "Duplicate order — placed twice by mistake"),
-            order("o6", "WHS-000004", 150, [("Chapman Punch", "6-pack", 5, 12.5), ("Zobo Hibiscus Drink", "Single", 12, 2.0)], 86.5, "zelle", "confirmed_by_admin", "fulfilled"),
+            order("o1", "FRES11052026-06", 2, [("Ruby Sorrel Hibiscus Punch", "12-Pack", 4, 33.0), ("Ruby Ginger Refresher", "24-Case", 2, 64.0)], 260.0, "cash", "pending", "fulfilled"),
+            order("o2", "FRES10282026-05", 10, [("Ruby Sorrel Hibiscus Punch", "24-Case", 2, 64.0)], 128.0, "zelle", "awaiting_confirmation", "confirmed", claimed: "zelle"),
+            order("o3", "FRES10122026-04", 26, [("Ruby Ginger Refresher", "12-Pack", 3, 33.0)], 99.0, "pay_on_delivery", "pending", "pending"),
+            order("o4", "FRES09182026-03", 50, [("Ruby Sorrel Hibiscus Punch", "12-Pack", 6, 33.0)], 198.0, "stripe", "paid", "fulfilled", batch: "B-0918-A"),
+            order("o5", "FRES08032026-02", 96, [("Ruby Ginger Refresher", "12oz Single", 24, 3.0)], 72.0, "cash", "pending", "canceled", cancel: "Duplicate order — placed twice by mistake"),
+            order("o6", "WHS-000004", 150, [("Ruby Ginger Refresher", "6-Pack", 5, 17.0), ("Ruby Sorrel Hibiscus Punch", "12oz Single", 12, 3.0)], 121.0, "zelle", "confirmed_by_admin", "fulfilled"),
         ]
     }
 
@@ -68,40 +68,39 @@ enum MockServer {
 
     static var catalogJSON: [[String: Any]] {
         [
-            ["product_id": "p-chap-6", "name": "Chapman Punch", "variant": "6-pack", "wholesale_price": 12.5],
-            ["product_id": "p-chap-12", "name": "Chapman Punch", "variant": "12-pack", "wholesale_price": 24.0],
-            ["product_id": "p-kunu-1", "name": "Tigernut Kunu", "variant": "Single", "wholesale_price": 2.5],
-            ["product_id": "p-kunu-6", "name": "Tigernut Kunu", "variant": "6-pack", "wholesale_price": 13.5],
-            ["product_id": "p-zobo-1", "name": "Zobo Hibiscus Drink", "variant": "Single", "wholesale_price": 2.0],
-            ["product_id": "p-zobo-12", "name": "Zobo Hibiscus Drink", "variant": "12-pack", "wholesale_price": 21.0],
-            ["product_id": "p-zobo-24", "name": "Zobo Hibiscus Drink", "variant": "24-pack", "wholesale_price": 39.0],
+            ["product_id": "p-ging-1", "name": "Ruby Ginger Refresher", "variant": "12oz Single", "wholesale_price": 3.0],
+            ["product_id": "p-ging-6", "name": "Ruby Ginger Refresher", "variant": "6-Pack", "wholesale_price": 17.0],
+            ["product_id": "p-ging-12", "name": "Ruby Ginger Refresher", "variant": "12-Pack", "wholesale_price": 33.0],
+            ["product_id": "p-ging-24", "name": "Ruby Ginger Refresher", "variant": "24-Case", "wholesale_price": 64.0],
+            ["product_id": "p-sorr-1", "name": "Ruby Sorrel Hibiscus Punch", "variant": "12oz Single", "wholesale_price": 3.0],
+            ["product_id": "p-sorr-12", "name": "Ruby Sorrel Hibiscus Punch", "variant": "12-Pack", "wholesale_price": 33.0],
+            ["product_id": "p-sorr-24", "name": "Ruby Sorrel Hibiscus Punch", "variant": "24-Case", "wholesale_price": 64.0],
         ]
     }
 
     static var stockJSON: [String: Any] {
         [
             "stock": [
-                ["product_id": "p-zobo-12", "quantity": 18, "updated_at": iso(daysAgo: 1), "products": ["name": "Zobo Hibiscus Drink", "variant": "12-pack"]],
-                ["product_id": "p-kunu-6", "quantity": 3, "updated_at": iso(daysAgo: 2), "products": ["name": "Tigernut Kunu", "variant": "6-pack"]],
-                ["product_id": "p-chap-6", "quantity": 0, "updated_at": iso(daysAgo: 9), "products": ["name": "Chapman Punch", "variant": "6-pack"]],
-                ["product_id": "p-zobo-1", "quantity": 9, "updated_at": iso(daysAgo: 4), "products": ["name": "Zobo Hibiscus Drink", "variant": "Single"]],
+                ["product_id": "p-sorr-12", "quantity": 18, "updated_at": iso(daysAgo: 1), "products": ["name": "Ruby Sorrel Hibiscus Punch", "variant": "12-Pack"]],
+                ["product_id": "p-ging-24", "quantity": 3, "updated_at": iso(daysAgo: 2), "products": ["name": "Ruby Ginger Refresher", "variant": "24-Case"]],
+                ["product_id": "p-ging-6", "quantity": 0, "updated_at": iso(daysAgo: 9), "products": ["name": "Ruby Ginger Refresher", "variant": "6-Pack"]],
+                ["product_id": "p-sorr-1", "quantity": 9, "updated_at": iso(daysAgo: 4), "products": ["name": "Ruby Sorrel Hibiscus Punch", "variant": "12oz Single"]],
             ],
             "movements": [
-                ["change": -2, "note": "Sold — reported by retailer", "created_at": iso(daysAgo: 1), "products": ["name": "Zobo Hibiscus Drink", "variant": "12-pack"]],
-                ["change": 4, "note": "Delivered — order FRES11052026-06", "created_at": iso(daysAgo: 2), "products": ["name": "Zobo Hibiscus Drink", "variant": "12-pack"]],
-                ["change": 2, "note": "Delivered — order FRES11052026-06", "created_at": iso(daysAgo: 2), "products": ["name": "Tigernut Kunu", "variant": "6-pack"]],
-                ["change": -5, "note": NSNull(), "created_at": iso(daysAgo: 9), "products": ["name": "Chapman Punch", "variant": "6-pack"]],
+                ["change": -2, "note": "Sold — reported by retailer", "created_at": iso(daysAgo: 1), "products": ["name": "Ruby Sorrel Hibiscus Punch", "variant": "12-Pack"]],
+                ["change": 4, "note": "Delivered — order FRES11052026-06", "created_at": iso(daysAgo: 2), "products": ["name": "Ruby Sorrel Hibiscus Punch", "variant": "12-Pack"]],
+                ["change": 2, "note": "Delivered — order FRES11052026-06", "created_at": iso(daysAgo: 2), "products": ["name": "Ruby Ginger Refresher", "variant": "24-Case"]],
+                ["change": -5, "note": NSNull(), "created_at": iso(daysAgo: 9), "products": ["name": "Ruby Ginger Refresher", "variant": "6-Pack"]],
             ],
         ]
     }
 
     static var publicCatalogJSON: [String: Any] {
         [
-            "products": ["Chapman Punch", "Tigernut Kunu", "Zobo Hibiscus Drink"],
+            "products": ["Ruby Ginger Refresher", "Ruby Sorrel Hibiscus Punch"],
             "catalog": [
-                ["name": "Chapman Punch", "sizes": ["6-pack", "12-pack"]],
-                ["name": "Tigernut Kunu", "sizes": ["Single", "6-pack"]],
-                ["name": "Zobo Hibiscus Drink", "sizes": ["Single", "12-pack", "24-pack"]],
+                ["name": "Ruby Ginger Refresher", "sizes": ["12oz Single", "6-Pack", "12-Pack", "24-Case"]],
+                ["name": "Ruby Sorrel Hibiscus Punch", "sizes": ["12oz Single", "6-Pack", "12-Pack", "24-Case"]],
             ],
         ]
     }

@@ -18,7 +18,8 @@ struct PortalScreen: View {
                             DueBannerView()
                             PortalNav()
                             content
-                        } else if store.isPending {
+                        } else {
+                            // Pending or suspended: profile + Privacy & Account (delete) stay reachable.
                             ProfileView()
                         }
                         LegalFooter()

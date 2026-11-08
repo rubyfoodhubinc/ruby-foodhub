@@ -63,7 +63,7 @@ struct TopBar: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Ruby FoodHub").font(.subheadline.weight(.heavy))
-                    Text("Retailer Portal").font(.caption).foregroundStyle(Brand.muted)
+                    Text("Retailer").font(.caption).foregroundStyle(Brand.muted)
                 }
                 .accessibilityElement(children: .combine)
                 Spacer(minLength: 8)
@@ -75,6 +75,24 @@ struct TopBar: View {
                         Text("\(account.business_name) · \(account.email)")
                             .font(.caption).foregroundStyle(Brand.muted).lineLimit(1)
                     }
+                    Menu {
+                        Button { store.view = .profile } label: { Label("Profile", systemImage: "person.crop.circle") }
+                        Link(destination: URL(string: "https://www.rubyfoodhub.com/privacy")!) {
+                            Label("Privacy Policy", systemImage: "hand.raised")
+                        }
+                        Button(role: .destructive) {
+                            store.view = .profile
+                            store.requestDeleteAccount = true
+                        } label: { Label("Delete Account", systemImage: "trash") }
+                        Button { Task { await store.logout() } } label: { Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") }
+                    } label: {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 22, weight: .regular))
+                            .foregroundStyle(Brand.primary)
+                            .frame(width: 34, height: 34)
+                    }
+                    .accessibilityLabel("Account")
+                    .accessibilityHint("Profile, privacy policy, delete account and sign out")
                     Button("Sign Out") { Task { await store.logout() } }
                         .buttonStyle(.outlineSmall)
                         .accessibilityHint("Signs you out of the retailer portal")
@@ -101,7 +119,7 @@ struct LegalFooter: View {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
         VStack(spacing: 2) {
-            Text("Ruby FoodHub Wholesale \(v) (\(b))")
+            Text("Ruby FoodHub Retailer \(v) (\(b))")
             Text("© 2026 RUBYNAV INC. This app is a product of RUBYNAV INC.")
         }
         .font(.caption2)

@@ -10,7 +10,7 @@ struct AuthScreen: View {
             ScrollView {
                 VStack(spacing: 0) {
                     VStack(spacing: 18) {
-                        Text("Retailer Portal")
+                        Text("Retailer Account")
                             .font(.title3.weight(.bold))
                             .accessibilityAddTraits(.isHeader)
                         AuthTabs()

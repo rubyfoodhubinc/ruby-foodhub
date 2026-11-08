@@ -22,7 +22,6 @@ struct ProfileView: View {
 
     // Delete
     @State private var deleteStep1 = false
-    @State private var deleteStep2 = false
     @State private var typed = ""
     @State private var deleteNote = ""
     @State private var deleting = false
@@ -60,6 +59,10 @@ struct ProfileView: View {
         .card()
         .onAppear(perform: fillIfNeeded)
         .onChange(of: store.account?.id) { _, _ in fillIfNeeded() }
+        .onAppear { if store.requestDeleteAccount { store.requestDeleteAccount = false; deleteNote = ""; deleteStep1 = true } }
+        .onChange(of: store.requestDeleteAccount) { _, wanted in
+            if wanted { store.requestDeleteAccount = false; deleteNote = ""; deleteStep1 = true }
+        }
         // Logo source chooser: library always; camera only on devices that have one.
         .confirmationDialog("Upload Company Logo", isPresented: $showSourceChooser, titleVisibility: .visible) {
             Button("Choose from Library") { showLibrary = true }
@@ -89,19 +92,9 @@ struct ProfileView: View {
         // Account deletion — step 1: consequences (same text as the web confirm()).
         .alert("Delete Account", isPresented: $deleteStep1) {
             Button("Cancel", role: .cancel) {}
-            Button("Continue", role: .destructive) { typed = ""; deleteStep2 = true }
+            Button("Delete My Account", role: .destructive) { typed = "DELETE"; performDelete() }
         } message: {
             Text("Permanently delete your Ruby FoodHub wholesale account?\n\n• Your personal details are erased and you are signed out immediately\n• You will not be able to sign in again\n• Past order records are kept for accounting and tax purposes\n• Any unpaid balance is still owed\n\nThis cannot be undone.")
-        }
-        // Step 2: type DELETE (the same word the API requires).
-        .alert("Confirm Deletion", isPresented: $deleteStep2) {
-            TextField("DELETE", text: $typed)
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {}
-            Button("Delete My Account", role: .destructive) { performDelete() }
-        } message: {
-            Text("To confirm, type DELETE below:")
         }
         .alert("Account Deleted", isPresented: Binding(get: { deletedMessage != nil }, set: { if !$0 { deletedMessage = nil } })) {
             Button("OK") { deletedMessage = nil; store.backToAuth() }
