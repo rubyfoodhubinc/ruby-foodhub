@@ -392,9 +392,18 @@
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not load products.');
-      list.innerHTML = (data.products || []).length
+      // Prefer the richer catalog (name + pack sizes); fall back to names only.
+      const items = Array.isArray(data.catalog) && data.catalog.length
+        ? data.catalog
+        : (data.products || []).map((name) => ({ name, sizes: [] }));
+      list.innerHTML = items.length
         ? '<ul style="list-style:none;padding:0;margin:0">' +
-          data.products.map((name) => '<li style="padding:12px 4px;border-bottom:1px solid rgba(34,30,26,.08);font-weight:700">' + esc(name) + '</li>').join('') +
+          items.map((p) => '<li style="padding:12px 4px;border-bottom:1px solid rgba(34,30,26,.08)">' +
+            '<div style="font-weight:700">' + esc(p.name) + '</div>' +
+            ((p.sizes || []).length
+              ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">' + p.sizes.map((v) => '<span class="pill pill-gray">' + esc(v) + '</span>').join('') + '</div>'
+              : '') +
+            '</li>').join('') +
           '</ul>'
         : '<p class="empty">No products listed yet — check back soon.</p>';
     } catch (err) {

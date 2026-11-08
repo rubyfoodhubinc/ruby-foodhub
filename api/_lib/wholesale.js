@@ -36,6 +36,28 @@ async function publicProductList() {
   return names.sort((a, b) => a.localeCompare(b));
 }
 
+// Public (no-login) product view: name plus the pack sizes it comes in.
+// Still never selects any price column. Sizes come straight from the
+// products table, so adding/retiring a size in admin updates the app with
+// no new build.
+async function publicProductCatalog() {
+  const { data, error } = await supabase
+    .from('products')
+    .select('name, variant')
+    .eq('active', true);
+  if (error) throw new Error(JSON.stringify(error));
+
+  const byName = new Map();
+  for (const p of data || []) {
+    if (!byName.has(p.name)) byName.set(p.name, []);
+    if (p.variant && !byName.get(p.name).includes(p.variant)) byName.get(p.name).push(p.variant);
+  }
+  const sizeOrder = (v) => { const n = parseInt(String(v).replace(/[^0-9]/g, ''), 10); return /single/i.test(v) ? 1 : (isNaN(n) ? 999 : n); };
+  return [...byName.entries()]
+    .map(([name, sizes]) => ({ name, sizes: sizes.sort((a, b) => sizeOrder(a) - sizeOrder(b)) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // Wholesale order numbers are retailer-scoped and human-readable: the first
 // four letters of the business name + the order date (MMDDYYYY, US Eastern) +
 // a per-retailer serial. MoneyMart's fifth order on 12-24-2026 becomes
@@ -77,4 +99,4 @@ async function insertWholesaleOrder(row, businessName) {
   throw new Error(JSON.stringify(lastError));
 }
 
-module.exports = { wholesaleCatalog, publicProductList, orderNumberFor, insertWholesaleOrder };
+module.exports = { wholesaleCatalog, publicProductList, publicProductCatalog, orderNumberFor, insertWholesaleOrder };

@@ -4,7 +4,7 @@ const { supabase } = require('./_lib/supabase');
 const { resend, FROM_ADDRESS } = require('./_lib/resend');
 const { requireRetailerSession } = require('./_lib/retailer-auth');
 const { logAudit } = require('./_lib/admin-auth');
-const { wholesaleCatalog, publicProductList, insertWholesaleOrder } = require('./_lib/wholesale');
+const { wholesaleCatalog, publicProductList, publicProductCatalog, insertWholesaleOrder } = require('./_lib/wholesale');
 const { applyStockChange } = require('./_lib/stock');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -61,7 +61,8 @@ module.exports = async (req, res) => {
   // wholesale pricing stays behind an approved account.
   if (action === 'public-catalog') {
     try {
-      return res.status(200).json({ products: await publicProductList() });
+      const [products, catalog] = await Promise.all([publicProductList(), publicProductCatalog()]);
+      return res.status(200).json({ products, catalog });
     } catch (err) {
       console.error('retailer-portal public-catalog error:', err.message);
       return res.status(500).json({ error: err.message });
